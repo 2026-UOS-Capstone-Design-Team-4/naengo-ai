@@ -30,7 +30,6 @@ naengo.sql
 *.sqlite3
 
 # IDEs
-.vscode/
 .idea/
 *.swp
 *.swo
