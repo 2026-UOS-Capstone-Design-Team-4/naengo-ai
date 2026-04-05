@@ -1,0 +1,21 @@
+{
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.venv": false,
+    "**/venv": false
+  },
+  "files.associations": {
+    "*.sql": "postgres"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "python.interpreter": "${workspaceFolder}/.venv/Scripts/python.exe",
+  "python.terminal.activateEnvInSelectedTerminal": true
+}
