@@ -1,12 +1,40 @@
-# Python-generated files
+# Environments & Secrets
+.env
+.env.*
+!.env.example
+
+# Python
 __pycache__/
-*.py[oc]
-build/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / Build
 dist/
-wheels/
-*.egg-info
+build/
+*.egg-info/
 
-# Virtual environments
-.venv
-
+# Databases
 naengo.sql
+*.sqlite3
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
