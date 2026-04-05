@@ -1,0 +1,60 @@
+[project]
+name = "naengo-ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.18.4",
+    "fastapi>=0.135.3",
+    "httpx>=0.28.1",
+    "pgvector>=0.4.2",
+    "psycopg2-binary>=2.9.11",
+    "pydantic>=2.12.5",
+    "pydantic-ai>=1.77.0",
+    "pytest>=9.0.2",
+    "python-dotenv>=1.2.2",
+    "scalar-fastapi>=1.8.1",
+    "sqlalchemy>=2.0.49",
+    "uvicorn>=0.43.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.9",
+]
+
+[tool.ruff]
+# Ruff 린트 및 포맷 설정을 추가합니다.
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+# E, W: 스타일(pycodestyle)
+# F: 논리적 오류(Pyflakes)
+# I: import 정렬(isort)
+# UP: 최신 구문 권장(pyupgrade)
+# N: 명명 규칙(pep8-naming)
+# B: 잠재적 버그/실수 방지(flake8-bugbear)
+# C4: 리스트/딕셔너리 효율적 생성(flake8-comprehensions)
+# T20: print문 체크(flake8-print)
+select = ["E", "F", "I", "UP", "N", "B", "C4", "W", "T20"]
+ignore = []
+
+[tool.ruff.lint.isort]
+# import 문 사이의 결합 및 정렬 최적화
+combine-as-imports = true
+
+[tool.ruff.format]
+# Black 스타일의 포매터를 사용합니다.
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+[tool.pytest.ini_options]
+# 테스트 탐색 경로 및 제외 폴더 설정
+testpaths = ["tests"]
+norecursedirs = [".venv", "venv"]
+# 비동기 테스트(FastAPI 등) 자동 인식 설정
+asyncio_mode = "auto"
