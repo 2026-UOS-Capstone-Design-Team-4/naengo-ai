@@ -1,0 +1,32 @@
+services:
+  naengo-db:
+    image: ankane/pgvector:v0.5.1
+    container_name: naengo-db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=recipe_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  naengo-ai:
+    build: .
+    image: naengo-ai:latest
+    container_name: naengo-ai
+    restart: always
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - .:/app
+      - /app/.venv
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@naengo-db:5432/recipe_db
+    depends_on:
+      - naengo-db
+
+volumes:
+  postgres_data:
