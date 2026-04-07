@@ -44,21 +44,37 @@ uv sync
 `.env` 파일을 생성하고 필요한 API 키를 입력하세요.
 ```bash
 OPENAI_API_KEY=your_api_key_here
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/recipe_db
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/naengo_db
 ```
 
 ### 3. 서버 실행 (Docker 권장 🐳)
-DB 서버와 API 서버를 한 번에 실행하려면 Docker Compose를 사용하세요.
-```bash
-# DB + API 서버 동시 실행
-docker-compose up -d
 
-# 실시간 로그 확인
-docker-compose logs -f
-```
+Docker Compose를 사용하면 데이터베이스(PostgreSQL + pgvector)와 API 서버를 한 번에 실행할 수 있습니다.
 
-### 4. 서버 실행 (로컬 - 선택 사항)
-로컬 DB가 실행 중인 경우 uvicorn을 직접 실행할 수 있습니다.
+1. **서비스 시작**:
+   ```bash
+   # 백그라운드에서 모든 서비스 실행
+   docker-compose up -d
+   ```
+   *이 명령어를 실행하면 `naengo-db`와 `naengo-ai` 컨테이너가 자동으로 생성되고 연결됩니다.*
+
+2. **실행 상태 및 로그 확인**:
+   ```bash
+   # 실행 중인 컨테이너 확인
+   docker-compose ps
+
+   # 실시간 로그 확인 (DB 초기화 및 서버 부팅 확인 가능)
+   docker-compose logs -f naengo-ai
+   ```
+
+3. **서비스 종료**:
+   ```bash
+   # 서비스 중단 및 컨테이너 제거
+   docker-compose down
+   ```
+
+### 4. 서버 실행 (로컬 개발 시 - 선택 사항)
+로컬에 별도의 PostgreSQL 서버가 실행 중인 경우 uvicorn을 직접 실행할 수 있습니다.
 ```bash
 uv run uvicorn app.main:app --reload
 ```
