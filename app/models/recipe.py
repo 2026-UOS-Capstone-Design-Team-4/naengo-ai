@@ -19,8 +19,12 @@ class Recipe(Base):
 
     recipe_id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    full_content = Column(Text, nullable=False)
+    description = Column(Text)
+    ingredients_raw = Column(Text)
+    ingredients = Column(JSONB)
+    instructions = Column(JSONB)
     image_url = Column(String(512))
+    video_url = Column(String(512))
     source = Column(String(20), default="STANDARD")  # STANDARD, USER
     author_id = Column(Integer, ForeignKey("users.user_id", ondelete="SET NULL"))
     status = Column(String(20), default="PENDING")  # APPROVED, PENDING, REJECTED
@@ -28,7 +32,6 @@ class Recipe(Base):
 
     # text-embedding-3-large (3072 차원) 기준
     embedding = Column(Vector(3072))
-    ingredients = Column(JSONB)
 
     # 관계 설정
     author = relationship("User", back_populates="recipes")
