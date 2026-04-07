@@ -1,23 +1,59 @@
-__pycache__
-*.pyc
-*.pyo
-*.pyd
+# 🛡️ Secrets & Config
+.env
+.env.*
+.git
+.gitignore
+*.key
+*.pem
+*.cert
+
+# 🐍 Python / Development
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 .Python
 env/
 venv/
 .venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.coverage
+htmlcov/
 pip-log.txt
 pip-delete-this-directory.txt
+
+# 📦 Distribution / Build
+build/
+dist/
+*.egg-info/
 .export
-.env
-.test.env
+
+# 📊 Data / Databases
+*.sql
+*.csv
+*.log
+*.db
+*.sqlite3
+postgres_data/
+
+# 🛠 IDEs / Tools
 .vscode/
 .idea/
-.git
-.gitignore
+*.swp
+*.swo
 Dockerfile
 docker-compose.yml
 alembic/
 tests/
 
-naengo.sql
+# 💻 OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
