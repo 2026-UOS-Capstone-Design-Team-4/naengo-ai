@@ -26,7 +26,8 @@ build/
 *.egg-info/
 
 # Databases
-naengo.sql
+*.sql
+*.csv
 *.sqlite3
 
 # IDEs
