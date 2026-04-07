@@ -24,6 +24,13 @@ async def lifespan(app: FastAPI):
         logger.info("데이터베이스를 초기화하는 중...")
         # pgvector 확장 활성화 (vector 익스텐션이 필요할 때)
         init_db()
+        
+        # 모든 모델을 임포트하여 Base.metadata가 테이블들을 인식하게 합니다.
+        from app.models.chat import ChatRoom, SessionLog  # noqa
+        from app.models.recipe import Recipe, RecipeStats  # noqa
+        from app.models.social import Like, Scrap  # noqa
+        from app.models.user import User  # noqa
+        
         # 모든 테이블 생성 (테이블이 이미 있으면 무시됨)
         Base.metadata.create_all(bind=engine)
         logger.info("데이터베이스 초기화 완료.")
