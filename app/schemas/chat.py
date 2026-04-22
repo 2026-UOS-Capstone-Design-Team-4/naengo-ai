@@ -19,3 +19,4 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     message: str
+    recipes: list[dict] | None = None
