@@ -30,8 +30,8 @@ class Recipe(Base):
     status = Column(String(20), default="PENDING")  # APPROVED, PENDING, REJECTED
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # text-embedding-3-large (3072 차원) 기준
-    embedding = Column(Vector(3072))
+    # text-embedding-3-small (1536 차원) 기준
+    embedding = Column(Vector(1536))
 
     # 관계 설정
     author = relationship("User", back_populates="recipes")
