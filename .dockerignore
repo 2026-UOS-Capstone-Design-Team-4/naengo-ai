@@ -6,6 +6,7 @@
 *.key
 *.pem
 *.cert
+naengo-ai-key-20260422.pem
 
 # 🐍 Python / Development
 __pycache__/

@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+naengo-ai-key-20260422.pem
 
 # Python
 __pycache__/
