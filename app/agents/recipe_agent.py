@@ -70,7 +70,8 @@ def search_recipes(ctx: RunContext[RecipeDeps], query: str) -> str:
         for r in recipes:
             logger.info(f"   - 제목: {r.title} (ID: {r.recipe_id})")
 
-            recipe_info = {
+            # [핵심] 나중에 스트림 끝에 주입할 바구니에 상세 정보 저장
+            ctx.deps.last_found_recipes.append({
                 "id": r.recipe_id,
                 "title": r.title,
                 "description": r.description,
@@ -78,11 +79,9 @@ def search_recipes(ctx: RunContext[RecipeDeps], query: str) -> str:
                 "ingredients": r.ingredients,
                 "instructions": r.instructions,
                 "video_url": r.video_url,
-            }
-            # 에이전트에게 줄 리스트에 추가
-            results_for_agent.append(recipe_info)
-            # [핵심] 나중에 스트림 끝에 주입할 바구니에 추가
-            ctx.deps.last_found_recipes.append(recipe_info)
+            })
+            # 에이전트에게는 제목만 전달
+            results_for_agent.append({"title": r.title})
 
         return json.dumps(results_for_agent, ensure_ascii=False)
 
