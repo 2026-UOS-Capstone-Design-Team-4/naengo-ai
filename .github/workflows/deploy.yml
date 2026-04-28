@@ -19,5 +19,5 @@ jobs:
           script: |
             cd ~/naengo-ai
             git pull origin main
-            docker compose up -d --build
+            docker compose up -d --build --force-recreate
             docker image prune -f
