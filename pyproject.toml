@@ -40,7 +40,7 @@ target-version = "py313"
 # C4: 리스트/딕셔너리 효율적 생성(flake8-comprehensions)
 # T20: print문 체크(flake8-print)
 select = ["E", "F", "I", "UP", "N", "B", "C4", "W", "T20"]
-ignore = []
+ignore = ["B008"]  # FastAPI Depends() in default arguments
 
 [tool.ruff.lint.isort]
 # import 문 사이의 결합 및 정렬 최적화
