@@ -42,7 +42,10 @@ app = FastAPI(
         "## 주요 기능\n"
         "- **채팅**: 재료를 입력하면 AI가 레시피를 추천 (SSE 스트리밍)\n"
         "- **레시피**: 벡터 유사도 기반 레시피 검색\n"
-        "- **어드민**: 레시피 관리"
+        "- **어드민**: 레시피 관리\n\n"
+        "## 인증\n"
+        "> ⚠️ 현재 사용자 인증이 구현되어 있지 않습니다. "
+        "모든 API는 임시로 `user_id = 1` 사용자를 기준으로 동작합니다."
     ),
     version="0.1.0",
     docs_url=None,
@@ -51,15 +54,19 @@ app = FastAPI(
     openapi_tags=[
         {
             "name": "chat",
-            "description": "AI 레시피 추천 채팅. SSE 스트리밍 방식으로 응답합니다.",
+            "description": "채팅방 관리 및 AI 레시피 추천 채팅. POST 엔드포인트는 SSE 스트리밍 방식으로 응답합니다.",
         },
         {
             "name": "recipes",
-            "description": "레시피 조회 및 검색 API.",
+            "description": "레시피 조회 API. ID 목록으로 레시피 데이터를 가져옵니다.",
         },
         {
             "name": "admin",
-            "description": "관리자 전용 API. 레시피 등록 및 관리에 사용합니다.",
+            "description": "관리자 전용 API. 레시피 등록 전 중복 확인 등에 사용합니다.",
+        },
+        {
+            "name": "health",
+            "description": "서버 상태 확인 API.",
         },
     ],
 )
@@ -87,6 +94,21 @@ app.add_middleware(
 app.include_router(api_router, prefix="/api/v1")
 
 
-@app.get("/")
+@app.get(
+    "/",
+    summary="헬스 체크",
+    description="서버가 정상 동작 중인지 확인합니다.",
+    tags=["health"],
+    responses={
+        200: {
+            "description": "서버 정상",
+            "content": {
+                "application/json": {
+                    "example": {"status": "ok", "message": "Naengo AI API is running"}
+                }
+            },
+        }
+    },
+)
 async def root():
     return {"status": "ok", "message": "Naengo AI API is running"}
