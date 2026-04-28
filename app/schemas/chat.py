@@ -1,32 +1,38 @@
-from typing import Literal
+from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict
 
-
-class ChatPart(BaseModel):
-    text: str
+from app.schemas.recipe import RecipeResponse
 
 
-class ChatContent(BaseModel):
-    role: Literal["user", "model"]
-    parts: list[ChatPart]
+class ChatRoomResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    room_id: int
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatMessageResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    message_id: int
+    role: str
+    content: str
+    recipes: list[RecipeResponse] | None = None
+    created_at: datetime
 
 
 class ChatRequest(BaseModel):
     prompt: str
-    history: list[ChatContent] | None = Field(default_factory=list)
+    image: str | None = None  # base64 data URL (e.g. "data:image/jpeg;base64,...")
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "prompt": "냉장고에 계란이랑 김치가 있어요",
-                "history": [
-                    {"role": "user", "parts": [{"text": "안녕하세요!"}]},
-                    {
-                        "role": "model",
-                        "parts": [{"text": "안녕하세요! 어떤 재료가 있으신가요?"}],
-                    },
-                ],
+                "prompt": "냉장고 사진이에요. 어떤 요리를 만들 수 있을까요?",
+                "image": "data:image/jpeg;base64,/9j/4AAQSkZJRgAB...",
             }
         }
     }
