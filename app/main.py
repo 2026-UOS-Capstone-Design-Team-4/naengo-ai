@@ -6,8 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from scalar_fastapi import get_scalar_api_reference
 
 from app.api.v1.api import api_router
-from app.db.session import engine, init_db
-from app.models.base import Base
+from app.db.session import init_db
 
 # 로그 설정
 logging.basicConfig(level=logging.INFO)
@@ -24,15 +23,7 @@ async def lifespan(app: FastAPI):
         logger.info("데이터베이스를 초기화하는 중...")
         # pgvector 확장 활성화 (vector 익스텐션이 필요할 때)
         init_db()
-        
-        # 모든 모델을 임포트하여 Base.metadata가 테이블들을 인식하게 합니다.
-        from app.models.chat import ChatRoom, SessionLog  # noqa
-        from app.models.recipe import Recipe, RecipeStats  # noqa
-        from app.models.social import Like, Scrap  # noqa
-        from app.models.user import User  # noqa
-        
-        # 모든 테이블 생성 (테이블이 이미 있으면 무시됨)
-        Base.metadata.create_all(bind=engine)
+
         logger.info("데이터베이스 초기화 완료.")
     except Exception as e:
         logger.error(f"데이터베이스 초기화 중 에러 발생: {e}")
@@ -45,10 +36,32 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Naengo AI API",
-    docs_url=None,  # 기본 Swagger UI 비활성화
-    redoc_url=None,  # 기본 ReDoc 비활성화
-    lifespan=lifespan,  # lifespan 이벤트 등록
+    title="냉고 AI API",
+    description=(
+        "냉고(Naengo)는 냉장고 속 재료로 레시피를 추천해주는 AI 요리 어시스턴트입니다.\n\n"
+        "## 주요 기능\n"
+        "- **채팅**: 재료를 입력하면 AI가 레시피를 추천 (SSE 스트리밍)\n"
+        "- **레시피**: 벡터 유사도 기반 레시피 검색\n"
+        "- **어드민**: 레시피 관리"
+    ),
+    version="0.1.0",
+    docs_url=None,
+    redoc_url=None,
+    lifespan=lifespan,
+    openapi_tags=[
+        {
+            "name": "chat",
+            "description": "AI 레시피 추천 채팅. SSE 스트리밍 방식으로 응답합니다.",
+        },
+        {
+            "name": "recipes",
+            "description": "레시피 조회 및 검색 API.",
+        },
+        {
+            "name": "admin",
+            "description": "관리자 전용 API. 레시피 등록 및 관리에 사용합니다.",
+        },
+    ],
 )
 
 
