@@ -1,9 +1,8 @@
-import json
 import logging
 
 from openai import OpenAI
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from app.agents.dependencies import RecipeDeps
@@ -11,24 +10,19 @@ from app.agents.system_prompts import RECIPE_AGENT_PROMPT
 from app.core import config
 from app.crud.recipe import search_recipes_by_vector
 from app.db.session import SessionLocal
-from app.models.chat import ChatRoom, SessionLog  # noqa
-from app.models.recipe import Recipe, RecipeStats  # noqa
+from app.models.chat import ChatMessage, ChatRoom  # noqa
+from app.models.recipe import PendingRecipe, Recipe, RecipeStats  # noqa
 from app.models.social import Like, Scrap  # noqa
-from app.models.user import User  # noqa
+from app.models.user import User, UserProfile  # noqa
 
 # 로그 설정
 logger = logging.getLogger(__name__)
 
 
 # 2. 모델 설정
-my_provider = OpenAIProvider(
-    base_url=config.BASE_URL,
-    api_key=config.API_KEY,
-)
-
-my_model = OpenAIChatModel(
-    model_name=config.MODEL_NAME,
-    provider=my_provider,
+my_model = OpenAIModel(
+    config.MODEL_NAME,
+    provider=OpenAIProvider(api_key=config.API_KEY, base_url=config.BASE_URL),
 )
 
 embedding_client = OpenAI(api_key=config.EMBEDDING_API_KEY)
@@ -71,19 +65,32 @@ def search_recipes(ctx: RunContext[RecipeDeps], query: str) -> str:
             logger.info(f"   - 제목: {r.title} (ID: {r.recipe_id})")
 
             # [핵심] 나중에 스트림 끝에 주입할 바구니에 상세 정보 저장
-            ctx.deps.last_found_recipes.append({
-                "id": r.recipe_id,
-                "title": r.title,
-                "description": r.description,
-                "ingredients_raw": r.ingredients_raw,
-                "ingredients": r.ingredients,
-                "instructions": r.instructions,
-                "video_url": r.video_url,
-            })
-            # 에이전트에게는 제목만 전달
-            results_for_agent.append({"title": r.title})
+            ctx.deps.last_found_recipes.append(
+                {
+                    "id": r.recipe_id,
+                    "title": r.title,
+                    "description": r.description,
+                    "ingredients": r.ingredients,
+                    "ingredients_raw": r.ingredients_raw,
+                    "instructions": r.instructions,
+                    "servings": float(r.servings) if r.servings else None,
+                    "cooking_time": r.cooking_time,
+                    "calories": r.calories,
+                    "difficulty": r.difficulty,
+                    "category": r.category,
+                    "tags": r.tags,
+                    "tips": r.tips,
+                    "video_url": r.video_url,
+                    "image_url": r.image_url,
+                    "author_type": r.author_type,
+                }
+            )
+            results_for_agent.append(r.title)
 
-        return json.dumps(results_for_agent, ensure_ascii=False)
+        titles = ", ".join(results_for_agent)
+        tool_result = f"검색 재료: {query}\n찾은 레시피: {titles}"
+        logger.info(f"📤 [Agent Tool] 에이전트에게 전달하는 내용:\n{tool_result}")
+        return tool_result
 
     except Exception as e:
         logger.error(f"🚨 [Agent Tool] 에러: {str(e)}")
