@@ -8,10 +8,10 @@ from openai import OpenAI
 
 from app.core import config
 from app.db.session import SessionLocal
-from app.models.chat import ChatRoom, SessionLog  # noqa
-from app.models.recipe import Recipe, RecipeStats  # noqa
+from app.models.chat import ChatMessage, ChatRoom  # noqa
+from app.models.recipe import PendingRecipe, Recipe, RecipeStats  # noqa
 from app.models.social import Like, Scrap  # noqa
-from app.models.user import User  # noqa
+from app.models.user import User, UserProfile  # noqa
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_FILE_PATH = os.path.join(BASE_DIR, "recipe.json")
@@ -19,16 +19,46 @@ JSON_FILE_PATH = os.path.join(BASE_DIR, "recipe.json")
 client = OpenAI(api_key=config.EMBEDDING_API_KEY)
 
 
+def build_embedding_text(recipe: dict) -> str:
+    difficulty_map = {"easy": "쉬움", "normal": "보통", "hard": "어려움"}
+
+    title = recipe.get("title", "")
+    description = recipe.get("description", "")
+    ingredients_raw = recipe.get("ingredients_raw", "")
+    servings = recipe.get("servings")
+    cooking_time = recipe.get("cooking_time")
+    difficulty = difficulty_map.get(recipe.get("difficulty", ""), "")
+    category = recipe.get("category", [])
+    tags = recipe.get("tags", [])
+    tips = recipe.get("tips", [])
+
+    parts = []
+    if title:
+        parts.append(f"{title} 레시피입니다.")
+    if category:
+        parts.append(f"카테고리: {', '.join(category)}.")
+    if description:
+        parts.append(description)
+    if ingredients_raw:
+        parts.append(f"주재료는 {ingredients_raw}입니다.")
+    if servings:
+        parts.append(f"{servings}인분 요리입니다.")
+    if cooking_time:
+        parts.append(f"조리 시간은 약 {cooking_time}분입니다.")
+    if difficulty:
+        parts.append(f"난이도는 {difficulty}입니다.")
+    if tags:
+        parts.append(f"태그: {', '.join(tags)}.")
+    if tips:
+        parts.append(f"조리 팁: {' '.join(tips)}")
+
+    print(f"🔍 임베딩 텍스트 생성:\n{' '.join(parts)}\n")
+    return " ".join(parts)
+
+
 def get_embedding(recipe: dict) -> list[float]:
-    recipe_data = {
-        "title": recipe.get("title", ""),
-        "description": recipe.get("description", ""),
-        "ingredients_raw": recipe.get("ingredients_raw", ""),
-        "ingredients": recipe.get("ingredients", []),
-        "instructions": recipe.get("instructions", []),
-    }
-    json_text = json.dumps(recipe_data, ensure_ascii=False)
-    response = client.embeddings.create(input=[json_text], model=config.EMBEDDING_MODEL)
+    text = build_embedding_text(recipe)
+    response = client.embeddings.create(input=[text], model=config.EMBEDDING_MODEL)
     return response.data[0].embedding
 
 
@@ -51,6 +81,18 @@ def upsert_recipes():
     insert_count = 0
     skip_count = 0
     fail_count = 0
+
+    # JSON 내 video_url 중복 체크
+    url_counts: dict[str, int] = {}
+    for data in recipes_list:
+        url = data.get("video_url")
+        if url:
+            url_counts[url] = url_counts.get(url, 0) + 1
+    duplicates = {url: cnt for url, cnt in url_counts.items() if cnt > 1}
+    if duplicates:
+        print(f"⚠️  JSON 내 중복 video_url {len(duplicates)}개 발견:")
+        for url, cnt in duplicates.items():
+            print(f"   - {url} ({cnt}회)")
 
     print(f"🚀 {len(recipes_list)}개의 레시피 처리를 시작합니다...")
 
@@ -79,13 +121,20 @@ def upsert_recipes():
                 new_recipe = Recipe(
                     title=title,
                     description=data.get("description"),
-                    ingredients_raw=data.get("ingredients_raw"),
                     ingredients=data.get("ingredients"),
+                    ingredients_raw=data.get("ingredients_raw"),
                     instructions=data.get("instructions"),
-                    image_url=data.get("image_url"),
+                    servings=data.get("servings"),
+                    cooking_time=data.get("cooking_time"),
+                    calories=data.get("calories"),
+                    difficulty=data.get("difficulty"),
+                    category=data.get("category"),
+                    tags=data.get("tags", []),
+                    tips=data.get("tips", []),
+                    content=data.get("content"),
                     video_url=video_url,
-                    source=data.get("source", "STANDARD"),
-                    status=data.get("status", "APPROVED"),
+                    image_url=data.get("image_url"),
+                    author_type="ADMIN",
                     embedding=embedding,
                 )
                 db.add(new_recipe)
