@@ -1,17 +1,23 @@
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
+
+
+def _to_str(v: object) -> str:
+    return str(v) if not isinstance(v, str) else v
 
 
 class IngredientItem(BaseModel):
     name: str
-    amount: str
+    amount: Annotated[str, BeforeValidator(_to_str)]
     unit: str
     type: str
     note: str | None = ""
 
 
 class RecipeBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     title: str
     description: str
     ingredients: list[IngredientItem] = []
@@ -27,9 +33,6 @@ class RecipeBase(BaseModel):
     video_url: str | None = None
     image_url: str | None = None
 
-    class Config:
-        from_attributes = True
-
 
 class RecipeSchema(RecipeBase):
     content: str | None = None
@@ -37,6 +40,7 @@ class RecipeSchema(RecipeBase):
 
 
 class RecipeResponse(RecipeBase):
-    """recipes SSE 이벤트로 전달되는 레시피 데이터"""
-    id: int
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int = Field(validation_alias="recipe_id")
     author_type: Literal["ADMIN", "USER"]
