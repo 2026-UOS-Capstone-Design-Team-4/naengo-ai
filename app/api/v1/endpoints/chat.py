@@ -22,6 +22,9 @@ from app.api.v1.docs.chat import (
     CHAT_RESPONSES,
     CHAT_ROOM_DESCRIPTION,
     CHAT_ROOM_SUMMARY,
+    DELETE_ROOM_DESCRIPTION,
+    DELETE_ROOM_RESPONSES,
+    DELETE_ROOM_SUMMARY,
     GET_ROOM_MESSAGES_DESCRIPTION,
     GET_ROOM_MESSAGES_RESPONSES,
     GET_ROOM_MESSAGES_SUMMARY,
@@ -140,7 +143,7 @@ async def run_chat_stream(
 async def get_rooms(db: Session = Depends(get_db)):
     rooms = (
         db.query(ChatRoom)
-        .filter(ChatRoom.user_id == TEMP_USER_ID)
+        .filter(ChatRoom.user_id == TEMP_USER_ID, ChatRoom.is_active == True)  # noqa: E712
         .order_by(ChatRoom.updated_at.desc())
         .all()
     )
@@ -190,6 +193,25 @@ async def get_room_messages(room_id: int, db: Session = Depends(get_db)):
             )
         )
     return result
+
+
+@router.delete(
+    "/rooms/{room_id}",
+    summary=DELETE_ROOM_SUMMARY,
+    description=DELETE_ROOM_DESCRIPTION,
+    responses=DELETE_ROOM_RESPONSES,
+)
+async def delete_room(room_id: int, db: Session = Depends(get_db)):
+    room = (
+        db.query(ChatRoom)
+        .filter(ChatRoom.room_id == room_id, ChatRoom.user_id == TEMP_USER_ID, ChatRoom.is_active == True)  # noqa: E712
+        .first()
+    )
+    if not room:
+        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+    room.is_active = False
+    db.commit()
+    return {"message": "채팅방이 삭제되었습니다."}
 
 
 @router.post(
