@@ -49,7 +49,9 @@ _COMMON_SSE_DESCRIPTION = r"""
 
 GET_ROOMS_SUMMARY = "채팅방 목록 조회"
 GET_ROOMS_DESCRIPTION = r"""
-사용자의 채팅방 목록을 `updated_at` 내림차순으로 반환합니다.
+사용자의 활성 채팅방 목록을 `updated_at` 내림차순으로 반환합니다.
+
+> 삭제된 채팅방(`is_active = false`)은 목록에서 제외됩니다.
 
 **응답 필드**:
 
@@ -118,6 +120,25 @@ CHAT_NEW_ROOM_DESCRIPTION = r"""
 
 - **room 이벤트**: 스트림 시작 시 생성된 채팅방 ID를 `{"room_id": 1}` 형식으로 전송합니다.
 """ + _COMMON_SSE_DESCRIPTION
+
+# ── DELETE /rooms/{room_id} ──────────────────────────────────────────────────
+
+DELETE_ROOM_SUMMARY = "채팅방 삭제"
+DELETE_ROOM_DESCRIPTION = r"""
+채팅방을 숨김 처리합니다.
+
+- 실제 데이터는 삭제되지 않으며 `is_active`가 `false`로 변경됩니다.
+- 삭제된 채팅방은 목록 조회(`GET /rooms`)에서 제외됩니다.
+- 이미 삭제된 채팅방에 요청하면 `404`를 반환합니다.
+"""
+
+DELETE_ROOM_RESPONSES = {
+    200: {
+        "description": "삭제 성공",
+        "content": {"application/json": {"example": {"message": "채팅방이 삭제되었습니다."}}},
+    },
+    404: {"description": "채팅방을 찾을 수 없습니다."},
+}
 
 # ── POST /rooms/{room_id} ─────────────────────────────────────────────────────
 
