@@ -32,6 +32,7 @@ from app.api.v1.docs.chat import (
     GET_ROOMS_RESPONSES,
     GET_ROOMS_SUMMARY,
 )
+from app.core.config import TEMP_USER_ID
 from app.db.session import get_db
 from app.models.chat import ChatMessage, ChatRoom
 from app.models.recipe import Recipe
@@ -40,8 +41,6 @@ from app.schemas.recipe import RecipeResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
-TEMP_USER_ID = 1  # 인증 구현 전 임시 사용자
 
 IDENTITY_PATTERNS = re.compile(
     r"(넌\s*누구|너\s*누구|네\s*이름|너의\s*이름|당신\s*누구|이름이\s*뭐|어떤\s*ai|무슨\s*ai|어느\s*회사|어떤\s*모델"
@@ -77,7 +76,11 @@ def save_messages(
     recipe_ids: list[int] | None = None,
 ):
     db.add(ChatMessage(room_id=room_id, role="user", content=user_content))
-    db.add(ChatMessage(room_id=room_id, role="model", content=ai_content, recipe_ids=recipe_ids))
+    db.add(
+        ChatMessage(
+            room_id=room_id, role="model", content=ai_content, recipe_ids=recipe_ids
+        )
+    )
     db.commit()
 
 
@@ -204,7 +207,11 @@ async def get_room_messages(room_id: int, db: Session = Depends(get_db)):
 async def delete_room(room_id: int, db: Session = Depends(get_db)):
     room = (
         db.query(ChatRoom)
-        .filter(ChatRoom.room_id == room_id, ChatRoom.user_id == TEMP_USER_ID, ChatRoom.is_active == True)  # noqa: E712
+        .filter(
+            ChatRoom.room_id == room_id,
+            ChatRoom.user_id == TEMP_USER_ID,
+            ChatRoom.is_active == True,
+        )  # noqa: E712
         .first()
     )
     if not room:

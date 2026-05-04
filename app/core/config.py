@@ -12,3 +12,6 @@ EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
 API_KEY = os.getenv("API_KEY")
 BASE_URL = os.getenv("BASE_URL")
 MODEL_NAME = os.getenv("MODEL_NAME")
+
+# 인증 구현 전 임시 사용자 ID
+TEMP_USER_ID = 1
