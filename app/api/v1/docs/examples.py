@@ -52,3 +52,17 @@ CHAT_MESSAGE_MODEL_EXAMPLE = {
     "recipes": [RECIPE_EXAMPLE],
     "created_at": "2026-04-29T12:00:05+09:00",
 }
+
+USER_EXAMPLE = {
+    "user_id": 1,
+    "email": "user@naengo.com",
+    "nickname": "냉장고지킴이",
+    "role": "USER",
+    "is_active": True,
+    "is_blocked": False,
+    "created_at": "2026-04-01T09:00:00+09:00",
+}
+
+USER_PROFILE_EXAMPLE = {
+    "user_input": ["새우 알레르기 있어요", "매운 음식 좋아해요", "간단한 요리 위주로 해줘"],
+}
