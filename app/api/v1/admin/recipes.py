@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.v1.docs.examples import RECIPE_EXAMPLE
 from app.db.session import get_db
 from app.models.recipe import Recipe
-from app.api.v1.docs.examples import RECIPE_EXAMPLE
 from app.schemas.recipe import RecipeResponse
 
 router = APIRouter()

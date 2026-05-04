@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.api.v1.docs.examples import RECIPE_EXAMPLE
 from app.db.session import get_db
 from app.models.recipe import Recipe
-from app.api.v1.docs.examples import RECIPE_EXAMPLE
 from app.schemas.recipe import RecipeResponse
 
 router = APIRouter()
@@ -25,5 +25,9 @@ async def get_recipes_by_ids(
     ids: list[int] = Query(),
     db: Session = Depends(get_db),
 ):
-    recipes = db.query(Recipe).filter(Recipe.recipe_id.in_(ids), Recipe.is_active == True).all()  # noqa: E712
+    recipes = (
+        db.query(Recipe)
+        .filter(Recipe.recipe_id.in_(ids), Recipe.is_active == True)
+        .all()
+    )  # noqa: E712
     return recipes

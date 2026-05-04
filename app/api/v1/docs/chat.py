@@ -2,7 +2,6 @@ from app.api.v1.docs.examples import (
     CHAT_MESSAGE_MODEL_EXAMPLE,
     CHAT_MESSAGE_USER_EXAMPLE,
     CHAT_ROOM_EXAMPLE,
-    RECIPE_EXAMPLE,
 )
 
 _RECIPE_RESPONSE_TABLE = r"""
@@ -38,12 +37,15 @@ _RECIPE_RESPONSE_TABLE = r"""
 | `note` | string \| null | 비고 |
 """
 
-_COMMON_SSE_DESCRIPTION = r"""
+_COMMON_SSE_DESCRIPTION = (
+    r"""
 - **응답 방식**: `text/event-stream` 형식으로 이벤트를 실시간 전송합니다.
 - **message 이벤트**: AI 텍스트 청크를 `{"content": "..."}` 형식으로 스트리밍합니다.
 - **recipes 이벤트**: 답변 완료 후 검색된 레시피 목록을 `RecipeResponse[]` 형식으로 전송합니다. 레시피가 없으면 전송하지 않습니다.
 - **이미지**: `image`에 base64 data URL(`data:image/jpeg;base64,...`)을 포함하면 멀티모달로 동작합니다.
-""" + _RECIPE_RESPONSE_TABLE
+"""
+    + _RECIPE_RESPONSE_TABLE
+)
 
 # ── GET /rooms ────────────────────────────────────────────────────────────────
 
@@ -85,7 +87,8 @@ GET_ROOMS_RESPONSES = {
 # ── GET /rooms/{room_id} ──────────────────────────────────────────────────────
 
 GET_ROOM_MESSAGES_SUMMARY = "채팅 내역 조회"
-GET_ROOM_MESSAGES_DESCRIPTION = r"""
+GET_ROOM_MESSAGES_DESCRIPTION = (
+    r"""
 채팅방의 전체 메시지를 시간순으로 반환합니다.
 `role = model`인 메시지에 레시피가 있었다면 `recipes` 필드에 전체 레시피 데이터를 포함합니다.
 
@@ -98,7 +101,9 @@ GET_ROOM_MESSAGES_DESCRIPTION = r"""
 | `content` | string | 메시지 내용 |
 | `recipes` | RecipeResponse[] \| null | 추천 레시피 목록 (없으면 null) |
 | `created_at` | datetime | 생성 시각 |
-""" + _RECIPE_RESPONSE_TABLE
+"""
+    + _RECIPE_RESPONSE_TABLE
+)
 
 GET_ROOM_MESSAGES_RESPONSES = {
     200: {
@@ -115,11 +120,14 @@ GET_ROOM_MESSAGES_RESPONSES = {
 # ── POST /rooms ───────────────────────────────────────────────────────────────
 
 CHAT_NEW_ROOM_SUMMARY = "새 채팅방 생성 및 첫 메시지 전송 (SSE)"
-CHAT_NEW_ROOM_DESCRIPTION = r"""
+CHAT_NEW_ROOM_DESCRIPTION = (
+    r"""
 새 채팅방을 생성하고 첫 메시지를 전송합니다. 채팅방 제목은 첫 질문 내용으로 자동 설정됩니다.
 
 - **room 이벤트**: 스트림 시작 시 생성된 채팅방 ID를 `{"room_id": 1}` 형식으로 전송합니다.
-""" + _COMMON_SSE_DESCRIPTION
+"""
+    + _COMMON_SSE_DESCRIPTION
+)
 
 # ── DELETE /rooms/{room_id} ──────────────────────────────────────────────────
 
@@ -135,7 +143,9 @@ DELETE_ROOM_DESCRIPTION = r"""
 DELETE_ROOM_RESPONSES = {
     200: {
         "description": "삭제 성공",
-        "content": {"application/json": {"example": {"message": "채팅방이 삭제되었습니다."}}},
+        "content": {
+            "application/json": {"example": {"message": "채팅방이 삭제되었습니다."}}
+        },
     },
     404: {"description": "채팅방을 찾을 수 없습니다."},
 }
@@ -143,9 +153,12 @@ DELETE_ROOM_RESPONSES = {
 # ── POST /rooms/{room_id} ─────────────────────────────────────────────────────
 
 CHAT_ROOM_SUMMARY = "기존 채팅방에서 메시지 전송 (SSE)"
-CHAT_ROOM_DESCRIPTION = r"""
+CHAT_ROOM_DESCRIPTION = (
+    r"""
 기존 채팅방에서 메시지를 전송합니다. 최근 10개의 대화 이력을 자동으로 불러와 컨텍스트로 사용합니다.
-""" + _COMMON_SSE_DESCRIPTION
+"""
+    + _COMMON_SSE_DESCRIPTION
+)
 
 # ── 공통 SSE 응답 예시 ─────────────────────────────────────────────────────────
 
