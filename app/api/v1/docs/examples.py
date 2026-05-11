@@ -130,6 +130,21 @@ PENDING_RECIPE_REVIEWED_EXAMPLE = {
     "reviewed_at": "2026-05-06T10:00:00+09:00",
 }
 
+RECIPE_DETAIL_RESPONSE_EXAMPLE = {
+    **RECIPE_EXAMPLE,
+    "id": 1,
+    "created_at": "2026-04-01T09:00:00+09:00",
+    "likes_count": 42,
+    "scrap_count": 15,
+    "is_liked": True,
+    "is_scrapped": False,
+}
+
+RECIPE_STATS_RESPONSE_EXAMPLE = {
+    "likes_count": 43,
+    "scrap_count": 15,
+}
+
 RECIPE_LIST_RESPONSE_EXAMPLE = {
     "items": [
         {
@@ -137,6 +152,8 @@ RECIPE_LIST_RESPONSE_EXAMPLE = {
             "created_at": "2026-04-01T09:00:00+09:00",
             "likes_count": 42,
             "scrap_count": 15,
+            "is_liked": True,
+            "is_scrapped": False,
         }
     ],
     "next_cursor": "42_1",
