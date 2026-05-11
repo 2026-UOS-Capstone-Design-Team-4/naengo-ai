@@ -71,6 +71,65 @@ USER_PROFILE_EXAMPLE = {
     ],
 }
 
+PENDING_RECIPE_EXAMPLE = {
+    "pending_recipe_id": 1,
+    "title": "엄마한테 배운 김치찌개",
+    "content": (
+        "묵은지를 쓰면 훨씬 맛있어요. 돼지고기는 앞다리살을 쓰고 "
+        "김치는 충분히 볶아야 칼칼한 맛이 납니다."
+    ),
+    "description": "집에서 해먹는 진짜 김치찌개",
+    "ingredients": [
+        {
+            "name": "묵은지",
+            "amount": "300",
+            "unit": "g",
+            "type": "메인",
+            "note": "충분히 익은 것",
+        },
+        {
+            "name": "돼지고기 앞다리살",
+            "amount": "200",
+            "unit": "g",
+            "type": "메인",
+            "note": None,
+        },
+        {"name": "두부", "amount": "1", "unit": "모", "type": "부재료", "note": None},
+        {"name": "대파", "amount": "1", "unit": "대", "type": "부재료", "note": None},
+    ],
+    "ingredients_raw": "묵은지 300g, 돼지고기 앞다리살 200g, 두부 1모, 대파 1대",
+    "instructions": [
+        "돼지고기를 먹기 좋은 크기로 썹니다.",
+        "냄비에 기름을 두르고 돼지고기와 김치를 함께 볶습니다.",
+        "물 500ml를 붓고 센 불에서 끓입니다.",
+        "끓어오르면 두부와 대파를 넣고 중불로 10분 더 끓입니다.",
+        "간을 맞추고 마무리합니다.",
+    ],
+    "servings": 2.0,
+    "cooking_time": 25,
+    "calories": 320,
+    "difficulty": "easy",
+    "category": ["한식", "찌개"],
+    "tags": ["얼큰한", "국물요리", "밥도둑"],
+    "tips": [
+        "김치는 묵은지를 써야 깊은 맛이 납니다.",
+        "돼지고기는 앞다리살이 잘 어울립니다.",
+    ],
+    "video_url": "https://youtube.com/watch?v=example",
+    "image_url": "https://example.com/kimchi-jjigae.jpg",
+    "status": "PENDING",
+    "admin_note": None,
+    "reviewed_at": None,
+    "created_at": "2026-05-04T12:00:00+09:00",
+}
+
+PENDING_RECIPE_REVIEWED_EXAMPLE = {
+    **PENDING_RECIPE_EXAMPLE,
+    "status": "APPROVED",
+    "admin_note": "재료 구성과 조리 순서가 명확합니다. 승인합니다.",
+    "reviewed_at": "2026-05-06T10:00:00+09:00",
+}
+
 RECIPE_LIST_RESPONSE_EXAMPLE = {
     "items": [
         {
