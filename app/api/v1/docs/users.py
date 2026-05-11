@@ -1,4 +1,8 @@
-from app.api.v1.docs.examples import USER_EXAMPLE, USER_PROFILE_EXAMPLE
+from app.api.v1.docs.examples import (
+    RECIPE_LIST_RESPONSE_EXAMPLE,
+    USER_EXAMPLE,
+    USER_PROFILE_EXAMPLE,
+)
 
 PATCH_ME_SUMMARY = "내 정보 수정"
 PATCH_ME_DESCRIPTION = r"""
@@ -84,4 +88,33 @@ PATCH_MY_PROFILE_RESPONSES = {
         "content": {"application/json": {"example": USER_PROFILE_EXAMPLE}},
     },
     404: {"description": "프로필을 찾을 수 없습니다."},
+}
+
+GET_MY_SCRAPS_SUMMARY = "내 북마크 레시피 조회"
+GET_MY_SCRAPS_DESCRIPTION = r"""
+내가 스크랩(북마크)한 레시피 목록을 커서 기반 페이지네이션으로 반환합니다.
+
+스크랩한 최신순으로 정렬됩니다.
+
+**쿼리 파라미터**:
+
+| 파라미터 | 타입 | 기본값 | 설명 |
+|----------|------|--------|------|
+| `cursor` | string | 없음 | 이전 응답의 `next_cursor` 값 (첫 페이지는 생략) |
+| `limit` | int | `20` | 한 번에 가져올 개수 (최대 100) |
+
+**응답 필드**:
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `items` | Recipe[] | 스크랩한 레시피 목록 |
+| `next_cursor` | string \| null | 다음 페이지 커서 (`null`이면 마지막 페이지) |
+| `has_next` | bool | 다음 페이지 존재 여부 |
+"""
+
+GET_MY_SCRAPS_RESPONSES = {
+    200: {
+        "description": "북마크 레시피 목록",
+        "content": {"application/json": {"example": RECIPE_LIST_RESPONSE_EXAMPLE}},
+    }
 }
