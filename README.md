@@ -93,14 +93,14 @@ naengo-ai/
 │   ├── agents/              # AI 에이전트, 의존성, 시스템 프롬프트
 │   ├── api/v1/
 │   │   ├── endpoints/       # chat, recipes, users, pending-recipes
-│   │   ├── admin/           # 관리자 전용 엔드포인트
-│   │   └── docs/            # Scalar UI 문서 (summary, description, examples)
+│   │   │   └── admin/       # 관리자 전용 엔드포인트
+│   │   ├── docs/            # Scalar UI 문서 (summary, description, examples)
+│   │   └── deps.py          # 공통 의존성
 │   ├── core/                # 공통 설정 (config)
-│   ├── crud/                # DB 쿼리 로직
 │   ├── db/                  # 데이터베이스 세션 및 초기화
 │   ├── models/              # SQLAlchemy DB 모델
 │   ├── schemas/             # Pydantic 데이터 검증 스키마
-│   └── services/            # 외부 API 연동 및 복합 비즈니스 로직
+│   └── services/            # 비즈니스 로직 및 AI 검색 서비스
 ├── scripts/                 # DB 데이터 삽입 스크립트
 ├── tests/                   # 테스트 코드
 ├── .github/workflows/       # GitHub Actions CI/CD
