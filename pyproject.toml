@@ -12,6 +12,7 @@ dependencies = [
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
     "pydantic-ai>=1.77.0",
+    "pydantic-settings>=2.13.1",
     "python-dotenv>=1.2.2",
     "scalar-fastapi>=1.8.1",
     "sqlalchemy>=2.0.49",
@@ -41,6 +42,11 @@ target-version = "py313"
 # T20: print문 체크(flake8-print)
 select = ["E", "F", "I", "UP", "N", "B", "C4", "W", "T20"]
 ignore = ["B008"]  # FastAPI Depends() in default arguments
+
+[tool.ruff.lint.per-file-ignores]
+"app/agents/system_prompts.py" = ["E501"]
+"app/api/v1/docs/*.py" = ["E501"]
+"app/main.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 # import 문 사이의 결합 및 정렬 최적화
