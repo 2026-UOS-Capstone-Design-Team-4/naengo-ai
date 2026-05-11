@@ -19,7 +19,10 @@ def search_recipes_by_vector(
     # 코사인 거리가 가장 가까운(유사도가 높은) 레시피 검색
     query = (
         select(Recipe)
-        .where(Recipe.is_active == True)  # noqa: E712
+        .where(
+            Recipe.is_active.is_(True),
+            Recipe.embedding.is_not(None),
+        )
         .order_by(Recipe.embedding.cosine_distance(query_vector))
         .limit(limit)
     )
