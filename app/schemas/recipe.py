@@ -55,9 +55,16 @@ class RecipeListItemResponse(RecipeBase):
     created_at: datetime | None = None
     likes_count: int = 0
     scrap_count: int = 0
+    is_liked: bool = False
+    is_scrapped: bool = False
 
 
 class RecipeListResponse(BaseModel):
     items: list[RecipeListItemResponse]
     next_cursor: str | None
     has_next: bool
+
+
+class RecipeStatsResponse(BaseModel):
+    likes_count: int
+    scrap_count: int
