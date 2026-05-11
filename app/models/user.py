@@ -1,4 +1,13 @@
-from sqlalchemy import BOOLEAN, Column, DateTime, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import (
+    BOOLEAN,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -29,7 +38,11 @@ class User(Base):
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 
-    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
 
     # 유저 직접 입력 (문장 배열)
     user_input = Column(JSONB, nullable=False, default=list)
@@ -48,7 +61,11 @@ class UserProfile(Base):
     recent_recipe_ids = Column(JSONB)
     ai_analyzed_at = Column(DateTime(timezone=True))
 
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     # 관계 설정
     user = relationship("User", back_populates="profile")
