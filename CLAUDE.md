@@ -20,3 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 커밋 메시지는 한국어로 작성합니다.
 - 커밋 시 파일을 하나씩 나눠서 커밋합니다. 여러 파일을 한 번에 커밋하지 않습니다.
 - 기능 단위로 커밋하며, `uv.lock` 파일도 함께 커밋해 주세요.
+
+## Push 전 체크리스트
+
+- push 전에 `README.md`의 내용(프로젝트 구조, 기술 스택, 환경 변수 등)이 실제 코드와 일치하는지 확인하고, 불일치가 있으면 수정합니다.
