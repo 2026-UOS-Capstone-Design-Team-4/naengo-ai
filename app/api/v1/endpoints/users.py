@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user_id
 from app.api.v1.docs.users import (
     GET_ME_DESCRIPTION,
     GET_ME_RESPONSES,
@@ -15,15 +16,14 @@ from app.api.v1.docs.users import (
     PATCH_MY_PROFILE_RESPONSES,
     PATCH_MY_PROFILE_SUMMARY,
 )
-from app.core.config import TEMP_USER_ID
 from app.db.session import get_db
-from app.models.user import User, UserProfile
 from app.schemas.user import (
     UserInputUpdateRequest,
     UserProfileResponse,
     UserResponse,
     UserUpdateRequest,
 )
+from app.services.user_service import UserService, UserUpdateStatus
 
 router = APIRouter()
 
@@ -35,8 +35,12 @@ router = APIRouter()
     response_model=UserResponse,
     responses=GET_ME_RESPONSES,
 )
-def get_me(db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.user_id == TEMP_USER_ID).first()
+def get_me(
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    user_service = UserService(db)
+    user = user_service.get_user(current_user_id)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
     return user
@@ -49,20 +53,18 @@ def get_me(db: Session = Depends(get_db)):
     response_model=UserResponse,
     responses=PATCH_ME_RESPONSES,
 )
-def update_me(body: UserUpdateRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.user_id == TEMP_USER_ID).first()
-    if not user:
+def update_me(
+    body: UserUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    user_service = UserService(db)
+    result = user_service.update_user(current_user_id, body)
+    if result.status == UserUpdateStatus.NOT_FOUND:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
-    if body.nickname is not None and body.nickname != user.nickname:
-        duplicate = db.query(User).filter(User.nickname == body.nickname).first()
-        if duplicate:
-            raise HTTPException(status_code=409, detail="이미 사용 중인 닉네임입니다.")
-        user.nickname = body.nickname
-
-    db.commit()
-    db.refresh(user)
-    return user
+    if result.status == UserUpdateStatus.NICKNAME_DUPLICATED:
+        raise HTTPException(status_code=409, detail="이미 사용 중인 닉네임입니다.")
+    return result.user
 
 
 @router.get(
@@ -72,11 +74,15 @@ def update_me(body: UserUpdateRequest, db: Session = Depends(get_db)):
     response_model=UserProfileResponse,
     responses=GET_MY_PROFILE_RESPONSES,
 )
-def get_my_profile(db: Session = Depends(get_db)):
-    profile = db.query(UserProfile).filter(UserProfile.user_id == TEMP_USER_ID).first()
+def get_my_profile(
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    user_service = UserService(db)
+    profile = user_service.get_profile_response(current_user_id)
     if not profile:
         raise HTTPException(status_code=404, detail="프로필을 찾을 수 없습니다.")
-    return UserProfileResponse(user_input=profile.user_input or [])
+    return profile
 
 
 @router.patch(
@@ -86,12 +92,13 @@ def get_my_profile(db: Session = Depends(get_db)):
     response_model=UserProfileResponse,
     responses=PATCH_MY_PROFILE_RESPONSES,
 )
-def update_my_profile(body: UserInputUpdateRequest, db: Session = Depends(get_db)):
-    profile = db.query(UserProfile).filter(UserProfile.user_id == TEMP_USER_ID).first()
+def update_my_profile(
+    body: UserInputUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    user_service = UserService(db)
+    profile = user_service.update_profile(current_user_id, body)
     if not profile:
         raise HTTPException(status_code=404, detail="프로필을 찾을 수 없습니다.")
-
-    profile.user_input = body.user_input
-    db.commit()
-    db.refresh(profile)
-    return UserProfileResponse(user_input=profile.user_input or [])
+    return profile
