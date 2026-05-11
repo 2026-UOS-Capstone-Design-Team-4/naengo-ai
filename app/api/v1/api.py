@@ -1,10 +1,10 @@
 from fastapi import APIRouter
 
-from app.api.v1.admin import (
+from app.api.v1.endpoints import chat, pending_recipes, recipes, users
+from app.api.v1.endpoints.admin import (
     pending_recipes as admin_pending_recipes,
     recipes as admin_recipes,
 )
-from app.api.v1.endpoints import chat, pending_recipes, recipes, users
 
 api_router = APIRouter()
 
