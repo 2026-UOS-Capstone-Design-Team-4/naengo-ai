@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
@@ -44,3 +45,19 @@ class RecipeResponse(RecipeBase):
 
     id: int = Field(validation_alias="recipe_id")
     author_type: Literal["ADMIN", "USER"]
+
+
+class RecipeListItemResponse(RecipeBase):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int = Field(validation_alias="recipe_id")
+    author_type: Literal["ADMIN", "USER"]
+    created_at: datetime | None = None
+    likes_count: int = 0
+    scrap_count: int = 0
+
+
+class RecipeListResponse(BaseModel):
+    items: list[RecipeListItemResponse]
+    next_cursor: str | None
+    has_next: bool
