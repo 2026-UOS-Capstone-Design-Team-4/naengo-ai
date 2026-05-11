@@ -1,8 +1,8 @@
 from collections.abc import Callable
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.crud.recipe import search_recipes_by_vector
 from app.db.session import SessionLocal
 from app.models.recipe import Recipe
 from app.services.embedding_service import EmbeddingService, embedding_service
@@ -21,7 +21,13 @@ class RecipeRetrievalService:
         db = self.session_factory()
         try:
             query_vector = self.embedder.embed_query(query)
-            return search_recipes_by_vector(db, query_vector, limit=limit)
+            stmt = (
+                select(Recipe)
+                .where(Recipe.is_active.is_(True), Recipe.embedding.is_not(None))
+                .order_by(Recipe.embedding.cosine_distance(query_vector))
+                .limit(limit)
+            )
+            return db.execute(stmt).scalars().all()
         finally:
             db.close()
 
