@@ -106,6 +106,7 @@ naengo-ai/
 ├── scripts/                 # DB 데이터 삽입 스크립트
 ├── tests/                   # 테스트 코드
 ├── .github/workflows/       # GitHub Actions CI/CD
+├── architecture.md          # 시스템 아키텍처 문서
 ├── Dockerfile               # uv 기반 최적화 빌드 설정
 ├── docker-compose.yml       # API 서버 오케스트레이션
 └── pyproject.toml           # 프로젝트 의존성 및 Ruff 설정
