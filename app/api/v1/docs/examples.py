@@ -70,3 +70,16 @@ USER_PROFILE_EXAMPLE = {
         "간단한 요리 위주로 추천해줘",
     ],
 }
+
+RECIPE_LIST_RESPONSE_EXAMPLE = {
+    "items": [
+        {
+            **RECIPE_EXAMPLE,
+            "created_at": "2026-04-01T09:00:00+09:00",
+            "likes_count": 42,
+            "scrap_count": 15,
+        }
+    ],
+    "next_cursor": "42_1",
+    "has_next": True,
+}
