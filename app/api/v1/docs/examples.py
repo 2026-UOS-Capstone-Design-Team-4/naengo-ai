@@ -13,10 +13,10 @@ RECIPE_EXAMPLE = {
     "ingredients": [INGREDIENT_EXAMPLE],
     "ingredients_raw": "김치 200g, 두부 1모, 돼지고기 100g",
     "instructions": [
-        "냄비에 기름을 두르고 돼지고기를 볶는다.",
-        "김치를 넣고 함께 볶는다.",
-        "물을 붓고 끓어오르면 두부를 넣는다.",
-        "간을 맞추고 5분 더 끓인다.",
+        "냄비에 기름을 두르고 돼지고기를 볶습니다.",
+        "김치를 넣고 함께 볶습니다.",
+        "물을 붓고 끓어오르면 두부를 넣습니다.",
+        "간을 맞추고 5분 더 끓입니다.",
     ],
     "servings": 2.0,
     "cooking_time": 20,
@@ -48,7 +48,7 @@ CHAT_MESSAGE_USER_EXAMPLE = {
 CHAT_MESSAGE_MODEL_EXAMPLE = {
     "message_id": 2,
     "role": "model",
-    "content": "김치와 두부로 만들 수 있는 김치두부찌개를 추천드려요!",
+    "content": "김치와 두부로 만들 수 있는 김치두부찌개를 추천드려요.",
     "recipes": [RECIPE_EXAMPLE],
     "created_at": "2026-04-29T12:00:05+09:00",
 }
@@ -56,7 +56,7 @@ CHAT_MESSAGE_MODEL_EXAMPLE = {
 USER_EXAMPLE = {
     "user_id": 1,
     "email": "user@naengo.com",
-    "nickname": "냉장고지킴이",
+    "nickname": "냉장고요리왕",
     "role": "USER",
     "is_active": True,
     "is_blocked": False,
@@ -64,5 +64,9 @@ USER_EXAMPLE = {
 }
 
 USER_PROFILE_EXAMPLE = {
-    "user_input": ["새우 알레르기 있어요", "매운 음식 좋아해요", "간단한 요리 위주로 해줘"],
+    "user_input": [
+        "새우 알레르기가 있어요",
+        "매운 음식을 좋아해요",
+        "간단한 요리 위주로 추천해줘",
+    ],
 }
