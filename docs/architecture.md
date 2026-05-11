@@ -255,29 +255,24 @@ User Prompt
 ## 10. 현재 API 목록
 
 ```
-GET  /api/v1/chat/rooms
-GET  /api/v1/chat/rooms/{room_id}
+GET    /api/v1/chat/rooms
+GET    /api/v1/chat/rooms/{room_id}
 DELETE /api/v1/chat/rooms/{room_id}
-POST /api/v1/chat/rooms
-POST /api/v1/chat/rooms/{room_id}
-GET  /api/v1/recipes?ids=1&ids=2
-GET  /api/v1/users/me
-PATCH /api/v1/users/me
-GET  /api/v1/users/me/profile
-PATCH /api/v1/users/me/profile
-GET  /api/v1/pending-recipes
-GET  /api/v1/pending-recipes/{pending_recipe_id}
-POST /api/v1/pending-recipes
+POST   /api/v1/chat/rooms
+POST   /api/v1/chat/rooms/{room_id}
+GET    /api/v1/recipes?sort=latest|likes&cursor=...&limit=20
+GET    /api/v1/recipes/by-ids?ids=1&ids=2
+GET    /api/v1/users/me
+PATCH  /api/v1/users/me
+GET    /api/v1/users/me/profile
+PATCH  /api/v1/users/me/profile
+GET    /api/v1/users/me/scraps?cursor=...&limit=20
+GET    /api/v1/pending-recipes
+GET    /api/v1/pending-recipes/{pending_recipe_id}
+POST   /api/v1/pending-recipes
 DELETE /api/v1/pending-recipes/{pending_recipe_id}
-GET  /api/v1/admin/recipes?video_url=...
-PATCH /api/v1/admin/pending-recipes/{pending_recipe_id}
-```
-
-추가 예정:
-
-```
-GET  /api/v1/recipes?sort=latest|likes&cursor=...&limit=20
-GET  /api/v1/users/me/scraps?cursor=...&limit=20
+GET    /api/v1/admin/recipes?video_url=...
+PATCH  /api/v1/admin/pending-recipes/{pending_recipe_id}
 ```
 
 ## 11. 설정과 환경변수
