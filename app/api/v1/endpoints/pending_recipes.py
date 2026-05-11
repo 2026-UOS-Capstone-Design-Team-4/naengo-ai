@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_current_user_id
 from app.api.v1.docs.pending_recipes import (
     DELETE_PENDING_RECIPE_DESCRIPTION,
     DELETE_PENDING_RECIPE_RESPONSES,
@@ -15,11 +16,9 @@ from app.api.v1.docs.pending_recipes import (
     POST_PENDING_RECIPE_RESPONSES,
     POST_PENDING_RECIPE_SUMMARY,
 )
-from app.core.config import TEMP_USER_ID
 from app.db.session import get_db
-from app.models.recipe import PendingRecipe
-from app.models.user import User
 from app.schemas.pending_recipe import PendingRecipeCreate, PendingRecipeResponse
+from app.services.pending_recipe_service import PendingRecipeService
 
 router = APIRouter()
 
@@ -31,13 +30,12 @@ router = APIRouter()
     response_model=list[PendingRecipeResponse],
     responses=GET_PENDING_RECIPES_RESPONSES,
 )
-def get_pending_recipes(db: Session = Depends(get_db)):
-    return (
-        db.query(PendingRecipe)
-        .filter(PendingRecipe.user_id == TEMP_USER_ID, PendingRecipe.is_active == True)  # noqa: E712
-        .order_by(PendingRecipe.created_at.desc())
-        .all()
-    )
+def get_pending_recipes(
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    pending_recipe_service = PendingRecipeService(db)
+    return pending_recipe_service.get_user_pending_recipes(current_user_id)
 
 
 @router.get(
@@ -47,15 +45,15 @@ def get_pending_recipes(db: Session = Depends(get_db)):
     response_model=PendingRecipeResponse,
     responses=GET_PENDING_RECIPE_RESPONSES,
 )
-def get_pending_recipe(pending_recipe_id: int, db: Session = Depends(get_db)):
-    pending = (
-        db.query(PendingRecipe)
-        .filter(
-            PendingRecipe.pending_recipe_id == pending_recipe_id,
-            PendingRecipe.user_id == TEMP_USER_ID,
-            PendingRecipe.is_active == True,  # noqa: E712
-        )
-        .first()
+def get_pending_recipe(
+    pending_recipe_id: int,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    pending_recipe_service = PendingRecipeService(db)
+    pending = pending_recipe_service.get_user_pending_recipe(
+        pending_recipe_id,
+        current_user_id,
     )
     if not pending:
         raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
@@ -70,32 +68,15 @@ def get_pending_recipe(pending_recipe_id: int, db: Session = Depends(get_db)):
     responses=POST_PENDING_RECIPE_RESPONSES,
     status_code=201,
 )
-def create_pending_recipe(body: PendingRecipeCreate, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.user_id == TEMP_USER_ID).first()
-    if not user:
+def create_pending_recipe(
+    body: PendingRecipeCreate,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    pending_recipe_service = PendingRecipeService(db)
+    pending = pending_recipe_service.create_pending_recipe(body, current_user_id)
+    if not pending:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
-    pending = PendingRecipe(
-        user_id=TEMP_USER_ID,
-        title=body.title,
-        content=body.content,
-        description=body.description,
-        ingredients=[i.model_dump() for i in body.ingredients] if body.ingredients else None,
-        ingredients_raw=body.ingredients_raw,
-        instructions=body.instructions,
-        servings=body.servings,
-        cooking_time=body.cooking_time,
-        calories=body.calories,
-        difficulty=body.difficulty,
-        category=body.category,
-        tags=body.tags,
-        tips=body.tips,
-        video_url=body.video_url,
-        image_url=body.image_url,
-    )
-    db.add(pending)
-    db.commit()
-    db.refresh(pending)
     return pending
 
 
@@ -105,19 +86,16 @@ def create_pending_recipe(body: PendingRecipeCreate, db: Session = Depends(get_d
     description=DELETE_PENDING_RECIPE_DESCRIPTION,
     responses=DELETE_PENDING_RECIPE_RESPONSES,
 )
-def delete_pending_recipe(pending_recipe_id: int, db: Session = Depends(get_db)):
-    pending = (
-        db.query(PendingRecipe)
-        .filter(
-            PendingRecipe.pending_recipe_id == pending_recipe_id,
-            PendingRecipe.user_id == TEMP_USER_ID,
-            PendingRecipe.is_active == True,  # noqa: E712
-        )
-        .first()
+def delete_pending_recipe(
+    pending_recipe_id: int,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    pending_recipe_service = PendingRecipeService(db)
+    deleted = pending_recipe_service.delete_user_pending_recipe(
+        pending_recipe_id,
+        current_user_id,
     )
-    if not pending:
+    if not deleted:
         raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
-
-    pending.is_active = False
-    db.commit()
     return {"message": "레시피가 삭제되었습니다."}
