@@ -52,7 +52,11 @@ class PendingRecipe(Base):
     __tablename__ = "pending_recipes"
 
     pending_recipe_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
     title = Column(String(255), nullable=False)
     description = Column(Text)
     content = Column(Text, nullable=False)
@@ -69,7 +73,7 @@ class PendingRecipe(Base):
     video_url = Column(String(512))
     image_url = Column(String(512))
     is_active = Column(BOOLEAN, nullable=False, default=True)
-    status = Column(String(20), nullable=False, default="PENDING")  # PENDING, APPROVED, REJECTED
+    status = Column(String(20), nullable=False, default="PENDING")
     admin_note = Column(Text)
     reviewed_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -84,7 +88,7 @@ class RecipeStats(Base):
     recipe_id = Column(
         Integer,
         ForeignKey("recipes.recipe_id", ondelete="CASCADE"),
-        primary_key=True
+        primary_key=True,
     )
     likes_count = Column(Integer, nullable=False, default=0)
     scrap_count = Column(Integer, nullable=False, default=0)
