@@ -176,7 +176,7 @@ AI 추천 개인화를 위한 사용자 취향 정보다.
 - `Like`, `Scrap`은 사용자-레시피 unique constraint를 갖는다.
 - `RecipeStats`는 레시피별 좋아요/스크랩 count를 저장한다.
 
-현재 API에는 social 기능이 노출되어 있지 않다.
+현재 좋아요/스크랩 추가·취소 API는 미구현 상태다.
 
 ## 7. 주요 유스케이스
 
@@ -261,7 +261,11 @@ DELETE /api/v1/chat/rooms/{room_id}
 POST   /api/v1/chat/rooms
 POST   /api/v1/chat/rooms/{room_id}
 GET    /api/v1/recipes?sort=latest|likes&cursor=...&limit=20
-GET    /api/v1/recipes/by-ids?ids=1&ids=2
+GET    /api/v1/recipes/{recipe_id}
+POST   /api/v1/recipes/{recipe_id}/likes
+DELETE /api/v1/recipes/{recipe_id}/likes
+POST   /api/v1/recipes/{recipe_id}/scraps
+DELETE /api/v1/recipes/{recipe_id}/scraps
 GET    /api/v1/users/me
 PATCH  /api/v1/users/me
 GET    /api/v1/users/me/profile
@@ -339,10 +343,9 @@ tests/
 
 ## 14. 다음 작업 우선순위
 
-1. 레시피 목록 API (커서 기반 페이지네이션, 최신순/좋아요순) 구현
-2. 북마크 목록 API (`GET /users/me/scraps`) 구현
-3. 핵심 API 테스트 추가
-4. 인증/인가 도입
+1. 레시피 단건 조회 / 좋아요·스크랩 API 구현 (Section 16 참고)
+2. 핵심 API 테스트 추가
+3. 인증/인가 도입
 
 ## 15. 레시피 목록 API 설계
 
@@ -407,7 +410,91 @@ GET /api/v1/users/me/scraps?cursor=...&limit=20
 - 엔드포인트: `app/api/v1/endpoints/recipes.py`
 - 스키마: `app/schemas/recipe.py` — `RecipeListResponse` 추가
 
-## 16. 코드 이관 기준
+## 16. 레시피 단건 조회 / 좋아요·스크랩 API 설계
+
+### 엔드포인트
+
+```
+GET    /api/v1/recipes/{recipe_id}           # 단건 상세 조회
+POST   /api/v1/recipes/{recipe_id}/likes     # 좋아요
+DELETE /api/v1/recipes/{recipe_id}/likes     # 좋아요 취소
+POST   /api/v1/recipes/{recipe_id}/scraps    # 스크랩
+DELETE /api/v1/recipes/{recipe_id}/scraps    # 스크랩 취소
+```
+
+기존 `GET /api/v1/recipes/by-ids`는 단건 조회로 대체한다.
+
+### 단건 조회 응답 (`RecipeDetailResponse`)
+
+목록 아이템과 동일한 구조에 사회적 정보를 포함한다.
+
+```json
+{
+  "id": 1,
+  "title": "...",
+  "likes_count": 42,
+  "scrap_count": 15,
+  "is_liked": true,
+  "is_scrapped": false,
+  ...
+}
+```
+
+### 좋아요·스크랩 응답 (`RecipeStatsResponse`)
+
+```json
+{ "likes_count": 43, "scrap_count": 16 }
+```
+
+| 상황 | 응답 |
+| --- | --- |
+| 성공 | `200` + 변경된 counts |
+| 레시피 없음 | `404` |
+| 이미 좋아요/스크랩 | `409` |
+| 없는 좋아요/스크랩 취소 요청 | `404` |
+
+### 기존 목록 API 변경
+
+`GET /api/v1/recipes`, `GET /api/v1/users/me/scraps` 응답에도 `is_liked`, `is_scrapped`를 추가한다.
+
+**효율적 조회 방식**: 목록 조회 후 `recipe_ids`를 IN 쿼리로 한 번에 확인해 N+1을 방지한다.
+
+```python
+liked_ids = {
+    row.recipe_id for row in
+    db.query(Like.recipe_id)
+    .filter(Like.user_id == user_id, Like.recipe_id.in_(recipe_ids))
+    .all()
+}
+```
+
+스크랩도 동일하게 처리한다.
+
+### RecipeStats 동기화
+
+`Recipe_Stats`의 count는 DB 트리거가 자동으로 관리하므로 서비스 레이어에서 직접 업데이트하지 않는다.
+
+- `Likes` INSERT → `trigger_likes_count`가 `likes_count += 1`
+- `Likes` DELETE → `trigger_likes_count`가 `likes_count -= 1`
+- `Scraps` INSERT → `trigger_scrap_count`가 `scrap_count += 1`
+- `Scraps` DELETE → `trigger_scrap_count`가 `scrap_count -= 1`
+
+서비스는 `Likes`/`Scraps` 행 추가·삭제만 담당하고 count 갱신은 트리거에 위임한다.
+
+### 스키마 변경
+
+- `RecipeListItemResponse`: `is_liked: bool = False`, `is_scrapped: bool = False` 추가
+- `RecipeDetailResponse`: `RecipeListItemResponse`를 재사용 (동일 구조)
+- `RecipeStatsResponse`: `likes_count`, `scrap_count` 신규 추가
+
+### 구현 위치
+
+- 서비스: `app/services/recipe_service.py` — `get_recipe`, `like`, `unlike`, `scrap`, `unscrap` 메서드 추가
+- 엔드포인트: `app/api/v1/endpoints/recipes.py` — 단건 조회 및 social 라우터 추가, `by-ids` 제거
+- 스키마: `app/schemas/recipe.py` — `is_liked`, `is_scrapped`, `RecipeStatsResponse` 추가
+- 문서: `app/api/v1/docs/recipes.py` — 단건 조회 및 social API 문서 추가
+
+## 17. 코드 이관 기준
 
 - 한 PR 또는 커밋은 하나의 기능 단위만 바꾼다.
 - 라우터의 public contract가 바뀌는 경우 API 문서와 테스트를 같이 수정한다.
