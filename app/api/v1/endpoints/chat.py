@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.agents.dependencies import RecipeDeps
 from app.agents.recipe_agent import recipe_agent
-from app.api.deps import get_current_user_id
+from app.api.v1.deps import get_current_user_id
 from app.api.v1.docs.chat import (
     CHAT_NEW_ROOM_DESCRIPTION,
     CHAT_NEW_ROOM_SUMMARY,

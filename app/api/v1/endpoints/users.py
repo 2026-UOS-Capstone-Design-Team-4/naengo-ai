@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user_id
+from app.api.v1.deps import get_current_user_id
 from app.api.v1.docs.users import (
     GET_ME_DESCRIPTION,
     GET_ME_RESPONSES,
