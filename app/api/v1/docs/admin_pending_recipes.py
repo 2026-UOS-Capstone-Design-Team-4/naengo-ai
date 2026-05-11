@@ -1,11 +1,4 @@
-from app.api.v1.docs.pending_recipes import PENDING_RECIPE_EXAMPLE
-
-PENDING_RECIPE_REVIEWED_EXAMPLE = {
-    **PENDING_RECIPE_EXAMPLE,
-    "status": "APPROVED",
-    "admin_note": "재료 구성과 조리 순서가 명확합니다. 승인합니다.",
-    "reviewed_at": "2026-05-06T10:00:00+09:00",
-}
+from app.api.v1.docs.examples import PENDING_RECIPE_REVIEWED_EXAMPLE
 
 PATCH_ADMIN_PENDING_RECIPE_SUMMARY = "[관리자] 제출 레시피 상태 수정"
 PATCH_ADMIN_PENDING_RECIPE_DESCRIPTION = r"""
