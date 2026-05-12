@@ -8,7 +8,6 @@ from scalar_fastapi import get_scalar_api_reference
 from app.api.v1.api import api_router
 from app.db.session import init_db
 
-# 로그 설정
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -16,38 +15,34 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    앱의 시작과 종료 시점에 실행되는 로직입니다.
+    애플리케이션 시작과 종료 시점에 필요한 작업을 수행합니다.
     """
-    # 1. 앱 시작 시 실행 (startup)
     try:
-        logger.info("데이터베이스를 초기화하는 중...")
-        # pgvector 확장 활성화 (vector 익스텐션이 필요할 때)
+        logger.info("데이터베이스를 초기화하는 중입니다.")
         init_db()
-
-        logger.info("데이터베이스 초기화 완료.")
+        logger.info("데이터베이스 초기화가 완료되었습니다.")
     except Exception as e:
-        logger.error(f"데이터베이스 초기화 중 에러 발생: {e}")
-        # DB 연결 실패 시 앱 실행을 중단하고 싶지 않다면 이대로 둡니다.
+        logger.error("데이터베이스 초기화 중 오류가 발생했습니다: %s", e)
 
     yield
 
-    # 2. 앱 종료 시 실행 (shutdown)
     logger.info("애플리케이션을 종료합니다.")
 
 
 app = FastAPI(
     title="냉고 AI API",
     description=(
-        "냉고(Naengo)는 냉장고 속 재료로 레시피를 추천해주는 AI 요리 어시스턴트입니다.\n\n"
+        "냉고(Naengo)는 냉장고 속 재료와 사용자 취향을 바탕으로 "
+        "레시피를 추천하는 AI 요리 어시스턴트입니다.\n\n"
         "## 주요 기능\n"
-        "- **채팅**: 재료를 입력하면 AI가 레시피를 추천 (SSE 스트리밍)\n"
-        "- **레시피**: 벡터 유사도 기반 레시피 검색\n"
-        "- **유저**: 사용자 정보 및 프로필 관리\n"
-        "- **레시피 제출**: 사용자가 직접 레시피를 작성해 제출 (관리자 검토 후 승인)\n"
-        "- **어드민**: 레시피 관리\n\n"
+        "- **채팅**: 재료와 상황을 입력하면 AI가 레시피를 추천합니다. 응답은 SSE로 스트리밍됩니다.\n"
+        "- **레시피**: 최신순/좋아요순 목록, 단건 상세, 좋아요, 스크랩 API를 제공합니다.\n"
+        "- **사용자**: 사용자 정보와 프로필 취향 입력을 관리합니다.\n"
+        "- **제출 레시피**: 사용자가 직접 레시피를 제출하고 관리자가 승인할 수 있습니다.\n"
+        "- **관리자**: 제출 레시피 검토와 정식 레시피 승격 흐름을 제공합니다.\n\n"
         "## 인증\n"
-        "> ⚠️ 현재 사용자 인증이 구현되어 있지 않습니다. "
-        "모든 API는 임시로 `user_id = 1` 사용자를 기준으로 동작합니다."
+        "> 현재 실제 사용자 인증은 구현되어 있지 않습니다. "
+        "모든 API는 임시로 `.env`의 `TEMP_USER_ID` 값을 현재 사용자로 사용합니다."
     ),
     version="0.1.0",
     docs_url=None,
@@ -56,33 +51,32 @@ app = FastAPI(
     openapi_tags=[
         {
             "name": "chat",
-            "description": "채팅방 관리 및 AI 레시피 추천 채팅. POST 엔드포인트는 SSE 스트리밍 방식으로 응답합니다.",
+            "description": "채팅방 관리와 AI 레시피 추천 채팅 API입니다. 메시지 전송은 SSE 스트리밍 방식으로 응답합니다.",
         },
         {
             "name": "recipes",
-            "description": "레시피 조회 API. ID 목록으로 레시피 데이터를 가져옵니다.",
+            "description": "레시피 목록/상세 조회, 좋아요, 스크랩 API입니다.",
         },
         {
             "name": "users",
-            "description": "사용자 정보 및 프로필 관리 API.",
+            "description": "사용자 정보, 프로필, 내 스크랩 레시피 조회 API입니다.",
         },
         {
             "name": "pending-recipes",
-            "description": "사용자가 제출한 레시피 관리 API. 제출된 레시피는 관리자 검토 후 승인됩니다.",
+            "description": "사용자가 제출한 레시피를 조회, 생성, 삭제하는 API입니다.",
         },
         {
             "name": "admin",
-            "description": "관리자 전용 API. 레시피 등록 전 중복 확인 등에 사용합니다.",
+            "description": "관리자 전용 API입니다. 제출 레시피 검토와 승인 승격에 사용합니다.",
         },
         {
             "name": "health",
-            "description": "서버 상태 확인 API.",
+            "description": "서버 상태 확인 API입니다.",
         },
     ],
 )
 
 
-# Scalar API Reference (더 예쁜 문서 도구)
 @app.get("/docs", include_in_schema=False)
 async def scalar_html():
     return get_scalar_api_reference(
@@ -91,7 +85,6 @@ async def scalar_html():
     )
 
 
-# CORS 설정 (프론트엔드 연결을 위해 모든 도메인 허용)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -100,13 +93,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 라우터 등록
 app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get(
     "/",
-    summary="헬스 체크",
+    summary="상태 체크",
     description="서버가 정상 동작 중인지 확인합니다.",
     tags=["health"],
     responses={
