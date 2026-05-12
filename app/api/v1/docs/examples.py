@@ -23,8 +23,8 @@ RECIPE_EXAMPLE = {
     "calories": 180,
     "difficulty": "easy",
     "category": ["한식", "찌개"],
-    "tags": ["얼큰한", "국물요리"],
-    "tips": ["김치는 충분히 익은 것을 사용해야 맛이 좋습니다."],
+    "tags": ["얼큰함", "국물요리"],
+    "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
     "video_url": "https://youtube.com/watch?v=example",
     "image_url": "https://example.com/image.jpg",
     "author_type": "ADMIN",
@@ -66,8 +66,8 @@ USER_EXAMPLE = {
 USER_PROFILE_EXAMPLE = {
     "user_input": [
         "새우 알레르기가 있어요",
-        "매운 음식을 좋아해요",
-        "간단한 요리 위주로 추천해줘",
+        "매운 한식을 좋아해요",
+        "간단한 요리 위주로 추천해주세요",
     ],
 }
 
@@ -75,10 +75,10 @@ PENDING_RECIPE_EXAMPLE = {
     "pending_recipe_id": 1,
     "title": "엄마한테 배운 김치찌개",
     "content": (
-        "묵은지를 쓰면 훨씬 맛있어요. 돼지고기는 앞다리살을 쓰고 "
-        "김치는 충분히 볶아야 칼칼한 맛이 납니다."
+        "묵은지를 쓰면 훨씬 맛있어요. 돼지고기는 앞다리살이 잘 어울리고 "
+        "김치는 충분히 볶아야 깊은 맛이 납니다."
     ),
-    "description": "집에서 해먹는 진짜 김치찌개",
+    "description": "집에서 자주 해먹는 진한 김치찌개",
     "ingredients": [
         {
             "name": "묵은지",
@@ -110,10 +110,10 @@ PENDING_RECIPE_EXAMPLE = {
     "calories": 320,
     "difficulty": "easy",
     "category": ["한식", "찌개"],
-    "tags": ["얼큰한", "국물요리", "밥도둑"],
+    "tags": ["얼큰함", "국물요리", "밥도둑"],
     "tips": [
         "김치는 묵은지를 써야 깊은 맛이 납니다.",
-        "돼지고기는 앞다리살이 잘 어울립니다.",
+        "돼지고기는 앞다리살이나 목살이 잘 어울립니다.",
     ],
     "video_url": "https://youtube.com/watch?v=example",
     "image_url": "https://example.com/kimchi-jjigae.jpg",

@@ -4,8 +4,8 @@ GET_PENDING_RECIPES_SUMMARY = "제출 레시피 목록 조회"
 GET_PENDING_RECIPES_DESCRIPTION = r"""
 현재 사용자가 제출한 레시피 목록을 반환합니다.
 
-- 삭제된 레시피(`is_active = false`)는 제외됩니다.
-- 최신순(`created_at` 내림차순)으로 반환됩니다.
+- 삭제 처리된 레시피(`is_active = false`)는 제외합니다.
+- 최신순(`created_at` 내림차순)으로 반환합니다.
 """
 
 GET_PENDING_RECIPES_RESPONSES = {
@@ -20,7 +20,7 @@ GET_PENDING_RECIPE_DESCRIPTION = r"""
 제출한 레시피 하나를 조회합니다.
 
 - 본인이 제출한 레시피만 조회할 수 있습니다.
-- 삭제된 레시피는 조회할 수 없습니다.
+- 삭제 처리된 레시피는 조회할 수 없습니다.
 """
 
 GET_PENDING_RECIPE_RESPONSES = {
@@ -34,31 +34,17 @@ GET_PENDING_RECIPE_RESPONSES = {
 POST_PENDING_RECIPE_SUMMARY = "레시피 제출"
 POST_PENDING_RECIPE_DESCRIPTION = r"""
 사용자가 작성한 레시피를 제출합니다.
-제출된 레시피는 관리자 검토 후 승인 또는 거절됩니다.
 
-- `title`과 `content`는 필수입니다.
-- 나머지 필드는 선택입니다.
-- 제출 직후 `status`는 `PENDING`으로 설정됩니다.
+제출된 레시피는 `PENDING` 상태로 저장되고, 관리자가 검토 후 승인하거나 거절합니다.
 
-**요청 필드**:
+**필수 필드**:
 
-| 필드 | 타입 | 필수 | 설명 |
-|------|------|------|------|
-| `title` | string | 예 | 레시피 제목 |
-| `content` | string | 예 | 자유 형식 레시피 본문 |
-| `description` | string \| null | 아니오 | 한 줄 설명 |
-| `ingredients` | IngredientItem[] \| null | 아니오 | 재료 목록 |
-| `ingredients_raw` | string \| null | 아니오 | 재료 원문 텍스트 |
-| `instructions` | string[] \| null | 아니오 | 조리 순서 |
-| `servings` | float \| null | 아니오 | 인분 수 |
-| `cooking_time` | int \| null | 아니오 | 조리 시간(분) |
-| `calories` | int \| null | 아니오 | 칼로리(kcal) |
-| `difficulty` | string \| null | 아니오 | 난이도 (`easy` / `normal` / `hard`) |
-| `category` | string[] \| null | 아니오 | 카테고리 |
-| `tags` | string[] \| null | 아니오 | 태그 |
-| `tips` | string[] \| null | 아니오 | 조리 팁 |
-| `video_url` | string \| null | 아니오 | YouTube 영상 URL |
-| `image_url` | string \| null | 아니오 | 이미지 URL |
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `title` | string | 레시피 제목 |
+| `content` | string | 자유 형식 레시피 본문 |
+
+나머지 구조화 필드는 선택값입니다. 다만 관리자가 `APPROVED`로 승인하려면 정식 레시피 생성에 필요한 필드가 채워져 있어야 합니다.
 """
 
 POST_PENDING_RECIPE_RESPONSES = {

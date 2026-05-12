@@ -12,24 +12,18 @@ GET_RECIPES_DESCRIPTION = r"""
 
 | `sort` 값 | 설명 |
 |-----------|------|
-| `latest` | 최신순 (기본값) |
-| `likes` | 좋아요 많은순 |
+| `latest` | 최신순. 기본값입니다. |
+| `likes` | 좋아요 많은 순입니다. |
 
 **쿼리 파라미터**:
 
 | 파라미터 | 타입 | 기본값 | 설명 |
 |----------|------|--------|------|
 | `sort` | string | `latest` | 정렬 기준 |
-| `cursor` | string | 없음 | 이전 응답의 `next_cursor` 값 (첫 페이지는 생략) |
-| `limit` | int | `20` | 한 번에 가져올 개수 (최대 100) |
+| `cursor` | string | 없음 | 이전 응답의 `next_cursor` 값 |
+| `limit` | int | `20` | 한 번에 가져올 개수. 최대 100개입니다. |
 
-**응답 필드**:
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `items` | Recipe[] | 레시피 목록 |
-| `next_cursor` | string \| null | 다음 페이지 커서 (`null`이면 마지막 페이지) |
-| `has_next` | bool | 다음 페이지 존재 여부 |
+응답의 각 레시피에는 현재 사용자 기준 `is_liked`, `is_scrapped`가 포함됩니다.
 """
 
 GET_RECIPES_RESPONSES = {
@@ -41,10 +35,10 @@ GET_RECIPES_RESPONSES = {
 
 GET_RECIPE_SUMMARY = "레시피 단건 조회"
 GET_RECIPE_DESCRIPTION = r"""
-레시피 ID로 레시피 상세 정보를 조회합니다.
+레시피 ID로 상세 정보를 조회합니다.
 
-- 삭제된 레시피는 조회할 수 없습니다.
-- 현재 사용자의 좋아요(`is_liked`) 및 스크랩(`is_scrapped`) 여부를 함께 반환합니다.
+- 삭제되었거나 비활성화된 레시피는 조회되지 않습니다.
+- 현재 사용자 기준 좋아요 여부(`is_liked`)와 스크랩 여부(`is_scrapped`)를 함께 반환합니다.
 """
 
 GET_RECIPE_RESPONSES = {
@@ -60,7 +54,7 @@ POST_LIKE_DESCRIPTION = r"""
 레시피에 좋아요를 추가합니다.
 
 - 이미 좋아요를 누른 경우 `409`를 반환합니다.
-- 성공 시 업데이트된 좋아요·스크랩 수를 반환합니다.
+- 성공하면 변경된 좋아요/스크랩 집계를 반환합니다.
 """
 
 POST_LIKE_RESPONSES = {
@@ -77,7 +71,7 @@ DELETE_LIKE_DESCRIPTION = r"""
 레시피 좋아요를 취소합니다.
 
 - 좋아요를 누르지 않은 경우 `409`를 반환합니다.
-- 성공 시 업데이트된 좋아요·스크랩 수를 반환합니다.
+- 성공하면 변경된 좋아요/스크랩 집계를 반환합니다.
 """
 
 DELETE_LIKE_RESPONSES = {
@@ -91,10 +85,10 @@ DELETE_LIKE_RESPONSES = {
 
 POST_SCRAP_SUMMARY = "레시피 스크랩"
 POST_SCRAP_DESCRIPTION = r"""
-레시피를 스크랩(북마크)합니다.
+레시피를 스크랩 목록에 추가합니다.
 
 - 이미 스크랩한 경우 `409`를 반환합니다.
-- 성공 시 업데이트된 좋아요·스크랩 수를 반환합니다.
+- 성공하면 변경된 좋아요/스크랩 집계를 반환합니다.
 """
 
 POST_SCRAP_RESPONSES = {
@@ -111,7 +105,7 @@ DELETE_SCRAP_DESCRIPTION = r"""
 레시피 스크랩을 취소합니다.
 
 - 스크랩하지 않은 경우 `409`를 반환합니다.
-- 성공 시 업데이트된 좋아요·스크랩 수를 반환합니다.
+- 성공하면 변경된 좋아요/스크랩 집계를 반환합니다.
 """
 
 DELETE_SCRAP_RESPONSES = {
