@@ -1,26 +1,37 @@
 import json
+import logging
 import os
 import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+sys.path.append(PROJECT_ROOT)
 
-from openai import OpenAI
+from openai import OpenAI  # noqa: E402
 
-from app.core import config
-from app.db.session import SessionLocal
-from app.models.chat import ChatMessage, ChatRoom  # noqa
-from app.models.recipe import PendingRecipe, Recipe, RecipeStats  # noqa
-from app.models.social import Like, Scrap  # noqa
-from app.models.user import User, UserProfile  # noqa
+from app.core import config  # noqa: E402
+from app.db.session import SessionLocal  # noqa: E402
+from app.models.chat import ChatMessage, ChatRoom  # noqa: E402, F401
+from app.models.recipe import PendingRecipe, Recipe, RecipeStats  # noqa: E402, F401
+from app.models.social import Like, Scrap  # noqa: E402, F401
+from app.models.user import User, UserProfile  # noqa: E402, F401
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-JSON_FILE_PATH = os.path.join(BASE_DIR, "recipe.json")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+JSON_FILE_PATH = os.path.join(
+    PROJECT_ROOT,
+    "db",
+    "samples",
+    "legacy_youtube_recipes.json",
+)
 
 client = OpenAI(api_key=config.EMBEDDING_API_KEY)
 
 
 def build_embedding_text(recipe: dict) -> str:
-    difficulty_map = {"easy": "쉬움", "normal": "보통", "hard": "어려움"}
+    difficulty_map = {"easy": "easy", "normal": "normal", "hard": "hard"}
 
     title = recipe.get("title", "")
     description = recipe.get("description", "")
@@ -34,26 +45,27 @@ def build_embedding_text(recipe: dict) -> str:
 
     parts = []
     if title:
-        parts.append(f"{title} 레시피입니다.")
+        parts.append(f"{title} recipe.")
     if category:
-        parts.append(f"카테고리: {', '.join(category)}.")
+        parts.append(f"Categories: {', '.join(category)}.")
     if description:
         parts.append(description)
     if ingredients_raw:
-        parts.append(f"주재료는 {ingredients_raw}입니다.")
+        parts.append(f"Ingredients: {ingredients_raw}.")
     if servings:
-        parts.append(f"{servings}인분 요리입니다.")
+        parts.append(f"Servings: {servings}.")
     if cooking_time:
-        parts.append(f"조리 시간은 약 {cooking_time}분입니다.")
+        parts.append(f"Cooking time: about {cooking_time} minutes.")
     if difficulty:
-        parts.append(f"난이도는 {difficulty}입니다.")
+        parts.append(f"Difficulty: {difficulty}.")
     if tags:
-        parts.append(f"태그: {', '.join(tags)}.")
+        parts.append(f"Tags: {', '.join(tags)}.")
     if tips:
-        parts.append(f"조리 팁: {' '.join(tips)}")
+        parts.append(f"Tips: {' '.join(tips)}")
 
-    print(f"🔍 임베딩 텍스트 생성:\n{' '.join(parts)}\n")
-    return " ".join(parts)
+    text = " ".join(parts)
+    logger.info("Embedding text generated:\n%s\n", text)
+    return text
 
 
 def get_embedding(recipe: dict) -> list[float]:
@@ -62,19 +74,19 @@ def get_embedding(recipe: dict) -> list[float]:
     return response.data[0].embedding
 
 
-def upsert_recipes():
+def import_legacy_youtube_recipes():
     if not os.path.exists(JSON_FILE_PATH):
-        print(f"❌ {JSON_FILE_PATH} 파일이 존재하지 않습니다.")
+        logger.error("%s does not exist.", JSON_FILE_PATH)
         return
 
     with open(JSON_FILE_PATH, encoding="utf-8") as f:
         try:
             recipes_list = json.load(f)
             if not isinstance(recipes_list, list):
-                print("❌ JSON 파일은 배열([]) 형식이어야 합니다.")
+                logger.error("The JSON file must contain an array.")
                 return
-        except json.JSONDecodeError as e:
-            print(f"❌ JSON 파싱 에러: {e}")
+        except json.JSONDecodeError:
+            logger.exception("Failed to parse JSON.")
             return
 
     db = SessionLocal()
@@ -82,7 +94,6 @@ def upsert_recipes():
     skip_count = 0
     fail_count = 0
 
-    # JSON 내 video_url 중복 체크
     url_counts: dict[str, int] = {}
     for data in recipes_list:
         url = data.get("video_url")
@@ -90,34 +101,30 @@ def upsert_recipes():
             url_counts[url] = url_counts.get(url, 0) + 1
     duplicates = {url: cnt for url, cnt in url_counts.items() if cnt > 1}
     if duplicates:
-        print(f"⚠️  JSON 내 중복 video_url {len(duplicates)}개 발견:")
+        logger.warning("Found %s duplicate video_url values in JSON.", len(duplicates))
         for url, cnt in duplicates.items():
-            print(f"   - {url} ({cnt}회)")
+            logger.warning("Duplicate video_url: %s (%s)", url, cnt)
 
-    print(f"🚀 {len(recipes_list)}개의 레시피 처리를 시작합니다...")
+    logger.info("Processing %s legacy YouTube recipes.", len(recipes_list))
 
     try:
-        # DB의 video_url을 한 번에 조회해서 set으로 만들기
         existing_urls: set[str] = {
             row[0] for row in db.query(Recipe.video_url).all() if row[0]
         }
-        print(f"  📦 DB에 기존 레시피 {len(existing_urls)}개 확인됨")
+        logger.info("Found %s existing recipe video URLs.", len(existing_urls))
 
         for data in recipes_list:
             video_url = data.get("video_url")
-            title = data.get("title", "제목 없음")
+            title = data.get("title", "Untitled")
 
             try:
-                # video_url 중복 체크
                 if video_url in existing_urls:
                     skip_count += 1
                     continue
 
-                # 임베딩 생성
-                print(f"  - 🔄 임베딩 생성 중: '{title}'")
+                logger.info("Creating embedding for '%s'.", title)
                 embedding = get_embedding(data)
 
-                # DB 삽입
                 new_recipe = Recipe(
                     title=title,
                     description=data.get("description"),
@@ -142,25 +149,25 @@ def upsert_recipes():
                 existing_urls.add(video_url)
 
                 insert_count += 1
-                print(f"  - ✅ 추가 완료: '{title}'")
+                logger.info("Inserted '%s'.", title)
 
-            except Exception as e:
+            except Exception:
                 db.rollback()
-                print(f"  - ❌ 실패: '{title}' ({e})")
+                logger.exception("Failed to import '%s'.", title)
                 fail_count += 1
 
-    except Exception as e:
-        print(f"🚨 중대한 에러 발생: {e}")
+    except Exception:
+        logger.exception("Fatal error while importing legacy YouTube recipes.")
     finally:
         db.close()
 
-    print("\n" + "=" * 30)
-    print("✨ 완료!")
-    print(f"✅ 추가: {insert_count}개")
-    print(f"⏭️  스킵: {skip_count}개")
-    print(f"❌ 실패: {fail_count}개")
-    print("=" * 30)
+    logger.info("=" * 30)
+    logger.info("Done.")
+    logger.info("Inserted: %s", insert_count)
+    logger.info("Skipped: %s", skip_count)
+    logger.info("Failed: %s", fail_count)
+    logger.info("=" * 30)
 
 
 if __name__ == "__main__":
-    upsert_recipes()
+    import_legacy_youtube_recipes()
