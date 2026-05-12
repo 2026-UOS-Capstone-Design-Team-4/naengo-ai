@@ -1,0 +1,50 @@
+# Naengo AI Docs
+
+프로젝트 상세 설계 문서의 시작점입니다.
+
+## Architecture
+
+- [00. Architecture Overview](architecture/00-overview.md)
+- [Data Ingestion](architecture/data-ingestion/00-overview.md)
+- [API](architecture/api/00-overview.md)
+- [Database](architecture/database/00-schema.md)
+- [Admin Review](architecture/admin-review/00-overview.md)
+- [AI Agent](architecture/ai-agent/00-overview.md)
+- [Live Research](architecture/live-research/00-overview.md)
+- [Background Jobs](architecture/background-jobs/00-overview.md)
+
+## Reading Order
+
+1. [Root Architecture](../architecture.md)
+2. [Architecture Overview](architecture/00-overview.md)
+3. [API Overview](architecture/api/00-overview.md)
+4. [User API](architecture/api/01-user-api.md)
+5. [Admin API](architecture/api/02-admin-api.md)
+6. [Internal API](architecture/api/03-internal-api.md)
+7. [Auth and Permissions](architecture/api/04-auth-and-permissions.md)
+8. [Error Response](architecture/api/05-error-response.md)
+9. [Data Ingestion Overview](architecture/data-ingestion/00-overview.md)
+10. [Data Ingestion Schema](architecture/data-ingestion/01-schema.md)
+11. [Data Ingestion Pipeline](architecture/data-ingestion/02-pipeline.md)
+12. [Image Storage](architecture/data-ingestion/03-images.md)
+13. [Scraper Operations](architecture/data-ingestion/04-scraper-operations.md)
+14. [AI Image Generation](architecture/data-ingestion/05-ai-image-generation.md)
+15. [Database Schema](architecture/database/00-schema.md)
+16. [Admin Review Overview](architecture/admin-review/00-overview.md)
+17. [Recipe Source Review](architecture/admin-review/01-recipe-source-review.md)
+18. [Review API](architecture/admin-review/02-review-api.md)
+19. [Import Actions](architecture/admin-review/03-import-actions.md)
+20. [Pending Recipe Enrichment](architecture/admin-review/04-pending-recipe-enrichment.md)
+21. [AI Agent Overview](architecture/ai-agent/00-overview.md)
+22. [AI Intent Analysis](architecture/ai-agent/01-intent-analysis.md)
+23. [AI Agent Service](architecture/ai-agent/02-agent-service.md)
+24. [AI Retrieval Planning](architecture/ai-agent/03-retrieval-planning.md)
+25. [AI Streaming Events](architecture/ai-agent/04-streaming-events.md)
+26. [AI Testing Strategy](architecture/ai-agent/05-testing-strategy.md)
+27. [Live Research Overview](architecture/live-research/00-overview.md)
+28. [Live Research Source Policy](architecture/live-research/01-source-policy.md)
+29. [Live Research Flow](architecture/live-research/02-research-flow.md)
+30. [Live Research Agent Integration](architecture/live-research/03-agent-integration.md)
+31. [Live Research Safety and Caching](architecture/live-research/04-safety-and-caching.md)
+32. [Database Migration Strategy](architecture/database/01-migration-strategy.md)
+33. [Background Jobs Overview](architecture/background-jobs/00-overview.md)
