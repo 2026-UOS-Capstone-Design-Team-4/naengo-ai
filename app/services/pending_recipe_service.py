@@ -1,8 +1,10 @@
+import hashlib
 from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from app.models.recipe import PendingRecipe, Recipe, RecipeStats
+from app.core.config import EMBEDDING_MODEL
+from app.models.recipe import PendingRecipe, Recipe, RecipeEmbedding, RecipeMedia
 from app.models.user import User
 from app.schemas.pending_recipe import PendingRecipeAdminUpdate, PendingRecipeCreate
 from app.services.embedding_service import embedding_service
@@ -19,10 +21,7 @@ class PendingRecipeService:
     def get_user_pending_recipes(self, user_id: int) -> list[PendingRecipe]:
         return (
             self.db.query(PendingRecipe)
-            .filter(
-                PendingRecipe.user_id == user_id,
-                PendingRecipe.is_active.is_(True),
-            )
+            .filter(PendingRecipe.user_id == user_id)
             .order_by(PendingRecipe.created_at.desc())
             .all()
         )
@@ -37,7 +36,6 @@ class PendingRecipeService:
             .filter(
                 PendingRecipe.pending_recipe_id == pending_recipe_id,
                 PendingRecipe.user_id == user_id,
-                PendingRecipe.is_active.is_(True),
             )
             .first()
         )
@@ -87,7 +85,7 @@ class PendingRecipeService:
         if not pending:
             return False
 
-        pending.is_active = False
+        pending.status = "REJECTED"
         self.db.commit()
         return True
 
@@ -99,7 +97,6 @@ class PendingRecipeService:
             self.db.query(PendingRecipe)
             .filter(
                 PendingRecipe.pending_recipe_id == pending_recipe_id,
-                PendingRecipe.is_active.is_(True),
             )
             .first()
         )
@@ -162,13 +159,18 @@ class PendingRecipeService:
 
         recipe_payload = self._pending_to_recipe_payload(pending)
         embedding_text = self._build_embedding_text(recipe_payload)
-        recipe = Recipe(
-            **recipe_payload,
-            embedding=embedding_service.embed_query(embedding_text),
-        )
+        recipe = Recipe(**recipe_payload)
         self.db.add(recipe)
         self.db.flush()
-        self.db.add(RecipeStats(recipe_id=recipe.recipe_id))
+        self.db.add(
+            RecipeEmbedding(
+                recipe_id=recipe.recipe_id,
+                embedding_type="RECIPE_SEARCH",
+                model=EMBEDDING_MODEL,
+                content_hash=hashlib.sha256(embedding_text.encode()).hexdigest(),
+                embedding=embedding_service.embed_query(embedding_text),
+            )
+        )
 
     def _get_missing_recipe_fields(self, pending: PendingRecipe) -> list[str]:
         required_fields = [
@@ -188,8 +190,9 @@ class PendingRecipeService:
         if pending.video_url:
             return (
                 self.db.query(Recipe)
+                .join(RecipeMedia, Recipe.recipe_id == RecipeMedia.recipe_id)
                 .filter(
-                    Recipe.video_url == pending.video_url,
+                    RecipeMedia.storage_url == pending.video_url,
                     Recipe.author_type == "USER",
                     Recipe.author_id == pending.user_id,
                 )
@@ -201,7 +204,7 @@ class PendingRecipeService:
                 Recipe.title == pending.title,
                 Recipe.author_type == "USER",
                 Recipe.author_id == pending.user_id,
-                Recipe.content == pending.content,
+                Recipe.summary == pending.content,
             )
             .first()
         )
@@ -211,16 +214,15 @@ class PendingRecipeService:
             "title": pending.title,
             "description": pending.description,
             "ingredients": pending.ingredients,
-            "ingredients_raw": pending.ingredients_raw,
             "instructions": pending.instructions,
             "servings": pending.servings,
-            "cooking_time": pending.cooking_time,
+            "total_time_minutes": pending.cooking_time,
             "calories": pending.calories,
             "difficulty": pending.difficulty,
-            "category": pending.category,
+            "category": pending.category or [],
             "tags": pending.tags or [],
             "tips": pending.tips or [],
-            "content": pending.content,
+            "summary": pending.content,
             "video_url": pending.video_url,
             "image_url": pending.image_url,
             "author_type": "USER",
@@ -231,13 +233,13 @@ class PendingRecipeService:
         parts = [
             recipe["title"],
             recipe["description"],
-            recipe["ingredients_raw"],
+            " ".join(item.get("name", "") for item in recipe.get("ingredients") or []),
             " ".join(recipe["category"] or []),
             " ".join(recipe["tags"] or []),
             " ".join(recipe["tips"] or []),
         ]
-        if recipe["cooking_time"]:
-            parts.append(f"{recipe['cooking_time']} minutes")
+        if recipe["total_time_minutes"]:
+            parts.append(f"{recipe['total_time_minutes']} minutes")
         if recipe["difficulty"]:
             parts.append(recipe["difficulty"])
         return " ".join(str(part) for part in parts if part)
