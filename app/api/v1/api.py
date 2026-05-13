@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import chat, pending_recipes, recipes, users
 from app.api.v1.endpoints.admin import (
     pending_recipes as admin_pending_recipes,
+    recipe_sources as admin_recipe_sources,
     recipes as admin_recipes,
 )
 
@@ -20,5 +21,10 @@ api_router.include_router(admin_recipes.router, prefix="/admin/recipes", tags=["
 api_router.include_router(
     admin_pending_recipes.router,
     prefix="/admin/pending-recipes",
+    tags=["admin"],
+)
+api_router.include_router(
+    admin_recipe_sources.router,
+    prefix="/admin/recipe-sources",
     tags=["admin"],
 )
