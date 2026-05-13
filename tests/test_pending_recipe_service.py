@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
-from app.models.recipe import PendingRecipe, Recipe, RecipeStats
+from app.models.recipe import PendingRecipe, Recipe, RecipeEmbedding
 from app.models.social import Like, Scrap  # noqa: F401
 from app.models.user import User, UserProfile  # noqa: F401
 from app.schemas.pending_recipe import PendingRecipeAdminUpdate
@@ -129,10 +129,10 @@ def test_promote_to_recipe_creates_recipe_stats_and_embedding(monkeypatch):
     service._promote_to_recipe(pending)
 
     recipe = next(item for item in db.added if isinstance(item, Recipe))
-    stats = next(item for item in db.added if isinstance(item, RecipeStats))
+    embedding = next(item for item in db.added if isinstance(item, RecipeEmbedding))
     assert recipe.title == pending.title
     assert recipe.author_type == "USER"
     assert recipe.author_id == pending.user_id
-    assert recipe.embedding == [0.1, 0.2, 0.3]
-    assert stats.recipe_id == 123
+    assert embedding.recipe_id == 123
+    assert embedding.embedding == [0.1, 0.2, 0.3]
     assert db.flushed is True
