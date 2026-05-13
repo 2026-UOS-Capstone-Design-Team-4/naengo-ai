@@ -37,21 +37,21 @@ class RecipeBase(BaseModel):
 
 class RecipeSchema(RecipeBase):
     content: str | None = None
-    author_type: Literal["ADMIN", "USER"] = "ADMIN"
+    author_type: Literal["ADMIN", "USER", "SOURCE"] = "ADMIN"
 
 
 class RecipeResponse(RecipeBase):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int = Field(validation_alias="recipe_id")
-    author_type: Literal["ADMIN", "USER"]
+    author_type: Literal["ADMIN", "USER", "SOURCE"]
 
 
 class RecipeListItemResponse(RecipeBase):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int = Field(validation_alias="recipe_id")
-    author_type: Literal["ADMIN", "USER"]
+    author_type: Literal["ADMIN", "USER", "SOURCE"]
     created_at: datetime | None = None
     likes_count: int = 0
     scrap_count: int = 0
