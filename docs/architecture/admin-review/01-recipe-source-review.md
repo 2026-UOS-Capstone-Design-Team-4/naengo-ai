@@ -1,6 +1,6 @@
 # 01. Recipe Source Review
 
-관리자는 `recipe_sources`의 raw/normalized 데이터를 비교하고, 정식 레시피로 올릴지 결정한다.
+관리자는 `recipe_sources`의 원본과 `recipe_source_extractions*`의 파싱 후보를 비교하고, 정식 레시피로 import할지 결정합니다.
 
 ## Review List
 
@@ -11,9 +11,12 @@
 - `source_site`
 - `source_url`
 - `source_author_name`
-- `status`
-- `title` from `normalized_payload`
-- `content_hash`
+- `collection_status`
+- `parse_status`
+- `review_status`
+- `import_status`
+- `title` from `recipe_source_extractions`
+- `raw_content_hash`
 - `validation_errors`
 - `collected_at`
 - `parsed_at`
@@ -21,7 +24,10 @@
 
 필터:
 
-- status
+- collection status
+- parse status
+- review status
+- import status
 - source site
 - parser type
 - collected date
@@ -38,14 +44,15 @@
 
 상세 화면에서 필요한 정보:
 
-- raw payload
-- normalized payload
-- source metadata
-- normalized metadata
+- `recipe_sources.raw_payload`
+- `recipe_source_extractions`
+- `recipe_source_extracted_ingredients`
+- `recipe_source_extracted_steps`
+- `recipe_source_extracted_labels`
 - validation errors
-- 중복 후보
-- 이미지 원본 URL
-- S3 업로드 결과
+- duplicate candidates
+- source image URLs
+- media upload result
 - import preview
 
 ## Editable Fields
@@ -53,31 +60,27 @@
 관리자가 import 전에 수정할 수 있는 값:
 
 - `title`
+- `subtitle`
 - `summary`
 - `description`
-- `ingredients`
-- `ingredients_raw`
-- `steps`
 - `servings`
-- `cooking_time`
+- `prep_time_minutes`
+- `cook_time_minutes`
+- `total_time_minutes`
+- `calories`
 - `difficulty`
-- `category`
-- `tags`
-- `tips`
-- `cuisine_type`
-- `dish_type`
-- `cooking_method`
-- `main_ingredients`
-- `taste_keywords`
-- `image_url`
-- `thumbnail_url`
-- `image_urls`
+- `difficulty_score`
+- ingredients
+- steps
+- labels
+- classifications
+- source image URLs
 
-수정 결과는 `recipe_sources.normalized_payload`, `normalized_metadata`에 반영한다.
+수정 결과는 `recipe_source_extractions*` 테이블에 반영합니다. `raw_payload`는 원본 백업이므로 수정하지 않습니다.
 
 ## Duplicate Review
 
-중복 후보는 아래 정보를 함께 보여준다.
+중복 후보는 아래 정보를 함께 보여줍니다.
 
 - 기존 `recipe_id`
 - 제목
@@ -89,7 +92,7 @@
 관리자 선택:
 
 - `REJECTED`: 새 데이터를 버림
-- `READY`: 중복이 아니라고 판단하고 import
-- `MERGED`: 기존 recipe에 일부 metadata만 병합
+- `APPROVED`: 중복이 아니라고 판단하고 import 허용
+- `MERGED`: 기존 recipe에 일부 정보만 병합
 
-초기 구현에서는 `MERGED`는 보류하고 `REJECTED` 또는 `READY`만 지원한다.
+초기 구현에서는 `MERGED`는 보류하고 `REJECTED` 또는 `APPROVED`만 지원합니다.

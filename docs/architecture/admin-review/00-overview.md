@@ -1,45 +1,56 @@
 # 00. Admin Review Overview
 
-Admin Review는 `recipe_sources`에 수집된 외부 레시피 데이터를 사람이 확인하고 정식 `recipes`로 승격하는 운영 흐름이다.
+Admin Review는 `recipe_sources`에 수집된 외부 레시피 데이터를 사람이 확인하고 정식 `recipes`로 승격하는 운영 흐름입니다.
 
 ## Why
 
-스크래핑 데이터는 바로 서비스에 노출하기 어렵다.
+스크래핑 데이터는 바로 서비스에 노출하기 어렵습니다.
 
-- 필수 필드가 빠질 수 있음
-- 중복일 수 있음
-- 카테고리/난이도 정규화가 틀릴 수 있음
+- 필수 필드가 비어 있을 수 있음
+- 중복 데이터가 있을 수 있음
+- 카테고리, 태그, 시간 같은 값의 정규화가 덜 되어 있음
 - 이미지 S3 업로드가 실패할 수 있음
 - 원문 문구나 이미지 권리 확인이 필요할 수 있음
 
-따라서 `READY` 데이터는 자동 import할 수 있지만, `REVIEW_REQUIRED`, `INVALID`, `DUPLICATE`는 관리자 검수 흐름이 필요하다.
+따라서 수집과 파싱은 자동화하되, 서비스 노출 전 검수 상태를 분리합니다.
 
 ## Target Flow
 
 ```text
 recipe_sources
+  -> parse into recipe_source_extractions*
   -> admin list/detail
-  -> edit normalized payload
-  -> approve / reject / mark duplicate / retry
-  -> import to recipes
+  -> edit extraction staging values
+  -> approve / reject
+  -> import to recipes*
 ```
 
 ## Status Flow
 
+상태는 하나의 `status` 컬럼에 몰아넣지 않고 단계별로 분리합니다.
+
 ```text
-COLLECTED
-  -> PARSED
-  -> READY
-      -> IMPORTED
-  -> REVIEW_REQUIRED
-      -> READY
-      -> REJECTED
-  -> INVALID
-      -> REVIEW_REQUIRED
-      -> REJECTED
-  -> DUPLICATE
-      -> REJECTED
-      -> READY
+collection_status
+  COLLECTED | FAILED | SKIPPED
+
+parse_status
+  NOT_PARSED | PARSED | INVALID | DUPLICATE | REVIEW_REQUIRED
+
+review_status
+  PENDING | APPROVED | REJECTED
+
+import_status
+  NOT_IMPORTED | IMPORTED | FAILED
+```
+
+예시:
+
+```text
+COLLECTED + PARSED + PENDING + NOT_IMPORTED
+  -> admin approves
+COLLECTED + PARSED + APPROVED + NOT_IMPORTED
+  -> import
+COLLECTED + PARSED + APPROVED + IMPORTED
 ```
 
 ## Subdocuments

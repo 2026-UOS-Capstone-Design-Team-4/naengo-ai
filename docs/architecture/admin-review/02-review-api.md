@@ -1,6 +1,6 @@
 # 02. Review API
 
-Admin Review API는 `recipe_sources` 검수와 import action을 제공합니다. AI 이미지 재생성도 관리자 액션으로 둡니다.
+Admin Review API는 수집된 `recipe_sources`와 추출 staging 데이터를 검수하고, 운영 레시피로 import하는 흐름을 제공합니다.
 
 ## Recipe Source Endpoints
 
@@ -8,10 +8,9 @@ Admin Review API는 `recipe_sources` 검수와 import action을 제공합니다.
 GET    /api/v1/admin/recipe-sources
 GET    /api/v1/admin/recipe-sources/{source_id}
 PATCH  /api/v1/admin/recipe-sources/{source_id}
+POST   /api/v1/admin/recipe-sources/{source_id}/parse
 POST   /api/v1/admin/recipe-sources/{source_id}/approve
 POST   /api/v1/admin/recipe-sources/{source_id}/reject
-POST   /api/v1/admin/recipe-sources/{source_id}/retry-normalize
-POST   /api/v1/admin/recipe-sources/{source_id}/retry-images
 POST   /api/v1/admin/recipe-sources/{source_id}/import
 ```
 
@@ -24,41 +23,111 @@ POST   /api/v1/admin/recipes/{recipe_id}/image-generations/{generation_id}/selec
 POST   /api/v1/admin/recipes/{recipe_id}/image-generations/{generation_id}/reject
 ```
 
-일반 사용자용 레시피 조회 API에는 이미지 생성 액션을 넣지 않습니다. 생성은 비용과 검수 책임이 있으므로 관리자 API에서만 수행합니다.
+이미지 생성은 비용과 검수 책임이 있으므로 일반 사용자 API가 아니라 admin API에서만 실행합니다.
 
 ## List Query
 
 ```text
-GET /api/v1/admin/recipe-sources?status=REVIEW_REQUIRED&source_site=10000recipe&limit=50&cursor=...
+GET /api/v1/admin/recipe-sources?collection_status=COLLECTED&parse_status=PARSED&review_status=PENDING&source_site=10000recipe&limit=50&cursor=...
 ```
 
 Query params:
 
-- `status`
 - `source_site`
+- `source_type`
 - `parser_type`
+- `collection_status`
+- `parse_status`
+- `review_status`
+- `import_status`
 - `has_errors`
 - `cursor`
 - `limit`
 
-## Patch Source
+## Detail Response
 
-`PATCH`는 import 전 normalized data를 수정합니다.
+상세 조회는 원본과 추출 결과를 함께 내려줍니다. 관리 화면은 이 응답만으로 원문 확인, 추출값 수정, 승인 여부 판단을 할 수 있어야 합니다.
 
 ```json
 {
-  "normalized_payload": {
-    "recipe": {
-      "title": "수정한 제목",
-      "difficulty": "easy"
+  "source": {
+    "id": 1,
+    "source_site": "10000recipe",
+    "source_url": "https://www.10000recipe.com/recipe/...",
+    "collection_status": "COLLECTED",
+    "parse_status": "PARSED",
+    "review_status": "PENDING",
+    "import_status": "NOT_IMPORTED"
+  },
+  "extraction": {
+    "title": "한우 육회",
+    "summary": "집에서 만드는 육회",
+    "servings": 4,
+    "cooking_time_minutes": 30,
+    "main_image_source_url": "https://..."
+  },
+  "ingredients": [
+    {
+      "name": "소고기 홍두깨살",
+      "amount_text": "300g",
+      "sort_order": 1
     }
-  },
-  "normalized_metadata": {
-    "main_ingredients": ["김치", "돼지고기"]
-  },
-  "status": "READY"
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "instruction": "고기를 키친타월로 눌러 핏물을 제거한다.",
+      "source_image_url": "https://..."
+    }
+  ],
+  "labels": [
+    {
+      "label_type": "TAG",
+      "value": "육회",
+      "source": "SCRAPE"
+    }
+  ]
 }
 ```
+
+## Patch Extraction
+
+`PATCH`는 운영 테이블을 직접 수정하지 않고 추출 staging 값을 수정합니다.
+
+```json
+{
+  "extraction": {
+    "title": "집에서 만드는 한우 육회",
+    "difficulty": "EASY"
+  },
+  "ingredients": [
+    {
+      "name": "소고기 홍두깨살",
+      "amount_text": "300g",
+      "sort_order": 1
+    }
+  ],
+  "labels": [
+    {
+      "label_type": "CATEGORY",
+      "value": "무침",
+      "source": "ADMIN"
+    }
+  ]
+}
+```
+
+## Parse
+
+```text
+POST /api/v1/admin/recipe-sources/{source_id}/parse
+```
+
+동작:
+
+- `recipe_sources.raw_payload`를 다시 읽습니다.
+- `recipe_source_extractions`, `recipe_source_extracted_ingredients`, `recipe_source_extracted_steps`, `recipe_source_extracted_labels`를 갱신합니다.
+- 필수값 누락이나 파싱 실패는 `validation_errors`와 `parse_status`에 남깁니다.
 
 ## Approve
 
@@ -68,8 +137,8 @@ POST /api/v1/admin/recipe-sources/{source_id}/approve
 
 동작:
 
-- validation을 다시 수행합니다.
-- 문제가 없으면 `status = READY`로 변경합니다.
+- 추출 staging validation을 다시 수행합니다.
+- 문제가 없으면 `review_status = APPROVED`로 변경합니다.
 - 자동 import는 하지 않습니다.
 
 ## Import
@@ -80,12 +149,11 @@ POST /api/v1/admin/recipe-sources/{source_id}/import
 
 동작:
 
-- `READY` 상태만 import 가능합니다.
-- `recipes`, `recipe_ingredients`, `recipe_steps`를 생성합니다.
-- embedding을 생성합니다.
-- 대표 이미지가 없으면 AI 이미지 생성 후보를 요청할 수 있습니다.
-- `recipe_sources.status = IMPORTED`로 변경합니다.
-- `imported_recipe_id`를 연결합니다.
+- `APPROVED` source만 import합니다.
+- `recipes`, `recipe_ingredients`, `recipe_steps`, `recipe_labels`, `recipe_classifications`, `recipe_media`를 생성합니다.
+- embedding은 `recipe_embeddings`에 별도로 생성하거나 background job으로 넘깁니다.
+- 원본 이미지가 없으면 AI 이미지 생성 후보를 만들 수 있지만, 바로 대표 이미지로 확정하지 않습니다.
+- 성공하면 `recipe_sources.import_status = IMPORTED`로 변경하고 `imported_recipe_id`를 연결합니다.
 
 ## Reject
 
@@ -97,53 +165,11 @@ Request:
 
 ```json
 {
-  "reason": "원문 신뢰도가 낮음"
+  "reason": "원문 품질이 낮고 필수 조리 단계가 부족함"
 }
 ```
 
-거절 사유는 `validation_errors` 또는 별도 review note에 기록할 수 있습니다.
-
-## Retry
-
-재처리 action:
-
-- `retry-normalize`: raw payload에서 normalized payload 재생성
-- `retry-images`: 원본 이미지 URL에서 S3 업로드 재시도
-
-초기 구현에서는 retry action을 동기 처리해도 되지만, 대량 처리 시 background job으로 분리합니다.
-
-## Generate Image
-
-```text
-POST /api/v1/admin/recipes/{recipe_id}/image-generations
-```
-
-요청 예시:
-
-```json
-{
-  "reason": "기존 대표 이미지가 없음",
-  "prompt_overrides": {
-    "style": "realistic Korean food photography",
-    "must_include": ["김치", "밥", "달걀 프라이"],
-    "avoid": ["글자", "로고", "사람"]
-  }
-}
-```
-
-응답 예시:
-
-```json
-{
-  "generation_id": 10,
-  "recipe_id": 123,
-  "status": "SUCCEEDED",
-  "image_url": "https://s3.../main.jpg",
-  "thumbnail_url": "https://s3.../thumb.jpg"
-}
-```
-
-이 API는 기존 `recipes.image_url`을 바로 덮어쓰지 않습니다. 새 후보를 `recipe_image_generations`에 저장하고, 관리자가 선택했을 때만 대표 이미지로 반영합니다.
+거절 사유는 `validation_errors` 또는 별도 review note에 남길 수 있습니다.
 
 ## Select Image
 
@@ -153,9 +179,10 @@ POST /api/v1/admin/recipes/{recipe_id}/image-generations/{generation_id}/select
 
 동작:
 
-- 같은 레시피의 기존 `SELECTED` 후보를 `REJECTED`로 변경합니다.
-- 선택한 후보를 `SELECTED`로 변경합니다.
-- `recipes.image_url`, `recipes.thumbnail_url`, `recipes.image_urls`를 갱신합니다.
+- 같은 레시피의 기존 선택 후보를 `REJECTED`로 변경합니다.
+- 선택 후보를 `SELECTED`로 변경합니다.
+- 생성된 이미지를 `recipe_media`의 `MAIN`, `THUMBNAIL` 역할로 반영합니다.
+- `recipes`에는 이미지 URL을 중복 저장하지 않습니다.
 
 ## Reject Image
 
@@ -163,4 +190,4 @@ POST /api/v1/admin/recipes/{recipe_id}/image-generations/{generation_id}/select
 POST /api/v1/admin/recipes/{recipe_id}/image-generations/{generation_id}/reject
 ```
 
-마음에 들지 않는 후보는 `REJECTED`로 바꾸고, 필요하면 다시 `POST /image-generations`로 재생성합니다.
+마음에 들지 않는 후보는 `REJECTED`로 바꾸고, 필요하면 `POST /image-generations`로 다시 생성합니다.
