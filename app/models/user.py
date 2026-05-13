@@ -56,10 +56,18 @@ class UserProfile(Base):
     frequently_used_ingredients = Column(JSONB)
     taste_keywords = Column(JSONB)
     cooking_skill = Column(String(10))       # easy, normal, hard
-    preferred_cooking_time = Column(Integer)
+    preferred_cooking_time_minutes = Column(Integer)
     serving_size = Column(Numeric(4, 1))
     recent_recipe_ids = Column(JSONB)
     ai_analyzed_at = Column(DateTime(timezone=True))
+
+    @property
+    def preferred_cooking_time(self) -> int | None:
+        return self.preferred_cooking_time_minutes
+
+    @preferred_cooking_time.setter
+    def preferred_cooking_time(self, value: int | None) -> None:
+        self.preferred_cooking_time_minutes = value
 
     updated_at = Column(
         DateTime(timezone=True),
