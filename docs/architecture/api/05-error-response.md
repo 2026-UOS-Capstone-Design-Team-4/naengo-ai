@@ -22,7 +22,7 @@ API 에러는 HTTP status와 stable error code를 함께 사용합니다.
 | 401 | `UNAUTHENTICATED` | 인증 필요 |
 | 403 | `FORBIDDEN` | 권한 없음 |
 | 404 | `RESOURCE_NOT_FOUND` | 리소스 없음 |
-| 409 | `CONFLICT` | 현재 상태와 충돌 |
+| 409 | `CONFLICT` | 현재 상태와 요청이 충돌 |
 | 422 | `UNPROCESSABLE_ENTITY` | 의미상 처리 불가 |
 | 429 | `RATE_LIMITED` | 요청 한도 초과 |
 | 500 | `INTERNAL_ERROR` | 서버 내부 오류 |
@@ -35,7 +35,7 @@ API 에러는 HTTP status와 stable error code를 함께 사용합니다.
 | --- | --- |
 | `RECIPE_NOT_FOUND` | 레시피 없음 |
 | `RECIPE_SOURCE_NOT_FOUND` | 수집 원본 없음 |
-| `RECIPE_SOURCE_NOT_READY` | import 가능한 상태가 아님 |
+| `RECIPE_SOURCE_NOT_IMPORTABLE` | import 가능한 lifecycle 상태가 아님 |
 | `DUPLICATE_RECIPE_SOURCE` | 중복 수집 원본 |
 | `PENDING_RECIPE_NOT_FOUND` | 사용자 제출 레시피 없음 |
 | `PENDING_RECIPE_ALREADY_REVIEWED` | 이미 승인/거절된 사용자 제출 레시피 |
@@ -77,11 +77,21 @@ API 에러는 HTTP status와 stable error code를 함께 사용합니다.
 ```json
 {
   "error": {
-    "code": "RECIPE_SOURCE_NOT_READY",
+    "code": "RECIPE_SOURCE_NOT_IMPORTABLE",
     "message": "import 가능한 상태가 아닙니다.",
     "details": {
-      "current_status": "REVIEW_REQUIRED",
-      "required_status": "READY"
+      "current": {
+        "collection_status": "COLLECTED",
+        "parse_status": "REVIEW_REQUIRED",
+        "review_status": "PENDING",
+        "import_status": "NOT_IMPORTED"
+      },
+      "required": {
+        "collection_status": "COLLECTED",
+        "parse_status": "PARSED",
+        "review_status": "APPROVED",
+        "import_status": "NOT_IMPORTED"
+      }
     }
   }
 }
