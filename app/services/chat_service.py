@@ -110,17 +110,18 @@ class ChatService:
         user_content: str,
         ai_content: str,
         recipe_ids: list[int] | None = None,
-    ):
+    ) -> int:
         self.db.add(ChatMessage(room_id=room_id, role="user", content=user_content))
-        self.db.add(
-            ChatMessage(
-                room_id=room_id,
-                role="model",
-                content=ai_content,
-                recipe_ids=recipe_ids,
-            )
+        ai_message = ChatMessage(
+            room_id=room_id,
+            role="model",
+            content=ai_content,
+            recipe_ids=recipe_ids,
         )
+        self.db.add(ai_message)
         self.db.commit()
+        self.db.refresh(ai_message)
+        return ai_message.message_id
 
     def _get_recipes(self, recipe_ids: list[int]) -> list[RecipeResponse]:
         recipe_rows = (
