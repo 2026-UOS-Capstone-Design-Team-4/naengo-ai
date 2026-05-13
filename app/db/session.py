@@ -1,10 +1,17 @@
-from sqlalchemy import create_engine, text
+from pgvector.psycopg2 import register_vector
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 from app.core import config
 
+
+def _on_connect(dbapi_conn, _connection_record):
+    register_vector(dbapi_conn)
+
+
 # 1. 엔진 생성
 engine = create_engine(config.DATABASE_URL)
+event.listen(engine, "connect", _on_connect)
 
 # 2. 세션 생성기
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
