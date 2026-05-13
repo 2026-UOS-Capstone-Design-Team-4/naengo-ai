@@ -574,8 +574,6 @@ CREATE INDEX idx_recipe_media_recipe_role
 ON recipe_media(recipe_id, image_role, is_primary);
 CREATE INDEX idx_recipe_image_generations_recipe_status
 ON recipe_image_generations(recipe_id, status, requested_at DESC);
-CREATE INDEX idx_recipe_embeddings_vector
-ON recipe_embeddings USING ivfflat (embedding vector_cosine_ops);
 CREATE INDEX idx_recipe_embeddings_recipe_type
 ON recipe_embeddings(recipe_id, embedding_type);
 
