@@ -5,66 +5,52 @@ from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from app.agents.dependencies import RecipeDeps
-from app.agents.system_prompts import RECIPE_AGENT_PROMPT
+from app.agents.system_prompts import COOKING_ANSWER_PROMPT, RECIPE_AGENT_PROMPT
 from app.core import config
-from app.models.chat import ChatMessage, ChatRoom  # noqa
-from app.models.recipe import PendingRecipe, Recipe, RecipeStats  # noqa
-from app.models.social import Like, Scrap  # noqa
-from app.models.user import User, UserProfile  # noqa
 from app.services.recipe_retrieval_service import recipe_retrieval_service
 
-# 로그 설정
 logger = logging.getLogger(__name__)
 
-
-# 2. 모델 설정
-my_model = OpenAIModel(
+_model = OpenAIModel(
     config.MODEL_NAME,
     provider=OpenAIProvider(api_key=config.API_KEY, base_url=config.BASE_URL),
 )
 
-# 3. 에이전트 생성
 recipe_agent = Agent(
-    my_model,
+    _model,
     deps_type=RecipeDeps,
     system_prompt=RECIPE_AGENT_PROMPT,
 )
 
+cooking_agent = Agent(
+    _model,
+    system_prompt=COOKING_ANSWER_PROMPT,
+)
 
-# 4. 도구(Tool) 정의 - 여러 개의 레시피 검색 가능하도록 수정
+
 @recipe_agent.tool
 def search_recipes(ctx: RunContext[RecipeDeps], query: str) -> str:
-    """
-    사용자의 재료 정보를 바탕으로 DB에서 가장 유사한 레시피들을 최대 3개까지 검색합니다.
-    """
-    logger.info(f"💡 [Agent Tool] 에이전트가 레시피 검색 요청: '{query}'")
+    """사용자의 재료/요청을 바탕으로 DB에서 가장 유사한 레시피를 최대 3개까지 검색합니다."""
+    search_query = (
+        ctx.deps.search_plan.query_text
+        if ctx.deps.search_plan is not None
+        else query
+    )
+    logger.info("레시피 검색: %s", search_query)
 
     try:
-        # A. 검색어(재료)를 벡터로 변환
-        recipes = recipe_retrieval_service.search_recipes(query, limit=3)
-
-        # B. DB에서 벡터 유사도 검색 실행 (최대 3개)
+        recipes = recipe_retrieval_service.search_recipes(search_query, limit=3)
         if not recipes:
-            logger.warning(f"⚠️ [Agent Tool] '{query}'에 대한 검색 결과가 없습니다.")
             return "검색 결과가 없습니다."
 
-        logger.info(f"🍴 [Agent Tool] {len(recipes)}개의 레시피를 찾았습니다!")
-
-        results_for_agent = []
         for r in recipes:
-            logger.info(f"   - 제목: {r.title} (ID: {r.recipe_id})")
-
-            # [핵심] 나중에 스트림 끝에 주입할 바구니에 상세 정보 저장
             ctx.deps.last_found_recipes.append(
                 recipe_retrieval_service.recipe_to_payload(r)
             )
-            results_for_agent.append(r.title)
 
-        titles = ", ".join(results_for_agent)
-        tool_result = f"검색 재료: {query}\n찾은 레시피: {titles}"
-        logger.info(f"📤 [Agent Tool] 에이전트에게 전달하는 내용:\n{tool_result}")
-        return tool_result
+        titles = ", ".join(r.title for r in recipes)
+        return f"검색 재료: {query}\n찾은 레시피: {titles}"
 
-    except Exception as e:
-        logger.error(f"🚨 [Agent Tool] 에러: {str(e)}")
-        return "검색 중 오류 발생"
+    except Exception as exc:
+        logger.error("레시피 검색 오류: %s", exc)
+        return "검색 중 오류가 발생했습니다."
