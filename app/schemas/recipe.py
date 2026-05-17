@@ -16,6 +16,26 @@ class IngredientItem(BaseModel):
     note: str | None = ""
 
 
+class RecipeNutritionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    serving_weight_grams: float | None = None
+    kcal_per_serving: int | None = None
+    carbohydrate_grams: float | None = None
+    protein_grams: float | None = None
+    fat_grams: float | None = None
+    sodium_milligrams: float | None = None
+    source: Literal["SOURCE", "RULE", "AI", "ADMIN"] = "SOURCE"
+
+
+class RecipeStepResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    step_no: int
+    instruction: str
+    tip: str | None = None
+
+
 class RecipeBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -23,10 +43,11 @@ class RecipeBase(BaseModel):
     description: str
     ingredients: list[IngredientItem] = []
     ingredients_raw: str
-    instructions: list[str] = []
+    steps: list[RecipeStepResponse] = []
     servings: float
-    cooking_time: int
-    calories: int | None = None
+    cooking_time_minutes: int
+    kcal_per_serving: int | None = None
+    nutrition: RecipeNutritionResponse | None = None
     difficulty: Literal["easy", "normal", "hard"]
     category: list[str] = []
     tags: list[str] = []
@@ -36,7 +57,7 @@ class RecipeBase(BaseModel):
 
 
 class RecipeSchema(RecipeBase):
-    content: str | None = None
+    summary: str | None = None
     author_type: Literal["ADMIN", "USER", "SOURCE"] = "ADMIN"
 
 
