@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.models.user import User, UserProfile
 from app.schemas.user import (
+    UserInputAppendRequest,
+    UserInputDeleteRequest,
     UserInputUpdateRequest,
     UserProfileResponse,
     UserUpdateRequest,
@@ -63,7 +65,7 @@ class UserService:
         profile = self.get_profile(user_id)
         if not profile:
             return None
-        return UserProfileResponse(user_input=profile.user_input or [])
+        return UserProfileResponse(user_input=_latest_first(profile.user_input))
 
     def update_profile(
         self,
@@ -74,7 +76,65 @@ class UserService:
         if not profile:
             return None
 
-        profile.user_input = body.user_input
+        profile.user_input = _clean_user_inputs(body.user_input)
         self.db.commit()
         self.db.refresh(profile)
-        return UserProfileResponse(user_input=profile.user_input or [])
+        return UserProfileResponse(user_input=_latest_first(profile.user_input))
+
+    def append_profile_user_input(
+        self,
+        user_id: int,
+        body: UserInputAppendRequest,
+    ) -> UserProfileResponse | None:
+        profile = self.get_profile(user_id)
+        if not profile:
+            return None
+
+        text = _clean_user_input(body.text)
+        if text is None:
+            return UserProfileResponse(user_input=_latest_first(profile.user_input))
+
+        profile.user_input = [*_clean_user_inputs(profile.user_input), text]
+        self.db.commit()
+        self.db.refresh(profile)
+        return UserProfileResponse(user_input=_latest_first(profile.user_input))
+
+    def delete_profile_user_inputs(
+        self,
+        user_id: int,
+        body: UserInputDeleteRequest,
+    ) -> UserProfileResponse | None:
+        profile = self.get_profile(user_id)
+        if not profile:
+            return None
+
+        delete_target = _clean_user_input(body.text)
+        current_inputs = _clean_user_inputs(profile.user_input)
+        if delete_target is not None:
+            try:
+                current_inputs.remove(delete_target)
+            except ValueError:
+                pass
+        profile.user_input = current_inputs
+        self.db.commit()
+        self.db.refresh(profile)
+        return UserProfileResponse(user_input=_latest_first(profile.user_input))
+
+
+def _clean_user_input(value: str) -> str | None:
+    text = value.strip()
+    return text or None
+
+
+def _clean_user_inputs(values: list[str] | None) -> list[str]:
+    if values is None:
+        return []
+    return [
+        text
+        for value in values
+        if isinstance(value, str) and (text := _clean_user_input(value)) is not None
+    ]
+
+
+def _latest_first(values: list[str] | None) -> list[str]:
+    return list(reversed(_clean_user_inputs(values)))
