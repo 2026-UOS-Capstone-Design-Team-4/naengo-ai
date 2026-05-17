@@ -5,8 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.api.errors import ApiError
 from app.api.v1.deps import get_current_user_id
-from app.api.v1.docs.chat import (
+from app.api.v1.openapi.chat import (
     CHAT_NEW_ROOM_DESCRIPTION,
     CHAT_NEW_ROOM_SUMMARY,
     CHAT_RESPONSES,
@@ -59,7 +60,7 @@ async def get_room_messages(
 ):
     chat_service = ChatService(db)
     if not chat_service.get_room(room_id, current_user_id):
-        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+        raise ApiError(404, "RESOURCE_NOT_FOUND", "채팅방을 찾을 수 없습니다.")
     return chat_service.get_room_messages(room_id)
 
 
@@ -75,7 +76,7 @@ async def delete_room(
     current_user_id: int = Depends(get_current_user_id),
 ):
     if not ChatService(db).delete_room(room_id, current_user_id):
-        raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+        raise ApiError(404, "RESOURCE_NOT_FOUND", "채팅방을 찾을 수 없습니다.")
     return {"message": "채팅방이 삭제되었습니다."}
 
 
@@ -114,7 +115,7 @@ async def create_room_and_chat(
 
     except Exception as exc:
         logger.error("create_room_and_chat 오류: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise ApiError(500, "INTERNAL_ERROR", str(exc)) from exc
 
 
 @router.post(
@@ -133,7 +134,7 @@ async def chat_in_room(
     try:
         chat_service = ChatService(db)
         if not chat_service.get_room(room_id, current_user_id):
-            raise HTTPException(status_code=404, detail="채팅방을 찾을 수 없습니다.")
+            raise ApiError(404, "RESOURCE_NOT_FOUND", "채팅방을 찾을 수 없습니다.")
 
         history = chat_service.load_recent_history(room_id, limit=10)
         agent_service = AgentService()
@@ -151,8 +152,8 @@ async def chat_in_room(
             media_type="text/event-stream",
         )
 
-    except HTTPException:
+    except (ApiError, HTTPException):
         raise
     except Exception as exc:
         logger.error("chat_in_room 오류: %s", exc)
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise ApiError(500, "INTERNAL_ERROR", str(exc)) from exc
