@@ -137,7 +137,6 @@ PATCH  /api/v1/users/me
 GET    /api/v1/users/me/profile
 POST   /api/v1/users/me/profile
 DELETE /api/v1/users/me/profile
-PATCH  /api/v1/users/me/profile
 GET    /api/v1/users/me/scraps?cursor=...&limit=20
 
 GET    /api/v1/pending-recipes
