@@ -1,3 +1,8 @@
+import base64
+import binascii
+import json
+from typing import Any
+
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -11,6 +16,10 @@ from app.schemas.recipe import (
 
 
 class RecipeNotFoundError(Exception):
+    pass
+
+
+class RecipeInvalidCursorError(ValueError):
     pass
 
 
@@ -37,7 +46,7 @@ class RecipeService:
     def get_recipe(self, recipe_id: int, user_id: int) -> RecipeListItemResponse:
         stmt = (
             select(Recipe)
-            .options(joinedload(Recipe.stats))
+            .options(joinedload(Recipe.stats), joinedload(Recipe.nutrition))
             .where(Recipe.recipe_id == recipe_id, Recipe.is_active.is_(True))
         )
         recipe = self.db.execute(stmt).scalars().unique().one_or_none()
@@ -49,11 +58,14 @@ class RecipeService:
     def get_recipes_by_latest(
         self, user_id: int, cursor: str | None, limit: int
     ) -> RecipeListResponse:
-        cursor_id = int(cursor) if cursor else None
+        cursor_payload = _decode_cursor(cursor) if cursor else None
+        if cursor_payload and cursor_payload.get("sort") != "latest":
+            raise RecipeInvalidCursorError("Cursor sort mismatch.")
+        cursor_id = _cursor_recipe_id(cursor_payload) if cursor_payload else None
 
         stmt = (
             select(Recipe)
-            .options(joinedload(Recipe.stats))
+            .options(joinedload(Recipe.stats), joinedload(Recipe.nutrition))
             .where(Recipe.is_active.is_(True))
         )
         if cursor_id is not None:
@@ -69,7 +81,11 @@ class RecipeService:
 
         return RecipeListResponse(
             items=[self._to_list_item(r, liked_ids, scrapped_ids) for r in items],
-            next_cursor=str(items[-1].recipe_id) if has_next else None,
+            next_cursor=(
+                _encode_cursor({"sort": "latest", "recipe_id": items[-1].recipe_id})
+                if has_next
+                else None
+            ),
             has_next=has_next,
         )
 
@@ -78,15 +94,14 @@ class RecipeService:
     ) -> RecipeListResponse:
         cursor_likes, cursor_id = None, None
         if cursor:
-            parts = cursor.split("_", 1)
-            cursor_likes, cursor_id = int(parts[0]), int(parts[1])
+            cursor_likes, cursor_id = _parse_count_cursor(cursor, "likes")
 
         coalesced_likes = func.coalesce(RecipeStats.likes_count, 0)
 
         stmt = (
             select(Recipe)
             .outerjoin(RecipeStats, Recipe.recipe_id == RecipeStats.recipe_id)
-            .options(joinedload(Recipe.stats))
+            .options(joinedload(Recipe.stats), joinedload(Recipe.nutrition))
             .where(Recipe.is_active.is_(True))
         )
         if cursor_likes is not None and cursor_id is not None:
@@ -108,7 +123,59 @@ class RecipeService:
         if has_next and items:
             last = items[-1]
             lc = last.stats.likes_count if last.stats else 0
-            next_cursor = f"{lc}_{last.recipe_id}"
+            next_cursor = _encode_cursor(
+                {"sort": "likes", "count": lc, "recipe_id": last.recipe_id}
+            )
+
+        recipe_ids = [r.recipe_id for r in items]
+        liked_ids, scrapped_ids = self._get_social_sets(user_id, recipe_ids)
+
+        return RecipeListResponse(
+            items=[self._to_list_item(r, liked_ids, scrapped_ids) for r in items],
+            next_cursor=next_cursor,
+            has_next=has_next,
+        )
+
+    def get_recipes_by_scraps(
+        self, user_id: int, cursor: str | None, limit: int
+    ) -> RecipeListResponse:
+        cursor_scraps, cursor_id = None, None
+        if cursor:
+            cursor_scraps, cursor_id = _parse_count_cursor(cursor, "scraps")
+
+        coalesced_scraps = func.coalesce(RecipeStats.scrap_count, 0)
+
+        stmt = (
+            select(Recipe)
+            .outerjoin(RecipeStats, Recipe.recipe_id == RecipeStats.recipe_id)
+            .options(joinedload(Recipe.stats), joinedload(Recipe.nutrition))
+            .where(Recipe.is_active.is_(True))
+        )
+        if cursor_scraps is not None and cursor_id is not None:
+            stmt = stmt.where(
+                or_(
+                    coalesced_scraps < cursor_scraps,
+                    and_(
+                        coalesced_scraps == cursor_scraps,
+                        Recipe.recipe_id < cursor_id,
+                    ),
+                )
+            )
+        stmt = stmt.order_by(coalesced_scraps.desc(), Recipe.recipe_id.desc()).limit(
+            limit + 1
+        )
+
+        recipes = list(self.db.execute(stmt).scalars().unique().all())
+        has_next = len(recipes) > limit
+        items = recipes[:limit]
+
+        next_cursor = None
+        if has_next and items:
+            last = items[-1]
+            sc = last.stats.scrap_count if last.stats else 0
+            next_cursor = _encode_cursor(
+                {"sort": "scraps", "count": sc, "recipe_id": last.recipe_id}
+            )
 
         recipe_ids = [r.recipe_id for r in items]
         liked_ids, scrapped_ids = self._get_social_sets(user_id, recipe_ids)
@@ -127,7 +194,10 @@ class RecipeService:
         stmt = (
             select(Scrap)
             .join(Recipe, Scrap.recipe_id == Recipe.recipe_id)
-            .options(joinedload(Scrap.recipe).joinedload(Recipe.stats))
+            .options(
+                joinedload(Scrap.recipe).joinedload(Recipe.stats),
+                joinedload(Scrap.recipe).joinedload(Recipe.nutrition),
+            )
             .where(Scrap.user_id == user_id, Recipe.is_active.is_(True))
         )
         if cursor_id is not None:
@@ -245,3 +315,37 @@ class RecipeService:
         item.is_liked = recipe.recipe_id in (liked_ids or set())
         item.is_scrapped = recipe.recipe_id in (scrapped_ids or set())
         return item
+
+
+def _encode_cursor(payload: dict[str, Any]) -> str:
+    raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
+    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+
+def _decode_cursor(cursor: str) -> dict[str, Any]:
+    try:
+        padding = "=" * (-len(cursor) % 4)
+        raw = base64.urlsafe_b64decode(f"{cursor}{padding}".encode())
+        payload = json.loads(raw)
+    except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise RecipeInvalidCursorError("Invalid cursor.") from exc
+    if not isinstance(payload, dict) or "recipe_id" not in payload:
+        raise RecipeInvalidCursorError("Invalid cursor.")
+    return payload
+
+
+def _cursor_recipe_id(payload: dict[str, Any]) -> int:
+    try:
+        return int(payload["recipe_id"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RecipeInvalidCursorError("Invalid cursor.") from exc
+
+
+def _parse_count_cursor(cursor: str, sort: str) -> tuple[int, int]:
+    payload = _decode_cursor(cursor)
+    if payload.get("sort") != sort or "count" not in payload:
+        raise RecipeInvalidCursorError("Invalid cursor.")
+    try:
+        return int(payload["count"]), _cursor_recipe_id(payload)
+    except (TypeError, ValueError) as exc:
+        raise RecipeInvalidCursorError("Invalid cursor.") from exc
