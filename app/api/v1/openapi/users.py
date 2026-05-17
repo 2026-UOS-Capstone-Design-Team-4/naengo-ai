@@ -72,31 +72,6 @@ GET_MY_PROFILE_RESPONSES = {
     404: PROFILE_NOT_FOUND_RESPONSE,
 }
 
-PATCH_MY_PROFILE_SUMMARY = "내 프로필 전체 수정"
-PATCH_MY_PROFILE_DESCRIPTION = r"""
-프로필의 `user_input` 문장 목록을 요청 본문의 배열로 교체합니다.
-
-요청 예시:
-
-```json
-{
-  "user_input": [
-    "새우 알레르기가 있어요",
-    "매운 한식을 좋아해요"
-  ]
-}
-```
-"""
-
-PATCH_MY_PROFILE_RESPONSES = {
-    200: {
-        "description": "수정된 사용자 프로필",
-        "content": {"application/json": {"example": USER_PROFILE_EXAMPLE}},
-    },
-    404: PROFILE_NOT_FOUND_RESPONSE,
-    422: VALIDATION_ERROR_RESPONSE,
-}
-
 POST_MY_PROFILE_USER_INPUT_SUMMARY = "프로필 문장 추가"
 POST_MY_PROFILE_USER_INPUT_DESCRIPTION = r"""
 사용자 프로필에 저장할 문장 하나를 추가합니다.
