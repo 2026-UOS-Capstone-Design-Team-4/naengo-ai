@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.api.errors import ApiError
 from app.api.v1.deps import get_current_user_id
-from app.api.v1.docs.pending_recipes import (
+from app.api.v1.openapi.pending_recipes import (
     DELETE_PENDING_RECIPE_DESCRIPTION,
     DELETE_PENDING_RECIPE_RESPONSES,
     DELETE_PENDING_RECIPE_SUMMARY,
@@ -56,7 +57,11 @@ def get_pending_recipe(
         current_user_id,
     )
     if not pending:
-        raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
+        raise ApiError(
+            404,
+            "PENDING_RECIPE_NOT_FOUND",
+            "제출 레시피를 찾을 수 없습니다.",
+        )
     return pending
 
 
@@ -76,7 +81,7 @@ def create_pending_recipe(
     pending_recipe_service = PendingRecipeService(db)
     pending = pending_recipe_service.create_pending_recipe(body, current_user_id)
     if not pending:
-        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        raise ApiError(404, "RESOURCE_NOT_FOUND", "사용자를 찾을 수 없습니다.")
     return pending
 
 
@@ -97,5 +102,9 @@ def delete_pending_recipe(
         current_user_id,
     )
     if not deleted:
-        raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
+        raise ApiError(
+            404,
+            "PENDING_RECIPE_NOT_FOUND",
+            "제출 레시피를 찾을 수 없습니다.",
+        )
     return {"message": "레시피가 삭제되었습니다."}
