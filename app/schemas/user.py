@@ -25,10 +25,6 @@ class UserUpdateRequest(BaseModel):
     nickname: str | None = None
 
 
-class UserInputUpdateRequest(BaseModel):
-    user_input: list[str]
-
-
 class UserInputAppendRequest(BaseModel):
     text: str = Field(min_length=1)
 
