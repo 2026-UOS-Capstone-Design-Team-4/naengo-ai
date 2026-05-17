@@ -1,10 +1,11 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.api.errors import ApiError
 from app.api.v1.deps import get_current_user_id
-from app.api.v1.docs.recipes import (
+from app.api.v1.openapi.recipes import (
     DELETE_LIKE_DESCRIPTION,
     DELETE_LIKE_RESPONSES,
     DELETE_LIKE_SUMMARY,
@@ -35,6 +36,7 @@ from app.services.recipe_service import (
     AlreadyScrappedError,
     NotLikedError,
     NotScrappedError,
+    RecipeInvalidCursorError,
     RecipeNotFoundError,
     RecipeService,
 )
@@ -52,16 +54,32 @@ _NOT_FOUND = "레시피를 찾을 수 없습니다."
     responses=GET_RECIPES_RESPONSES,
 )
 def get_recipes(
-    sort: Literal["latest", "likes"] = Query(default="latest"),
-    cursor: str | None = Query(default=None),
-    limit: int = Query(default=20, ge=1, le=100),
+    sort: Literal["latest", "likes", "scraps"] = Query(
+        default="latest",
+        description="정렬 기준: latest(최신순), likes(좋아요순), scraps(스크랩순)",
+    ),
+    cursor: str | None = Query(
+        default=None,
+        description="이전 응답의 next_cursor. base64url JSON cursor입니다.",
+    ),
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="한 번에 가져올 레시피 개수",
+    ),
     db: Session = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id),
 ):
     service = RecipeService(db)
-    if sort == "likes":
-        return service.get_recipes_by_likes(current_user_id, cursor, limit)
-    return service.get_recipes_by_latest(current_user_id, cursor, limit)
+    try:
+        if sort == "likes":
+            return service.get_recipes_by_likes(current_user_id, cursor, limit)
+        if sort == "scraps":
+            return service.get_recipes_by_scraps(current_user_id, cursor, limit)
+        return service.get_recipes_by_latest(current_user_id, cursor, limit)
+    except RecipeInvalidCursorError:
+        raise ApiError(400, "INVALID_CURSOR", "Cursor is invalid.") from None
 
 
 @router.get(
@@ -79,7 +97,7 @@ def get_recipe(
     try:
         return RecipeService(db).get_recipe(recipe_id, current_user_id)
     except RecipeNotFoundError:
-        raise HTTPException(status_code=404, detail=_NOT_FOUND) from None
+        raise ApiError(404, "RECIPE_NOT_FOUND", _NOT_FOUND) from None
 
 
 @router.post(
@@ -97,11 +115,9 @@ def like_recipe(
     try:
         return RecipeService(db).like(recipe_id, current_user_id)
     except RecipeNotFoundError:
-        raise HTTPException(status_code=404, detail=_NOT_FOUND) from None
+        raise ApiError(404, "RECIPE_NOT_FOUND", _NOT_FOUND) from None
     except AlreadyLikedError:
-        raise HTTPException(
-            status_code=409, detail="이미 좋아요를 눌렀습니다."
-        ) from None
+        raise ApiError(409, "ALREADY_LIKED", "이미 좋아요를 눌렀습니다.") from None
 
 
 @router.delete(
@@ -119,11 +135,9 @@ def unlike_recipe(
     try:
         return RecipeService(db).unlike(recipe_id, current_user_id)
     except RecipeNotFoundError:
-        raise HTTPException(status_code=404, detail=_NOT_FOUND) from None
+        raise ApiError(404, "RECIPE_NOT_FOUND", _NOT_FOUND) from None
     except NotLikedError:
-        raise HTTPException(
-            status_code=409, detail="좋아요를 누르지 않았습니다."
-        ) from None
+        raise ApiError(409, "NOT_LIKED", "좋아요를 누르지 않았습니다.") from None
 
 
 @router.post(
@@ -141,10 +155,12 @@ def scrap_recipe(
     try:
         return RecipeService(db).scrap(recipe_id, current_user_id)
     except RecipeNotFoundError:
-        raise HTTPException(status_code=404, detail=_NOT_FOUND) from None
+        raise ApiError(404, "RECIPE_NOT_FOUND", _NOT_FOUND) from None
     except AlreadyScrappedError:
-        raise HTTPException(
-            status_code=409, detail="이미 스크랩한 레시피입니다."
+        raise ApiError(
+            409,
+            "ALREADY_SCRAPPED",
+            "이미 스크랩한 레시피입니다.",
         ) from None
 
 
@@ -163,8 +179,6 @@ def unscrap_recipe(
     try:
         return RecipeService(db).unscrap(recipe_id, current_user_id)
     except RecipeNotFoundError:
-        raise HTTPException(status_code=404, detail=_NOT_FOUND) from None
+        raise ApiError(404, "RECIPE_NOT_FOUND", _NOT_FOUND) from None
     except NotScrappedError:
-        raise HTTPException(
-            status_code=409, detail="스크랩하지 않은 레시피입니다."
-        ) from None
+        raise ApiError(409, "NOT_SCRAPPED", "스크랩하지 않은 레시피입니다.") from None
