@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.api.v1.deps import require_admin
 from app.api.v1.endpoints import chat, pending_recipes, recipes, users
 from app.api.v1.endpoints.admin import (
+    chat_rooms as admin_chat_rooms,
     pending_recipes as admin_pending_recipes,
-    recipe_sources as admin_recipe_sources,
     recipes as admin_recipes,
 )
 
@@ -17,14 +18,21 @@ api_router.include_router(
     prefix="/pending-recipes",
     tags=["pending-recipes"],
 )
-api_router.include_router(admin_recipes.router, prefix="/admin/recipes", tags=["admin"])
 api_router.include_router(
     admin_pending_recipes.router,
     prefix="/admin/pending-recipes",
     tags=["admin"],
+    dependencies=[Depends(require_admin)],
 )
 api_router.include_router(
-    admin_recipe_sources.router,
-    prefix="/admin/recipe-sources",
+    admin_recipes.router,
+    prefix="/admin/recipes",
     tags=["admin"],
+    dependencies=[Depends(require_admin)],
+)
+api_router.include_router(
+    admin_chat_rooms.router,
+    prefix="/admin/chat-rooms",
+    tags=["admin"],
+    dependencies=[Depends(require_admin)],
 )
