@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from scalar_fastapi import get_scalar_api_reference
 
+from app.api.errors import register_error_handlers
 from app.api.v1.api import api_router
 from app.db.session import init_db
 
@@ -39,7 +40,7 @@ app = FastAPI(
         "- **레시피**: 최신순/좋아요순 목록, 단건 상세, 좋아요, 스크랩 API를 제공합니다.\n"
         "- **사용자**: 사용자 정보와 프로필 취향 입력을 관리합니다.\n"
         "- **제출 레시피**: 사용자가 직접 레시피를 제출하고 관리자가 승인할 수 있습니다.\n"
-        "- **관리자**: 제출 레시피 검토와 정식 레시피 승격 흐름을 제공합니다.\n\n"
+        "- **관리자**: 제출 레시피 검토와 승인 흐름을 제공합니다.\n\n"
         "## 인증\n"
         "> 현재 실제 사용자 인증은 구현되어 있지 않습니다. "
         "모든 API는 임시로 `.env`의 `TEMP_USER_ID` 값을 현재 사용자로 사용합니다."
@@ -67,7 +68,7 @@ app = FastAPI(
         },
         {
             "name": "admin",
-            "description": "관리자 전용 API입니다. 제출 레시피 검토와 승인 승격에 사용합니다.",
+            "description": "관리자 전용 API입니다. 제출 레시피 검토와 승인에 사용합니다.",
         },
         {
             "name": "health",
@@ -75,6 +76,7 @@ app = FastAPI(
         },
     ],
 )
+register_error_handlers(app)
 
 
 @app.get("/docs", include_in_schema=False)
