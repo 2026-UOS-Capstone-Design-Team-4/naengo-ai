@@ -8,8 +8,12 @@ from app.models.recipe_source import (
     RecipeSourceExtractedLabel,
     RecipeSourceExtractedStep,
     RecipeSourceExtraction,
+    RecipeSourceQualityScore,
 )
 from app.schemas.recipe_source import RecipeSourceUpdate
+from app.services.ingestion.recipe_classification_service import (
+    recipe_classification_service,
+)
 
 
 class RecipeSourceNotFoundError(Exception):
@@ -29,7 +33,6 @@ class RecipeSourceService:
 
     def get_sources(
         self,
-        collection_status: str | None = None,
         parse_status: str | None = None,
         review_status: str | None = None,
         import_status: str | None = None,
@@ -41,8 +44,6 @@ class RecipeSourceService:
             joinedload(RecipeSource.extraction)
         )
 
-        if collection_status:
-            query = query.filter(RecipeSource.collection_status == collection_status)
         if parse_status:
             query = query.filter(RecipeSource.parse_status == parse_status)
         if review_status:
@@ -72,6 +73,9 @@ class RecipeSourceService:
                 ),
                 joinedload(RecipeSource.extraction).joinedload(
                     RecipeSourceExtraction.labels
+                ),
+                joinedload(RecipeSource.extraction).joinedload(
+                    RecipeSourceExtraction.quality_score
                 ),
             )
             .filter(RecipeSource.source_id == source_id)
@@ -139,23 +143,28 @@ def _build_extraction(source_id: int, data) -> RecipeSourceExtraction:
     extraction = RecipeSourceExtraction(
         source_id=source_id,
         title=data.title,
-        subtitle=data.subtitle,
         summary=data.summary,
         description=data.description,
         servings=data.servings,
-        prep_time_minutes=data.prep_time_minutes,
-        cook_time_minutes=data.cook_time_minutes,
-        total_time_minutes=data.total_time_minutes,
-        calories=data.calories,
+        cooking_time_minutes=data.cooking_time_minutes,
+        kcal_per_serving=data.kcal_per_serving,
+        serving_weight_grams=data.serving_weight_grams,
+        carbohydrate_grams=data.carbohydrate_grams,
+        protein_grams=data.protein_grams,
+        fat_grams=data.fat_grams,
+        sodium_milligrams=data.sodium_milligrams,
+        nutrition_source=data.nutrition_source,
+        nutrition_raw=data.nutrition_raw,
         difficulty=data.difficulty,
-        difficulty_score=data.difficulty_score,
         source_main_image_url=data.source_main_image_url,
         source_thumbnail_url=data.source_thumbnail_url,
         source_video_url=data.source_video_url,
         content_hash=data.content_hash,
-        completeness_score=data.completeness_score,
-        confidence_score=data.confidence_score,
     )
+    if data.quality_score is not None:
+        extraction.quality_score = RecipeSourceQualityScore(
+            **data.quality_score.model_dump(exclude_none=True)
+        )
     extraction.ingredients = [
         RecipeSourceExtractedIngredient(**item.model_dump(exclude_none=True))
         for item in data.ingredients
@@ -183,17 +192,22 @@ def _validate_extraction(extraction: RecipeSourceExtraction | None) -> list[dict
     errors = []
     if not extraction.title:
         errors.append({"code": "MISSING_TITLE", "message": "제목이 없습니다."})
-    if not extraction.description:
-        errors.append({"code": "MISSING_DESCRIPTION", "message": "설명이 없습니다."})
+    if not extraction.description and not extraction.summary:
+        errors.append(
+            {
+                "code": "MISSING_DESCRIPTION",
+                "message": "설명 또는 요약이 없습니다.",
+            }
+        )
     if not extraction.ingredients:
         errors.append({"code": "MISSING_INGREDIENTS", "message": "재료가 없습니다."})
     if not extraction.steps:
         errors.append({"code": "MISSING_STEPS", "message": "조리 단계가 없습니다."})
     if not extraction.servings:
         errors.append({"code": "MISSING_SERVINGS", "message": "인분 정보가 없습니다."})
-    if not extraction.total_time_minutes:
+    if not extraction.cooking_time_minutes:
         errors.append(
-            {"code": "MISSING_TOTAL_TIME", "message": "조리 시간이 없습니다."}
+            {"code": "MISSING_COOKING_TIME", "message": "조리 시간이 없습니다."}
         )
     if extraction.difficulty not in VALID_DIFFICULTIES:
         errors.append(
@@ -207,4 +221,7 @@ def _validate_extraction(extraction: RecipeSourceExtraction | None) -> list[dict
         )
     if not any(label.label_type == "CATEGORY" for label in extraction.labels):
         errors.append({"code": "MISSING_CATEGORY", "message": "카테고리가 없습니다."})
+    errors.extend(
+        recipe_classification_service.validate_extraction_classification(extraction)
+    )
     return errors
