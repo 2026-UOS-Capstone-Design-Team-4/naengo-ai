@@ -1,6 +1,6 @@
 # 05. Error Response
 
-API 에러는 HTTP status와 stable error code를 함께 사용합니다.
+API error는 HTTP status와 stable error code를 함께 사용한다. 클라이언트는 message보다 code와 details를 기준으로 분기한다.
 
 ## Shape
 
@@ -34,9 +34,9 @@ API 에러는 HTTP status와 stable error code를 함께 사용합니다.
 | Code | Usage |
 | --- | --- |
 | `RECIPE_NOT_FOUND` | 레시피 없음 |
-| `RECIPE_SOURCE_NOT_FOUND` | 수집 원본 없음 |
+| `RECIPE_SOURCE_NOT_FOUND` | 수집 source 없음 |
 | `RECIPE_SOURCE_NOT_IMPORTABLE` | import 가능한 lifecycle 상태가 아님 |
-| `DUPLICATE_RECIPE_SOURCE` | 중복 수집 원본 |
+| `DUPLICATE_RECIPE_SOURCE` | 중복 source |
 | `PENDING_RECIPE_NOT_FOUND` | 사용자 제출 레시피 없음 |
 | `PENDING_RECIPE_ALREADY_REVIEWED` | 이미 승인/거절된 사용자 제출 레시피 |
 | `PENDING_RECIPE_ENRICH_FAILED` | 사용자 제출 레시피 AI 보정 실패 |
@@ -51,7 +51,7 @@ API 에러는 HTTP status와 stable error code를 함께 사용합니다.
 
 ## Validation Details
 
-필드 단위 오류는 `details.fields`에 담습니다.
+필드 단위 오류는 `details.fields`에 담는다.
 
 ```json
 {
@@ -72,7 +72,7 @@ API 에러는 HTTP status와 stable error code를 함께 사용합니다.
 
 ## Conflict Details
 
-상태 전이가 맞지 않는 경우 현재 상태와 필요한 상태를 내려줍니다.
+상태 전이가 맞지 않는 경우 현재 상태와 필요한 상태를 함께 내려준다.
 
 ```json
 {
@@ -81,13 +81,11 @@ API 에러는 HTTP status와 stable error code를 함께 사용합니다.
     "message": "import 가능한 상태가 아닙니다.",
     "details": {
       "current": {
-        "collection_status": "COLLECTED",
         "parse_status": "REVIEW_REQUIRED",
         "review_status": "PENDING",
         "import_status": "NOT_IMPORTED"
       },
       "required": {
-        "collection_status": "COLLECTED",
         "parse_status": "PARSED",
         "review_status": "APPROVED",
         "import_status": "NOT_IMPORTED"
