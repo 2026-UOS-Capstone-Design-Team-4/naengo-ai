@@ -20,6 +20,7 @@ class ChatMessageResponse(BaseModel):
     message_id: int
     role: str
     content: str
+    image_url: str | None = None
     recipes: list[RecipeResponse] | None = None
     created_at: datetime
 
