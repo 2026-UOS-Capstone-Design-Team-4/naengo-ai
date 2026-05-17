@@ -10,7 +10,6 @@ PATCH  /api/v1/users/me
 GET    /api/v1/users/me/profile
 POST   /api/v1/users/me/profile
 DELETE /api/v1/users/me/profile
-PATCH  /api/v1/users/me/profile
 GET    /api/v1/users/me/scraps
 ```
 
@@ -65,8 +64,6 @@ DELETE /api/v1/users/me/profile
 ```
 
 삭제 API는 요청한 문장과 정확히 일치하는 항목을 제거한다. 응답은 항상 최신순 `user_input` 배열이다.
-
-`PATCH /me/profile`은 기존 전체 교체 호환성을 위해 남겨두지만, 일반 클라이언트는 문장 단위 `POST`/`DELETE`를 우선 사용한다.
 
 채팅 중 agent가 명확한 사용자 정보를 발견하면 정책에 따라 profile update 후보를 만들 수 있다. 민감하거나 모호한 정보는 바로 저장하지 않고 확인 흐름을 거친다.
 
