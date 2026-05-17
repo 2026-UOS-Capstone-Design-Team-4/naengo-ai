@@ -9,9 +9,9 @@ SourceType = Literal[
     "WEB_SCRAPE",
     "VIDEO",
     "EXTERNAL_API",
+    "PUBLIC_DATA",
 ]
-ParserType = Literal["MANUAL", "HTML", "AI", "API"]
-CollectionStatus = Literal["COLLECTED", "FAILED", "SKIPPED"]
+ParserType = Literal["MANUAL", "HTML", "AI", "API", "DATASET"]
 ParseStatus = Literal["NOT_PARSED", "PARSED", "INVALID", "DUPLICATE", "REVIEW_REQUIRED"]
 ReviewStatus = Literal["PENDING", "APPROVED", "REJECTED"]
 ImportStatus = Literal["NOT_IMPORTED", "IMPORTED", "FAILED"]
@@ -39,11 +39,7 @@ class ExtractedStep(BaseModel):
 
     extracted_step_id: int | None = None
     step_no: int
-    title: str | None = None
     instruction: str
-    duration_minutes: int | None = None
-    temperature: str | None = None
-    equipment: list[str] = []
     source_image_url: str | None = None
     tip: str | None = None
     raw_text: str | None = None
@@ -61,27 +57,44 @@ class ExtractedLabel(BaseModel):
     sort_order: int = 0
 
 
+class RecipeSourceQualityScoreSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    completeness_score: float | None = None
+    parse_confidence: float | None = None
+    ingredient_confidence: float | None = None
+    metadata_confidence: float | None = None
+    rewrite_confidence: float | None = None
+    nutrition_confidence: float | None = None
+    duplicate_score: float | None = None
+    estimated_fields: list[str] = []
+    validation_summary: list[dict] = []
+    quality_notes: dict = {}
+
+
 class RecipeSourceExtractionSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     extraction_id: int | None = None
     title: str
-    subtitle: str | None = None
     summary: str | None = None
     description: str | None = None
     servings: float | None = None
-    prep_time_minutes: int | None = None
-    cook_time_minutes: int | None = None
-    total_time_minutes: int | None = None
-    calories: int | None = None
+    cooking_time_minutes: int | None = None
+    kcal_per_serving: int | None = None
+    serving_weight_grams: float | None = None
+    carbohydrate_grams: float | None = None
+    protein_grams: float | None = None
+    fat_grams: float | None = None
+    sodium_milligrams: float | None = None
+    nutrition_source: Literal["SOURCE", "RULE", "AI", "ADMIN"] | None = None
+    nutrition_raw: dict = {}
     difficulty: Difficulty | None = None
-    difficulty_score: int | None = None
     source_main_image_url: str | None = None
     source_thumbnail_url: str | None = None
     source_video_url: str | None = None
     content_hash: str | None = None
-    completeness_score: float | None = None
-    confidence_score: float | None = None
+    quality_score: RecipeSourceQualityScoreSchema | None = None
     ingredients: list[ExtractedIngredient] = []
     steps: list[ExtractedStep] = []
     labels: list[ExtractedLabel] = []
@@ -95,8 +108,11 @@ class RecipeSourceListItem(BaseModel):
     source_type: SourceType
     parser_type: ParserType
     source_url: str | None
+    source_record_id: str | None = None
+    source_organization: str | None = None
+    source_dataset_id: str | None = None
+    source_dataset_name: str | None = None
     title: str | None = None
-    collection_status: CollectionStatus
     parse_status: ParseStatus
     review_status: ReviewStatus
     import_status: ImportStatus
@@ -111,8 +127,11 @@ class RecipeSourceListItem(BaseModel):
             source_type=obj.source_type,
             parser_type=obj.parser_type,
             source_url=obj.source_url,
+            source_record_id=obj.source_record_id,
+            source_organization=obj.source_organization,
+            source_dataset_id=obj.source_dataset_id,
+            source_dataset_name=obj.source_dataset_name,
             title=obj.extraction.title if obj.extraction else None,
-            collection_status=obj.collection_status,
             parse_status=obj.parse_status,
             review_status=obj.review_status,
             import_status=obj.import_status,
@@ -130,17 +149,23 @@ class RecipeSourceDetail(BaseModel):
     parser_type: ParserType
     source_recipe_id: str | None
     source_url: str | None
+    source_record_id: str | None
+    source_organization: str | None
+    source_dataset_id: str | None
+    source_dataset_name: str | None
+    source_api_url: str | None
+    source_license: str | None
+    source_license_url: str | None
     source_author_name: str | None
     source_author_url: str | None
     source_published_at: datetime | None
     raw_payload: dict
     raw_content_hash: str | None
-    collection_status: CollectionStatus
     parse_status: ParseStatus
     review_status: ReviewStatus
     import_status: ImportStatus
     validation_errors: list
-    parser_version: str | None
+    extraction_version: str | None
     collected_at: datetime
     parsed_at: datetime | None
     reviewed_at: datetime | None
