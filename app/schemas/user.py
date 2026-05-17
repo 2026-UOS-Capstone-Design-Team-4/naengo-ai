@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class UserResponse(BaseModel):
@@ -27,3 +27,11 @@ class UserUpdateRequest(BaseModel):
 
 class UserInputUpdateRequest(BaseModel):
     user_input: list[str]
+
+
+class UserInputAppendRequest(BaseModel):
+    text: str = Field(min_length=1)
+
+
+class UserInputDeleteRequest(BaseModel):
+    text: str = Field(min_length=1)
