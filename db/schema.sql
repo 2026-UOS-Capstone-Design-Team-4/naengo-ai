@@ -41,21 +41,27 @@ CREATE TABLE recipe_sources (
                 'USER_SUBMISSION',
                 'WEB_SCRAPE',
                 'VIDEO',
-                'EXTERNAL_API'
+                'EXTERNAL_API',
+                'PUBLIC_DATA'
             )
         ),
     source_site VARCHAR(50) NOT NULL,
     parser_type VARCHAR(20) NOT NULL
-        CHECK (parser_type IN ('MANUAL', 'HTML', 'AI', 'API')),
+        CHECK (parser_type IN ('MANUAL', 'HTML', 'AI', 'API', 'DATASET')),
     source_recipe_id VARCHAR(100),
     source_url VARCHAR(1024),
+    source_record_id VARCHAR(100),
+    source_organization VARCHAR(255),
+    source_dataset_id VARCHAR(100),
+    source_dataset_name VARCHAR(255),
+    source_api_url VARCHAR(1024),
+    source_license VARCHAR(100),
+    source_license_url VARCHAR(1024),
     source_author_name VARCHAR(255),
     source_author_url VARCHAR(1024),
     source_published_at TIMESTAMP WITH TIME ZONE,
     raw_payload JSONB NOT NULL DEFAULT '{}',
     raw_content_hash VARCHAR(64),
-    collection_status VARCHAR(30) NOT NULL DEFAULT 'COLLECTED'
-        CHECK (collection_status IN ('COLLECTED', 'FAILED', 'SKIPPED')),
     parse_status VARCHAR(30) NOT NULL DEFAULT 'NOT_PARSED'
         CHECK (
             parse_status IN (
@@ -71,7 +77,7 @@ CREATE TABLE recipe_sources (
     import_status VARCHAR(30) NOT NULL DEFAULT 'NOT_IMPORTED'
         CHECK (import_status IN ('NOT_IMPORTED', 'IMPORTED', 'FAILED')),
     validation_errors JSONB NOT NULL DEFAULT '[]',
-    parser_version VARCHAR(50),
+    extraction_version VARCHAR(50),
     collected_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     parsed_at TIMESTAMP WITH TIME ZONE,
     reviewed_at TIMESTAMP WITH TIME ZONE,
@@ -79,6 +85,7 @@ CREATE TABLE recipe_sources (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (source_site, source_recipe_id),
+    UNIQUE (source_dataset_id, source_record_id),
     UNIQUE (source_url)
 );
 
@@ -87,26 +94,45 @@ CREATE TABLE recipe_source_extractions (
     source_id INTEGER NOT NULL UNIQUE
         REFERENCES recipe_sources(source_id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    subtitle VARCHAR(255),
     summary TEXT,
     description TEXT,
     servings NUMERIC(4, 1),
-    prep_time_minutes INTEGER,
-    cook_time_minutes INTEGER,
-    total_time_minutes INTEGER,
-    calories INTEGER,
+    cooking_time_minutes INTEGER,
+    kcal_per_serving INTEGER,
+    serving_weight_grams NUMERIC(10, 2),
+    carbohydrate_grams NUMERIC(10, 2),
+    protein_grams NUMERIC(10, 2),
+    fat_grams NUMERIC(10, 2),
+    sodium_milligrams NUMERIC(10, 2),
+    nutrition_source VARCHAR(30)
+        CHECK (nutrition_source IN ('SOURCE', 'RULE', 'AI', 'ADMIN')),
+    nutrition_raw JSONB NOT NULL DEFAULT '{}',
     difficulty VARCHAR(10)
         CHECK (difficulty IN ('easy', 'normal', 'hard')),
-    difficulty_score INTEGER
-        CHECK (difficulty_score BETWEEN 1 AND 5),
     source_main_image_url VARCHAR(1024),
     source_thumbnail_url VARCHAR(1024),
     source_video_url VARCHAR(1024),
     content_hash VARCHAR(64),
-    completeness_score NUMERIC(5, 2),
-    confidence_score NUMERIC(5, 2),
     extracted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE recipe_source_quality_scores (
+    extraction_id INTEGER PRIMARY KEY
+        REFERENCES recipe_source_extractions(extraction_id) ON DELETE CASCADE,
+    completeness_score NUMERIC(5, 2),
+    parse_confidence NUMERIC(5, 2),
+    ingredient_confidence NUMERIC(5, 2),
+    metadata_confidence NUMERIC(5, 2),
+    rewrite_confidence NUMERIC(5, 2),
+    nutrition_confidence NUMERIC(5, 2),
+    duplicate_score NUMERIC(5, 2),
+    estimated_fields JSONB NOT NULL DEFAULT '[]',
+    validation_summary JSONB NOT NULL DEFAULT '[]',
+    quality_notes JSONB NOT NULL DEFAULT '{}',
+    reviewed_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -131,11 +157,7 @@ CREATE TABLE recipe_source_extracted_steps (
     extraction_id INTEGER NOT NULL
         REFERENCES recipe_source_extractions(extraction_id) ON DELETE CASCADE,
     step_no INTEGER NOT NULL,
-    title VARCHAR(255),
     instruction TEXT NOT NULL,
-    duration_minutes INTEGER,
-    temperature VARCHAR(50),
-    equipment JSONB NOT NULL DEFAULT '[]',
     source_image_url VARCHAR(1024),
     tip TEXT,
     raw_text TEXT,
@@ -158,38 +180,33 @@ CREATE TABLE recipe_source_extracted_labels (
 
 CREATE TABLE recipes (
     recipe_id SERIAL PRIMARY KEY,
-    source_id INTEGER REFERENCES recipe_sources(source_id) ON DELETE SET NULL,
+    source_id INTEGER REFERENCES recipe_sources(source_id) ON DELETE RESTRICT,
     title VARCHAR(255) NOT NULL,
-    subtitle VARCHAR(255),
     summary TEXT,
     description TEXT NOT NULL,
     servings NUMERIC(4, 1) NOT NULL,
-    prep_time_minutes INTEGER,
-    cook_time_minutes INTEGER,
-    total_time_minutes INTEGER NOT NULL,
-    calories INTEGER,
+    cooking_time_minutes INTEGER NOT NULL,
+    kcal_per_serving INTEGER,
     difficulty VARCHAR(10) NOT NULL
         CHECK (difficulty IN ('easy', 'normal', 'hard')),
-    difficulty_score INTEGER
-        CHECK (difficulty_score BETWEEN 1 AND 5),
-    status VARCHAR(20) NOT NULL DEFAULT 'PUBLISHED'
-        CHECK (status IN ('DRAFT', 'PUBLISHED', 'ARCHIVED')),
     visibility VARCHAR(20) NOT NULL DEFAULT 'PUBLIC'
-        CHECK (visibility IN ('PUBLIC', 'PRIVATE', 'ADMIN_ONLY')),
+        CHECK (visibility IN ('PUBLIC', 'ADMIN_ONLY')),
     author_type VARCHAR(20) NOT NULL DEFAULT 'ADMIN'
         CHECK (author_type IN ('ADMIN', 'USER', 'SOURCE')),
     author_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    source_author_name VARCHAR(255),
-    source_author_url VARCHAR(1024),
-    source_url VARCHAR(1024),
-    source_site VARCHAR(50),
-    source_recipe_id VARCHAR(100),
-    source_published_at TIMESTAMP WITH TIME ZONE,
+    classification_status VARCHAR(30) NOT NULL DEFAULT 'NOT_CLASSIFIED'
+        CHECK (
+            classification_status IN (
+                'NOT_CLASSIFIED',
+                'CLASSIFIED',
+                'FAILED',
+                'REVIEW_REQUIRED'
+            )
+        ),
+    classified_at TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (source_site, source_recipe_id),
-    UNIQUE (source_url)
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 ALTER TABLE recipe_sources
@@ -215,11 +232,7 @@ CREATE TABLE recipe_steps (
     step_id SERIAL PRIMARY KEY,
     recipe_id INTEGER NOT NULL REFERENCES recipes(recipe_id) ON DELETE CASCADE,
     step_no INTEGER NOT NULL,
-    title VARCHAR(255),
     instruction TEXT NOT NULL,
-    duration_minutes INTEGER,
-    temperature VARCHAR(50),
-    equipment JSONB NOT NULL DEFAULT '[]',
     tip TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     UNIQUE (recipe_id, step_no)
@@ -240,11 +253,24 @@ CREATE TABLE recipe_labels (
             )
         ),
     label_value TEXT NOT NULL,
-    normalized_value VARCHAR(100),
     source VARCHAR(30) NOT NULL DEFAULT 'SCRAPE'
         CHECK (source IN ('SCRAPE', 'RULE', 'AI', 'ADMIN')),
     confidence_score NUMERIC(5, 2),
     sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE recipe_nutrition (
+    recipe_id INTEGER PRIMARY KEY REFERENCES recipes(recipe_id) ON DELETE CASCADE,
+    serving_weight_grams NUMERIC(10, 2),
+    kcal_per_serving INTEGER,
+    carbohydrate_grams NUMERIC(10, 2),
+    protein_grams NUMERIC(10, 2),
+    fat_grams NUMERIC(10, 2),
+    sodium_milligrams NUMERIC(10, 2),
+    source VARCHAR(30) NOT NULL DEFAULT 'SOURCE'
+        CHECK (source IN ('SOURCE', 'RULE', 'AI', 'ADMIN')),
+    raw_payload JSONB NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE recipe_classifications (
@@ -369,18 +395,49 @@ CREATE TABLE pending_recipes (
     pending_recipe_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
-    content TEXT NOT NULL,
-    suggested_patch JSONB,
-    servings NUMERIC(4, 1),
-    total_time_minutes INTEGER,
-    difficulty VARCHAR(10)
-        CHECK (difficulty IN ('easy', 'normal', 'hard')),
-    image_url VARCHAR(1024),
+    submission_text TEXT NOT NULL,
+    draft_payload JSONB NOT NULL DEFAULT '{
+        "description": null,
+        "ingredients": [],
+        "ingredients_raw": [],
+        "instructions": [],
+        "servings": null,
+        "cooking_time_minutes": null,
+        "kcal_per_serving": null,
+        "difficulty": null,
+        "category": [],
+        "tags": [],
+        "tips": [],
+        "video_url": null,
+        "image_url": null
+    }',
+    ai_suggested_patch JSONB NOT NULL DEFAULT '{
+        "description": null,
+        "ingredients": [],
+        "ingredients_raw": [],
+        "instructions": [],
+        "servings": null,
+        "cooking_time_minutes": null,
+        "kcal_per_serving": null,
+        "difficulty": null,
+        "category": [],
+        "tags": [],
+        "tips": [],
+        "video_url": null,
+        "image_url": null
+    }',
+    validation_errors JSONB NOT NULL DEFAULT '[]',
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
         CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+    import_status VARCHAR(30) NOT NULL DEFAULT 'NOT_IMPORTED'
+        CHECK (import_status IN ('NOT_IMPORTED', 'IMPORTED', 'FAILED')),
+    is_active BOOLEAN NOT NULL DEFAULT true,
     admin_note TEXT,
+    rejection_reason TEXT,
+    reviewed_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
     reviewed_at TIMESTAMP WITH TIME ZONE,
+    imported_recipe_id INTEGER REFERENCES recipes(recipe_id) ON DELETE SET NULL,
+    imported_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -399,6 +456,7 @@ CREATE TABLE chat_messages (
     room_id INTEGER NOT NULL REFERENCES chat_rooms(room_id) ON DELETE CASCADE,
     role VARCHAR(20) NOT NULL CHECK (role IN ('user', 'model')),
     content TEXT NOT NULL,
+    image_url TEXT,
     recipe_ids JSONB,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -443,12 +501,20 @@ CREATE TRIGGER touch_recipe_source_extractions_updated_at
 BEFORE UPDATE ON recipe_source_extractions
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
+CREATE TRIGGER touch_recipe_source_quality_scores_updated_at
+BEFORE UPDATE ON recipe_source_quality_scores
+FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
 CREATE TRIGGER touch_recipes_updated_at
 BEFORE UPDATE ON recipes
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
 CREATE TRIGGER touch_recipe_classifications_updated_at
 BEFORE UPDATE ON recipe_classifications
+FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
+CREATE TRIGGER touch_recipe_nutrition_updated_at
+BEFORE UPDATE ON recipe_nutrition
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
 CREATE TRIGGER touch_recipe_image_generations_updated_at
@@ -537,27 +603,22 @@ CREATE INDEX idx_users_nickname ON users(nickname);
 
 CREATE INDEX idx_recipe_sources_lifecycle
 ON recipe_sources(parse_status, review_status, import_status, source_id DESC);
-CREATE INDEX idx_recipe_sources_source ON recipe_sources(source_site, source_recipe_id);
 CREATE INDEX idx_recipe_sources_hash ON recipe_sources(raw_content_hash);
 
-CREATE INDEX idx_source_extractions_source ON recipe_source_extractions(source_id);
 CREATE INDEX idx_source_extracted_ingredients_name
 ON recipe_source_extracted_ingredients(normalized_name);
-CREATE INDEX idx_source_extracted_steps_extraction
-ON recipe_source_extracted_steps(extraction_id, step_no);
 CREATE INDEX idx_source_extracted_labels_extraction
 ON recipe_source_extracted_labels(extraction_id, label_type);
 
 CREATE INDEX idx_recipes_active_id ON recipes(is_active, recipe_id DESC);
-CREATE INDEX idx_recipes_status_visibility ON recipes(status, visibility);
-CREATE INDEX idx_recipes_source ON recipes(source_site, source_recipe_id);
-CREATE INDEX idx_recipes_source_url ON recipes(source_url);
+CREATE INDEX idx_recipes_classification_status
+ON recipes(classification_status, recipe_id DESC);
 
 CREATE INDEX idx_recipe_ingredients_recipe_id ON recipe_ingredients(recipe_id);
 CREATE INDEX idx_recipe_ingredients_name ON recipe_ingredients(normalized_name);
-CREATE INDEX idx_recipe_steps_recipe_id ON recipe_steps(recipe_id, step_no);
 CREATE INDEX idx_recipe_labels_recipe_type ON recipe_labels(recipe_id, label_type);
-CREATE INDEX idx_recipe_labels_value ON recipe_labels(normalized_value);
+CREATE INDEX idx_recipe_nutrition_kcal ON recipe_nutrition(kcal_per_serving);
+CREATE INDEX idx_recipe_nutrition_sodium ON recipe_nutrition(sodium_milligrams);
 
 CREATE INDEX idx_recipe_classifications_cuisine
 ON recipe_classifications(cuisine_type);
@@ -581,7 +642,7 @@ CREATE INDEX idx_chat_rooms_user_active_updated
 ON chat_rooms(user_id, is_active, updated_at DESC);
 CREATE INDEX idx_chat_messages_room_created ON chat_messages(room_id, created_at);
 CREATE INDEX idx_pending_recipes_user_status_created
-ON pending_recipes(user_id, status, created_at DESC);
+ON pending_recipes(user_id, is_active, status, created_at DESC);
 CREATE INDEX idx_likes_recipe_id ON likes(recipe_id);
 CREATE INDEX idx_scraps_recipe_id ON scraps(recipe_id);
 CREATE INDEX idx_scraps_user_created ON scraps(user_id, scrap_id DESC);
