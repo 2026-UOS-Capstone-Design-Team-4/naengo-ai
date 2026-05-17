@@ -20,6 +20,24 @@ def _as_list(value):
     return value if isinstance(value, list) else []
 
 
+def _default_pending_recipe_payload():
+    return {
+        "description": None,
+        "ingredients": [],
+        "ingredients_raw": [],
+        "instructions": [],
+        "servings": None,
+        "cooking_time_minutes": None,
+        "kcal_per_serving": None,
+        "difficulty": None,
+        "category": [],
+        "tags": [],
+        "tips": [],
+        "video_url": None,
+        "image_url": None,
+    }
+
+
 class Recipe(Base):
     __tablename__ = "recipes"
 
@@ -29,26 +47,21 @@ class Recipe(Base):
         ForeignKey("recipe_sources.source_id", ondelete="SET NULL"),
     )
     title = Column(String(255), nullable=False)
-    subtitle = Column(String(255))
     summary = Column(Text)
     description = Column(Text, nullable=False)
     servings = Column(Numeric(4, 1), nullable=False)
-    prep_time_minutes = Column(Integer)
-    cook_time_minutes = Column(Integer)
-    total_time_minutes = Column(Integer, nullable=False)
-    calories = Column(Integer)
+    cooking_time_minutes = Column(Integer, nullable=False)
+    kcal_per_serving = Column(Integer)
     difficulty = Column(String(10), nullable=False)
-    difficulty_score = Column(Integer)
-    status = Column(String(20), nullable=False, default="PUBLISHED")
     visibility = Column(String(20), nullable=False, default="PUBLIC")
     author_type = Column(String(20), nullable=False, default="ADMIN")
     author_id = Column(Integer, ForeignKey("users.user_id", ondelete="SET NULL"))
-    source_author_name = Column(String(255))
-    source_author_url = Column(String(1024))
-    source_url = Column(String(1024))
-    source_site = Column(String(50))
-    source_recipe_id = Column(String(100))
-    source_published_at = Column(DateTime(timezone=True))
+    classification_status = Column(
+        String(30),
+        nullable=False,
+        default="NOT_CLASSIFIED",
+    )
+    classified_at = Column(DateTime(timezone=True))
     is_active = Column(BOOLEAN, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -80,6 +93,12 @@ class Recipe(Base):
         order_by="RecipeLabel.sort_order",
         cascade="all, delete-orphan",
     )
+    nutrition = relationship(
+        "RecipeNutrition",
+        back_populates="recipe",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     classifications = relationship(
         "RecipeClassification",
         back_populates="recipe",
@@ -108,14 +127,6 @@ class Recipe(Base):
     def content(self, value: str | None) -> None:
         if value and not self.summary:
             self.summary = value
-
-    @property
-    def cooking_time(self) -> int:
-        return self.total_time_minutes
-
-    @cooking_time.setter
-    def cooking_time(self, value: int | None) -> None:
-        self.total_time_minutes = int(value or 0)
 
     @property
     def ingredients(self) -> list[dict]:
@@ -284,7 +295,6 @@ class Recipe(Base):
             RecipeLabel(
                 label_type=label_type,
                 label_value=value,
-                normalized_value=value,
                 source="ADMIN",
                 sort_order=index,
             )
@@ -333,11 +343,7 @@ class RecipeStep(Base):
         nullable=False,
     )
     step_no = Column(Integer, nullable=False)
-    title = Column(String(255))
     instruction = Column(Text, nullable=False)
-    duration_minutes = Column(Integer)
-    temperature = Column(String(50))
-    equipment = Column(JSONB, nullable=False, default=list)
     tip = Column(Text)
     sort_order = Column(Integer, nullable=False, default=0)
 
@@ -356,12 +362,32 @@ class RecipeLabel(Base):
     )
     label_type = Column(String(30), nullable=False)
     label_value = Column(Text, nullable=False)
-    normalized_value = Column(String(100))
     source = Column(String(30), nullable=False, default="SCRAPE")
     confidence_score = Column(Numeric(5, 2))
     sort_order = Column(Integer, nullable=False, default=0)
 
     recipe = relationship("Recipe", back_populates="labels")
+
+
+class RecipeNutrition(Base):
+    __tablename__ = "recipe_nutrition"
+
+    recipe_id = Column(
+        Integer,
+        ForeignKey("recipes.recipe_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    serving_weight_grams = Column(Numeric(10, 2))
+    kcal_per_serving = Column(Integer)
+    carbohydrate_grams = Column(Numeric(10, 2))
+    protein_grams = Column(Numeric(10, 2))
+    fat_grams = Column(Numeric(10, 2))
+    sodium_milligrams = Column(Numeric(10, 2))
+    source = Column(String(30), nullable=False, default="SOURCE")
+    raw_payload = Column(JSONB, nullable=False, default=dict)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    recipe = relationship("Recipe", back_populates="nutrition")
 
 
 class RecipeClassification(Base):
@@ -462,97 +488,39 @@ class PendingRecipe(Base):
         nullable=False,
     )
     title = Column(String(255), nullable=False)
-    description = Column(Text)
-    content = Column(Text, nullable=False)
-    suggested_patch = Column(JSONB)
-    servings = Column(Numeric(4, 1))
-    total_time_minutes = Column(Integer)
-    difficulty = Column(String(10))
-    image_url = Column(String(1024))
+    submission_text = Column(Text, nullable=False)
+    draft_payload = Column(
+        JSONB,
+        nullable=False,
+        default=_default_pending_recipe_payload,
+    )
+    ai_suggested_patch = Column(
+        JSONB,
+        nullable=False,
+        default=_default_pending_recipe_payload,
+    )
+    validation_errors = Column(JSONB, nullable=False, default=list)
     status = Column(String(20), nullable=False, default="PENDING")
+    import_status = Column(String(30), nullable=False, default="NOT_IMPORTED")
+    is_active = Column(BOOLEAN, nullable=False, default=True)
     admin_note = Column(Text)
+    rejection_reason = Column(Text)
+    reviewed_by = Column(Integer, ForeignKey("users.user_id", ondelete="SET NULL"))
     reviewed_at = Column(DateTime(timezone=True))
+    imported_recipe_id = Column(
+        Integer,
+        ForeignKey("recipes.recipe_id", ondelete="SET NULL"),
+    )
+    imported_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    user = relationship("User", back_populates="pending_recipes")
-
-    def _patch(self) -> dict:
-        if self.suggested_patch is None:
-            self.suggested_patch = {}
-        return self.suggested_patch
-
-    @property
-    def ingredients(self) -> list[dict] | None:
-        return self._patch().get("ingredients")
-
-    @ingredients.setter
-    def ingredients(self, value: list[dict] | None) -> None:
-        self._patch()["ingredients"] = value
-
-    @property
-    def ingredients_raw(self) -> str | None:
-        return self._patch().get("ingredients_raw")
-
-    @ingredients_raw.setter
-    def ingredients_raw(self, value: str | None) -> None:
-        self._patch()["ingredients_raw"] = value
-
-    @property
-    def instructions(self) -> list[str] | None:
-        return self._patch().get("instructions")
-
-    @instructions.setter
-    def instructions(self, value: list[str] | None) -> None:
-        self._patch()["instructions"] = value
-
-    @property
-    def cooking_time(self) -> int | None:
-        return self.total_time_minutes
-
-    @cooking_time.setter
-    def cooking_time(self, value: int | None) -> None:
-        self.total_time_minutes = value
-
-    @property
-    def calories(self) -> int | None:
-        return self._patch().get("calories")
-
-    @calories.setter
-    def calories(self, value: int | None) -> None:
-        self._patch()["calories"] = value
-
-    @property
-    def category(self) -> list[str] | None:
-        return self._patch().get("category")
-
-    @category.setter
-    def category(self, value: list[str] | None) -> None:
-        self._patch()["category"] = value
-
-    @property
-    def tags(self) -> list[str] | None:
-        return self._patch().get("tags")
-
-    @tags.setter
-    def tags(self, value: list[str] | None) -> None:
-        self._patch()["tags"] = value
-
-    @property
-    def tips(self) -> list[str] | None:
-        return self._patch().get("tips")
-
-    @tips.setter
-    def tips(self, value: list[str] | None) -> None:
-        self._patch()["tips"] = value
-
-    @property
-    def video_url(self) -> str | None:
-        return self._patch().get("video_url")
-
-    @video_url.setter
-    def video_url(self, value: str | None) -> None:
-        self._patch()["video_url"] = value
+    user = relationship(
+        "User",
+        back_populates="pending_recipes",
+        foreign_keys=[user_id],
+    )
+    imported_recipe = relationship("Recipe", foreign_keys=[imported_recipe_id])
 
 
 class RecipeQualityScore(Base):
@@ -586,3 +554,6 @@ class RecipeStats(Base):
     scrap_count = Column(Integer, nullable=False, default=0)
 
     recipe = relationship("Recipe", back_populates="stats")
+
+
+from app.models.recipe_source import RecipeSource  # noqa: E402,F401
