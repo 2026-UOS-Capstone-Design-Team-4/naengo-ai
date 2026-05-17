@@ -7,7 +7,6 @@ from app.models.user import User, UserProfile
 from app.schemas.user import (
     UserInputAppendRequest,
     UserInputDeleteRequest,
-    UserInputUpdateRequest,
     UserProfileResponse,
     UserUpdateRequest,
 )
@@ -65,20 +64,6 @@ class UserService:
         profile = self.get_profile(user_id)
         if not profile:
             return None
-        return UserProfileResponse(user_input=_latest_first(profile.user_input))
-
-    def update_profile(
-        self,
-        user_id: int,
-        body: UserInputUpdateRequest,
-    ) -> UserProfileResponse | None:
-        profile = self.get_profile(user_id)
-        if not profile:
-            return None
-
-        profile.user_input = _clean_user_inputs(body.user_input)
-        self.db.commit()
-        self.db.refresh(profile)
         return UserProfileResponse(user_input=_latest_first(profile.user_input))
 
     def append_profile_user_input(
