@@ -1,16 +1,25 @@
-import hashlib
+import base64
+import binascii
+import json
 from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.core.config import EMBEDDING_MODEL
-from app.models.recipe import PendingRecipe, Recipe, RecipeEmbedding, RecipeMedia
+from app.models.recipe import PendingRecipe
 from app.models.user import User
-from app.schemas.pending_recipe import PendingRecipeAdminUpdate, PendingRecipeCreate
-from app.services.embedding_service import embedding_service
+from app.schemas.pending_recipe import (
+    PendingRecipeAdminUpdate,
+    PendingRecipeCreate,
+    build_pending_recipe_payload,
+)
 
 
-class PendingRecipeApprovalError(ValueError):
+class PendingRecipeInvalidCursorError(ValueError):
+    pass
+
+
+class PendingRecipeActiveDeleteError(ValueError):
     pass
 
 
@@ -21,10 +30,58 @@ class PendingRecipeService:
     def get_user_pending_recipes(self, user_id: int) -> list[PendingRecipe]:
         return (
             self.db.query(PendingRecipe)
-            .filter(PendingRecipe.user_id == user_id)
+            .filter(
+                PendingRecipe.user_id == user_id,
+                PendingRecipe.is_active.is_(True),
+            )
             .order_by(PendingRecipe.created_at.desc())
             .all()
         )
+
+    def get_admin_pending_recipes(
+        self,
+        *,
+        status: str | None = None,
+        is_active: bool | None = None,
+        user_id: int | None = None,
+        q: str | None = None,
+        cursor: str | None = None,
+        limit: int = 20,
+    ) -> tuple[list[PendingRecipe], str | None]:
+        cursor_id = (
+            _parse_admin_pending_recipe_cursor(cursor)
+            if cursor is not None
+            else None
+        )
+        query = self.db.query(PendingRecipe)
+        if status:
+            query = query.filter(PendingRecipe.status == status)
+        if is_active is not None:
+            query = query.filter(PendingRecipe.is_active.is_(is_active))
+        if user_id is not None:
+            query = query.filter(PendingRecipe.user_id == user_id)
+        if q:
+            like_q = f"%{q}%"
+            query = query.filter(
+                PendingRecipe.title.ilike(like_q)
+                | PendingRecipe.submission_text.ilike(like_q)
+            )
+        if cursor_id is not None:
+            query = query.filter(PendingRecipe.pending_recipe_id < cursor_id)
+
+        rows = (
+            query.order_by(PendingRecipe.pending_recipe_id.desc())
+            .limit(limit + 1)
+            .all()
+        )
+        has_next = len(rows) > limit
+        items = rows[:limit]
+        next_cursor = (
+            _build_admin_pending_recipe_cursor(items[-1].pending_recipe_id)
+            if has_next and items
+            else None
+        )
+        return items, next_cursor
 
     def get_user_pending_recipe(
         self,
@@ -36,6 +93,7 @@ class PendingRecipeService:
             .filter(
                 PendingRecipe.pending_recipe_id == pending_recipe_id,
                 PendingRecipe.user_id == user_id,
+                PendingRecipe.is_active.is_(True),
             )
             .first()
         )
@@ -52,24 +110,9 @@ class PendingRecipeService:
         pending = PendingRecipe(
             user_id=user_id,
             title=body.title,
-            content=body.content,
-            description=body.description,
-            ingredients=(
-                [item.model_dump() for item in body.ingredients]
-                if body.ingredients
-                else None
-            ),
-            ingredients_raw=body.ingredients_raw,
-            instructions=body.instructions,
-            servings=body.servings,
-            cooking_time=body.cooking_time,
-            calories=body.calories,
-            difficulty=body.difficulty,
-            category=body.category,
-            tags=body.tags,
-            tips=body.tips,
-            video_url=body.video_url,
-            image_url=body.image_url,
+            submission_text=body.submission_text,
+            draft_payload=build_pending_recipe_payload(body.draft_payload),
+            ai_suggested_patch=build_pending_recipe_payload(),
         )
         self.db.add(pending)
         self.db.commit()
@@ -85,7 +128,7 @@ class PendingRecipeService:
         if not pending:
             return False
 
-        pending.status = "REJECTED"
+        pending.is_active = False
         self.db.commit()
         return True
 
@@ -110,136 +153,72 @@ class PendingRecipeService:
         if not pending:
             return None
 
-        recipe_fields = [
-            "title",
-            "content",
-            "description",
-            "ingredients_raw",
-            "instructions",
-            "servings",
-            "cooking_time",
-            "calories",
-            "difficulty",
-            "category",
-            "tags",
-            "tips",
-            "video_url",
-            "image_url",
-            "admin_note",
-        ]
-        for field in recipe_fields:
+        direct_fields = ["title", "submission_text"]
+        for field in direct_fields:
             value = getattr(body, field)
             if value is not None:
                 setattr(pending, field, value)
 
-        if body.ingredients is not None:
-            pending.ingredients = [item.model_dump() for item in body.ingredients]
+        nullable_fields = ["admin_note", "rejection_reason"]
+        for field in nullable_fields:
+            if field in body.model_fields_set:
+                setattr(pending, field, getattr(body, field))
+
+        if body.draft_payload is not None:
+            pending.draft_payload = build_pending_recipe_payload(body.draft_payload)
+        if body.ai_suggested_patch is not None:
+            pending.ai_suggested_patch = build_pending_recipe_payload(
+                body.ai_suggested_patch,
+            )
+        if body.validation_errors is not None:
+            pending.validation_errors = body.validation_errors
 
         if body.status is not None and body.status != pending.status:
-            previous_status = pending.status
             pending.status = body.status
             pending.reviewed_at = datetime.now(UTC)
-            if body.status == "APPROVED" and previous_status != "APPROVED":
-                self._promote_to_recipe(pending)
+            if (
+                body.status != "REJECTED"
+                and "rejection_reason" not in body.model_fields_set
+            ):
+                pending.rejection_reason = None
 
         self.db.commit()
         self.db.refresh(pending)
         return pending
 
-    def _promote_to_recipe(self, pending: PendingRecipe):
-        missing_fields = self._get_missing_recipe_fields(pending)
-        if missing_fields:
-            missing = ", ".join(missing_fields)
-            message = f"Cannot approve recipe with missing fields: {missing}"
-            raise PendingRecipeApprovalError(message)
-
-        existing_recipe = self._find_existing_promoted_recipe(pending)
-        if existing_recipe:
-            return
-
-        recipe_payload = self._pending_to_recipe_payload(pending)
-        embedding_text = self._build_embedding_text(recipe_payload)
-        recipe = Recipe(**recipe_payload)
-        self.db.add(recipe)
-        self.db.flush()
-        self.db.add(
-            RecipeEmbedding(
-                recipe_id=recipe.recipe_id,
-                embedding_type="RECIPE_SEARCH",
-                model=EMBEDDING_MODEL,
-                content_hash=hashlib.sha256(embedding_text.encode()).hexdigest(),
-                embedding=embedding_service.embed_query(embedding_text),
+    def hard_delete_inactive_pending_recipe(self, pending_recipe_id: int) -> bool:
+        pending = self.get_active_pending_recipe(pending_recipe_id)
+        if not pending:
+            return False
+        if pending.is_active:
+            raise PendingRecipeActiveDeleteError(
+                "Active pending recipe cannot be hard-deleted.",
             )
-        )
 
-    def _get_missing_recipe_fields(self, pending: PendingRecipe) -> list[str]:
-        required_fields = [
-            "title",
-            "description",
-            "ingredients",
-            "ingredients_raw",
-            "instructions",
-            "servings",
-            "cooking_time",
-            "difficulty",
-            "category",
-        ]
-        return [field for field in required_fields if not getattr(pending, field)]
+        self.db.delete(pending)
+        self.db.commit()
+        return True
 
-    def _find_existing_promoted_recipe(self, pending: PendingRecipe) -> Recipe | None:
-        if pending.video_url:
-            return (
-                self.db.query(Recipe)
-                .join(RecipeMedia, Recipe.recipe_id == RecipeMedia.recipe_id)
-                .filter(
-                    RecipeMedia.storage_url == pending.video_url,
-                    Recipe.author_type == "USER",
-                    Recipe.author_id == pending.user_id,
-                )
-                .first()
-            )
-        return (
-            self.db.query(Recipe)
-            .filter(
-                Recipe.title == pending.title,
-                Recipe.author_type == "USER",
-                Recipe.author_id == pending.user_id,
-                Recipe.summary == pending.content,
-            )
-            .first()
-        )
 
-    def _pending_to_recipe_payload(self, pending: PendingRecipe) -> dict:
-        return {
-            "title": pending.title,
-            "description": pending.description,
-            "ingredients": pending.ingredients,
-            "instructions": pending.instructions,
-            "servings": pending.servings,
-            "total_time_minutes": pending.cooking_time,
-            "calories": pending.calories,
-            "difficulty": pending.difficulty,
-            "category": pending.category or [],
-            "tags": pending.tags or [],
-            "tips": pending.tips or [],
-            "summary": pending.content,
-            "video_url": pending.video_url,
-            "image_url": pending.image_url,
-            "author_type": "USER",
-            "author_id": pending.user_id,
-        }
+def _build_admin_pending_recipe_cursor(pending_recipe_id: int) -> str:
+    payload: dict[str, Any] = {
+        "sort": "latest",
+        "pending_recipe_id": pending_recipe_id,
+    }
+    raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
+    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
-    def _build_embedding_text(self, recipe: dict) -> str:
-        parts = [
-            recipe["title"],
-            recipe["description"],
-            " ".join(item.get("name", "") for item in recipe.get("ingredients") or []),
-            " ".join(recipe["category"] or []),
-            " ".join(recipe["tags"] or []),
-            " ".join(recipe["tips"] or []),
-        ]
-        if recipe["total_time_minutes"]:
-            parts.append(f"{recipe['total_time_minutes']} minutes")
-        if recipe["difficulty"]:
-            parts.append(recipe["difficulty"])
-        return " ".join(str(part) for part in parts if part)
+
+def _parse_admin_pending_recipe_cursor(cursor: str) -> int:
+    try:
+        padding = "=" * (-len(cursor) % 4)
+        raw = base64.urlsafe_b64decode(f"{cursor}{padding}".encode())
+        payload = json.loads(raw)
+    except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise PendingRecipeInvalidCursorError("Invalid cursor.") from exc
+    if not isinstance(payload, dict) or payload.get("sort") != "latest":
+        raise PendingRecipeInvalidCursorError("Invalid cursor.")
+    try:
+        return int(payload["pending_recipe_id"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PendingRecipeInvalidCursorError("Invalid cursor.") from exc
