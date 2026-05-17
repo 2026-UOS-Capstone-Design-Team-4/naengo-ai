@@ -133,7 +133,7 @@ def import_legacy_youtube_recipes():
                     instructions=data.get("instructions"),
                     servings=data.get("servings"),
                     cooking_time=data.get("cooking_time"),
-                    calories=data.get("calories"),
+                    kcal_per_serving=data.get("kcal_per_serving"),
                     difficulty=data.get("difficulty"),
                     category=data.get("category"),
                     tags=data.get("tags", []),
