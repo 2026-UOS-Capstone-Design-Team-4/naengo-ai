@@ -19,9 +19,6 @@ from app.api.v1.openapi.users import (
     PATCH_ME_DESCRIPTION,
     PATCH_ME_RESPONSES,
     PATCH_ME_SUMMARY,
-    PATCH_MY_PROFILE_DESCRIPTION,
-    PATCH_MY_PROFILE_RESPONSES,
-    PATCH_MY_PROFILE_SUMMARY,
     POST_MY_PROFILE_USER_INPUT_DESCRIPTION,
     POST_MY_PROFILE_USER_INPUT_RESPONSES,
     POST_MY_PROFILE_USER_INPUT_SUMMARY,
@@ -31,7 +28,6 @@ from app.schemas.recipe import RecipeListResponse
 from app.schemas.user import (
     UserInputAppendRequest,
     UserInputDeleteRequest,
-    UserInputUpdateRequest,
     UserProfileResponse,
     UserResponse,
     UserUpdateRequest,
@@ -139,25 +135,6 @@ def append_my_profile_user_input(
         current_user_id,
         UserInputAppendRequest(text=normalized.normalized_sentence),
     )
-    return profile
-
-
-@router.patch(
-    "/me/profile",
-    summary=PATCH_MY_PROFILE_SUMMARY,
-    description=PATCH_MY_PROFILE_DESCRIPTION,
-    response_model=UserProfileResponse,
-    responses=PATCH_MY_PROFILE_RESPONSES,
-)
-def update_my_profile(
-    body: UserInputUpdateRequest,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id),
-):
-    user_service = UserService(db)
-    profile = user_service.update_profile(current_user_id, body)
-    if not profile:
-        raise ApiError(404, "RESOURCE_NOT_FOUND", "프로필을 찾을 수 없습니다.")
     return profile
 
 
