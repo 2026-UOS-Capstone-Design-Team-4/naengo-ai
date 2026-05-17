@@ -13,10 +13,6 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
-from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
-from app.models.recipe import Recipe, RecipeIngredient, RecipeStep  # noqa: F401
-from app.models.social import Like, Scrap  # noqa: F401
-from app.models.user import User, UserProfile  # noqa: F401
 
 
 class RecipeSource(Base):
@@ -28,17 +24,23 @@ class RecipeSource(Base):
     parser_type = Column(String(20), nullable=False)
     source_recipe_id = Column(String(100))
     source_url = Column(String(1024))
+    source_record_id = Column(String(100))
+    source_organization = Column(String(255))
+    source_dataset_id = Column(String(100))
+    source_dataset_name = Column(String(255))
+    source_api_url = Column(String(1024))
+    source_license = Column(String(100))
+    source_license_url = Column(String(1024))
     source_author_name = Column(String(255))
     source_author_url = Column(String(1024))
     source_published_at = Column(DateTime(timezone=True))
     raw_payload = Column(JSONB, nullable=False, default=dict)
     raw_content_hash = Column(String(64))
-    collection_status = Column(String(30), nullable=False, default="COLLECTED")
     parse_status = Column(String(30), nullable=False, default="NOT_PARSED")
     review_status = Column(String(30), nullable=False, default="PENDING")
     import_status = Column(String(30), nullable=False, default="NOT_IMPORTED")
     validation_errors = Column(JSONB, nullable=False, default=list)
-    parser_version = Column(String(50))
+    extraction_version = Column(String(50))
     collected_at = Column(DateTime(timezone=True), server_default=func.now())
     parsed_at = Column(DateTime(timezone=True))
     reviewed_at = Column(DateTime(timezone=True))
@@ -59,7 +61,6 @@ class RecipeSource(Base):
     imported_recipe = relationship(
         "Recipe",
         foreign_keys=[imported_recipe_id],
-        primaryjoin="RecipeSource.imported_recipe_id == Recipe.recipe_id",
     )
     image_generations = relationship("RecipeImageGeneration", back_populates="source")
 
@@ -75,16 +76,11 @@ class RecipeSource(Base):
             return self.parse_status
         if self.parse_status == "PARSED":
             return "PARSED"
-        return self.collection_status
+        return "NOT_PARSED"
 
     @status.setter
     def status(self, value: str) -> None:
-        if value == "COLLECTED":
-            self.collection_status = "COLLECTED"
-            self.parse_status = "NOT_PARSED"
-            self.review_status = "PENDING"
-            self.import_status = "NOT_IMPORTED"
-        elif value == "PARSED":
+        if value == "PARSED":
             self.parse_status = "PARSED"
             self.review_status = "PENDING"
         elif value in {"INVALID", "DUPLICATE", "REVIEW_REQUIRED"}:
@@ -97,8 +93,6 @@ class RecipeSource(Base):
             self.import_status = "IMPORTED"
         elif value == "REJECTED":
             self.review_status = "REJECTED"
-        else:
-            self.collection_status = value
 
     @property
     def content_hash(self) -> str | None:
@@ -120,27 +114,34 @@ class RecipeSourceExtraction(Base):
         unique=True,
     )
     title = Column(String(255), nullable=False)
-    subtitle = Column(String(255))
     summary = Column(Text)
     description = Column(Text)
     servings = Column(Numeric(4, 1))
-    prep_time_minutes = Column(Integer)
-    cook_time_minutes = Column(Integer)
-    total_time_minutes = Column(Integer)
-    calories = Column(Integer)
+    cooking_time_minutes = Column(Integer)
+    kcal_per_serving = Column(Integer)
+    serving_weight_grams = Column(Numeric(10, 2))
+    carbohydrate_grams = Column(Numeric(10, 2))
+    protein_grams = Column(Numeric(10, 2))
+    fat_grams = Column(Numeric(10, 2))
+    sodium_milligrams = Column(Numeric(10, 2))
+    nutrition_source = Column(String(30))
+    nutrition_raw = Column(JSONB, nullable=False, default=dict)
     difficulty = Column(String(10))
-    difficulty_score = Column(Integer)
     source_main_image_url = Column(String(1024))
     source_thumbnail_url = Column(String(1024))
     source_video_url = Column(String(1024))
     content_hash = Column(String(64))
-    completeness_score = Column(Numeric(5, 2))
-    confidence_score = Column(Numeric(5, 2))
     extracted_at = Column(DateTime(timezone=True), server_default=func.now())
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
 
     source = relationship("RecipeSource", back_populates="extraction")
+    quality_score = relationship(
+        "RecipeSourceQualityScore",
+        back_populates="extraction",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
     ingredients = relationship(
         "RecipeSourceExtractedIngredient",
         back_populates="extraction",
@@ -159,6 +160,31 @@ class RecipeSourceExtraction(Base):
         order_by="RecipeSourceExtractedLabel.sort_order",
         cascade="all, delete-orphan",
     )
+
+
+class RecipeSourceQualityScore(Base):
+    __tablename__ = "recipe_source_quality_scores"
+
+    extraction_id = Column(
+        Integer,
+        ForeignKey("recipe_source_extractions.extraction_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    completeness_score = Column(Numeric(5, 2))
+    parse_confidence = Column(Numeric(5, 2))
+    ingredient_confidence = Column(Numeric(5, 2))
+    metadata_confidence = Column(Numeric(5, 2))
+    rewrite_confidence = Column(Numeric(5, 2))
+    nutrition_confidence = Column(Numeric(5, 2))
+    duplicate_score = Column(Numeric(5, 2))
+    estimated_fields = Column(JSONB, nullable=False, default=list)
+    validation_summary = Column(JSONB, nullable=False, default=list)
+    quality_notes = Column(JSONB, nullable=False, default=dict)
+    reviewed_by = Column(Integer, ForeignKey("users.user_id", ondelete="SET NULL"))
+    reviewed_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    extraction = relationship("RecipeSourceExtraction", back_populates="quality_score")
 
 
 class RecipeSourceExtractedIngredient(Base):
@@ -194,11 +220,7 @@ class RecipeSourceExtractedStep(Base):
         nullable=False,
     )
     step_no = Column(Integer, nullable=False)
-    title = Column(String(255))
     instruction = Column(Text, nullable=False)
-    duration_minutes = Column(Integer)
-    temperature = Column(String(50))
-    equipment = Column(JSONB, nullable=False, default=list)
     source_image_url = Column(String(1024))
     tip = Column(Text)
     raw_text = Column(Text)
