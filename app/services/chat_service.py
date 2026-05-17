@@ -79,6 +79,7 @@ class ChatService:
                     message_id=msg.message_id,
                     role=msg.role,
                     content=msg.content,
+                    image_url=msg.image_url,
                     recipes=recipes,
                     created_at=msg.created_at,
                 )
@@ -110,8 +111,11 @@ class ChatService:
         user_content: str,
         ai_content: str,
         recipe_ids: list[int] | None = None,
+        image_url: str | None = None,
     ) -> int:
-        self.db.add(ChatMessage(room_id=room_id, role="user", content=user_content))
+        self.db.add(
+            ChatMessage(room_id=room_id, role="user", content=user_content, image_url=image_url)
+        )
         ai_message = ChatMessage(
             room_id=room_id,
             role="model",
