@@ -48,6 +48,7 @@ class ChatMessage(Base):
     )
     role = Column(String(20), nullable=False)  # user, model
     content = Column(Text, nullable=False)
+    image_url = Column(Text, nullable=True)
     recipe_ids = Column(JSONB, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
