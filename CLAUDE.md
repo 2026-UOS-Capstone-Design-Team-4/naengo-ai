@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Docker 개발 환경
+
+- 로컬 개발 컨테이너는 `docker compose -f docker-compose.dev.yml up -d --build`로 실행합니다.
+- `docker-compose.dev.yml`은 소스 디렉터리를 `/app`에 bind mount하고 `uvicorn --reload`로 실행합니다.
+- 일반적인 Python 코드 수정은 컨테이너에 바로 반영되므로 재빌드하지 않습니다. 의존성, Dockerfile, compose 설정이 바뀐 경우에만 재빌드합니다.
+
 ## 커밋 컨벤션
 
 | 타입 | 설명 |
@@ -31,28 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 전체 설계 지도: [`architecture.md`](architecture.md)
 - 문서 목록 및 읽기 순서: [`docs/00-index.md`](docs/00-index.md)
-
-### 주요 설계 문서
-
-| 영역 | 문서 |
-|------|------|
-| API 전체 구조 | [`docs/architecture/api/00-overview.md`](docs/architecture/api/00-overview.md) |
-| User API | [`docs/architecture/api/01-user-api.md`](docs/architecture/api/01-user-api.md) |
-| Admin API | [`docs/architecture/api/02-admin-api.md`](docs/architecture/api/02-admin-api.md) |
-| Internal API | [`docs/architecture/api/03-internal-api.md`](docs/architecture/api/03-internal-api.md) |
-| 인증/권한 | [`docs/architecture/api/04-auth-and-permissions.md`](docs/architecture/api/04-auth-and-permissions.md) |
-| 에러 응답 | [`docs/architecture/api/05-error-response.md`](docs/architecture/api/05-error-response.md) |
-| DB 스키마 | [`docs/architecture/database/00-schema.md`](docs/architecture/database/00-schema.md) |
-| Migration 전략 | [`docs/architecture/database/01-migration-strategy.md`](docs/architecture/database/01-migration-strategy.md) |
-| 데이터 수집 파이프라인 | [`docs/architecture/data-ingestion/00-overview.md`](docs/architecture/data-ingestion/00-overview.md) |
-| Admin 검수 흐름 | [`docs/architecture/admin-review/00-overview.md`](docs/architecture/admin-review/00-overview.md) |
-| AI 에이전트 | [`docs/architecture/ai-agent/00-overview.md`](docs/architecture/ai-agent/00-overview.md) |
-| Background Jobs | [`docs/architecture/background-jobs/00-overview.md`](docs/architecture/background-jobs/00-overview.md) |
-| Live Research | [`docs/architecture/live-research/00-overview.md`](docs/architecture/live-research/00-overview.md) |
-
-### 설계 원칙
-
-- 새 테이블을 추가할 때는 `db/schema.sql`을 먼저 수정하고 SQLAlchemy 모델을 추가합니다. 순서를 바꾸지 않습니다.
-- 에러 응답은 `{"error": {"code": "...", "message": "...", "details": {}}}` 형식을 따릅니다.
-- HTTP 트리거 비동기 작업은 FastAPI `BackgroundTasks`를 사용합니다. 별도 큐/워커 인프라를 추가하지 않습니다.
-- 배치 작업(스크래핑, 정규화, import, embedding 백필)은 CLI 스크립트로 구현합니다.
+- 먼저 `architecture.md`에서 전체 구조와 문서 지도를 확인합니다.
+- 그 다음 `docs/00-index.md`의 읽기 순서를 보고, 현재 작업과 직접 관련된 세부 문서만 추가로 읽습니다.
+- 특정 문서 경로를 이 파일에 중복으로 나열하지 않습니다. 문서 구조가 바뀌면 `architecture.md`와 `docs/00-index.md`만 갱신합니다.
+- 설계 문서는 구체적인 구현보다는 전체적인 흐름에 초점을 맞춥니다. 구현 세부사항은 코드에서 확인합니다.
