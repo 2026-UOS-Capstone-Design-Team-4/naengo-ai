@@ -1,10 +1,10 @@
 # 03. Agent Integration
 
-Live Research는 AI Agent의 route 중 하나로 연결한다.
+Live Research는 AI Agent의 route 중 하나로 연결된다.
 
 ## Intent Types
 
-Live Research 후보가 되는 intent:
+Live Research 정보가 필요한 intent:
 
 - `RECIPE_RECOMMENDATION`
 - `COOKING_TIP`
@@ -24,7 +24,7 @@ Live Research 후보가 되는 intent:
 
 ```text
 IntentClassifier
-  -> AgentRouter
+  -> IntentAgentRouter
       -> if fresh/current/trend required:
            LiveResearchService
       -> else:
@@ -33,13 +33,13 @@ IntentClassifier
 
 ## Combined Answer
 
-내부 DB와 live research를 함께 쓸 수 있다.
+기존 DB와 live research를 함께 쓸 수 있다.
 
 ```text
-1. 내부 DB에서 레시피 후보 검색
-2. live research로 최신 트렌드/맥락 확인
-3. AI 답변은 DB 레시피를 우선 추천
-4. 최신 정보는 보조 설명과 출처로 제공
+1. 기존 DB에서 관련 정보 검색
+2. live research로 최신 트렌드 맥락 확인
+3. AI 응답은 DB 정보를 우선 추천
+4. 최신 정보는 보조 설명과 출처를 제공
 ```
 
 ## Prompt Context
@@ -57,7 +57,7 @@ Live research evidence:
 
 ## SSE Metadata
 
-`metadata` 이벤트에 research 사용 여부를 표시할 수 있다.
+`metadata` 이벤트에 research 활용 여부를 표시할 수 있다.
 
 ```json
 {
