@@ -127,7 +127,7 @@ POST   /api/v1/pending-recipes
 DELETE /api/v1/pending-recipes/{pending_recipe_id}
 ```
 
-사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `pending_recipes`에 저장한다. 사용자의 원문은 `submission_text`, 검수 대상 구조화 값은 `draft_payload`에 보관한다. 사용자가 삭제하면 실제 삭제 대신 `is_active = false`로 바꾸어 관리자 검수 상태(`PENDING`, `APPROVED`, `REJECTED`)와 분리한다.
+사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `pending_recipes`에 저장한다. 요청 본문은 `title`(필수)과 `submission_text`(필수)를 받는다. 검수 대상 구조화 값인 `draft_payload`와 AI 보정 후보인 `ai_suggested_patch`는 빈 기본 구조로 초기화한다. 사용자가 삭제하면 실제 삭제 대신 `is_active = false`로 바꾸어 관리자 검수 상태(`PENDING`, `APPROVED`, `REJECTED`)와 분리한다.
 
 ## Excluded From User API
 
