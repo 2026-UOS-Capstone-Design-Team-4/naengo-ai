@@ -111,7 +111,7 @@ class PendingRecipeService:
             user_id=user_id,
             title=body.title,
             submission_text=body.submission_text,
-            draft_payload=build_pending_recipe_payload(body.draft_payload),
+            draft_payload=build_pending_recipe_payload(),
             ai_suggested_patch=build_pending_recipe_payload(),
         )
         self.db.add(pending)
@@ -207,6 +207,14 @@ def _build_admin_pending_recipe_cursor(pending_recipe_id: int) -> str:
     }
     raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+
+def _build_pending_recipe_title(submission_text: str) -> str:
+    for line in submission_text.splitlines():
+        title = line.strip()
+        if title:
+            return title[:255]
+    return "사용자 제출 레시피"
 
 
 def _parse_admin_pending_recipe_cursor(cursor: str) -> int:
