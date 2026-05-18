@@ -32,14 +32,10 @@ def build_pending_recipe_payload(values: dict | None = None) -> dict:
 
 
 class PendingRecipeCreate(BaseModel):
-    title: str
-    submission_text: str
-    draft_payload: dict = Field(default_factory=build_pending_recipe_payload)
+    model_config = ConfigDict(extra="forbid")
 
-    @field_validator("draft_payload", mode="before")
-    @classmethod
-    def normalize_draft_payload(cls, value: dict | None) -> dict:
-        return build_pending_recipe_payload(value)
+    title: str = Field(min_length=1, max_length=255)
+    submission_text: str = Field(min_length=1)
 
 
 class PendingRecipeResponse(BaseModel):
