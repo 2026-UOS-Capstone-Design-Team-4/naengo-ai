@@ -50,17 +50,14 @@ POST_PENDING_RECIPE_DESCRIPTION = r"""
 
 제출 레시피는 `PENDING` 상태로 저장되고 관리자가 검수 후 승인하거나 거절합니다.
 
-**필수 필드**:
+**필드**:
 
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `title` | string | 제출 레시피 제목 |
-| `submission_text` | string | 사용자가 처음 제출한 원문 설명 |
-| `draft_payload` | object | 검수 대상이 되는 구조화 draft 값 |
+| 필드 | 타입 | 필수 | 설명 |
+|------|------|------|------|
+| `title` | string | ✓ | 제출 레시피 제목 |
+| `submission_text` | string | ✓ | 사용자가 처음 제출한 원문 설명 |
 
-`draft_payload`에는 승인 시 정식 레시피 생성에 필요한 값을 담습니다.
-대표 필드는 `description`, `ingredients`, `ingredients_raw`, `instructions`,
-`servings`, `cooking_time_minutes`, `difficulty`, `category`입니다.
+검수용 `draft_payload`와 `ai_suggested_patch`는 빈 기본 구조로 초기화합니다.
 """
 
 POST_PENDING_RECIPE_RESPONSES = {
