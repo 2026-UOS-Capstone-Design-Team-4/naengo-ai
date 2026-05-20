@@ -37,7 +37,7 @@ DELETE /api/v1/admin/chat-rooms/{room_id}
 Hard deletes a chat room and its messages from the database. User-facing
 `DELETE /api/v1/chat/rooms/{room_id}` remains a soft delete.
 
-### Pending Recipes
+### User Recipes
 
 ```text
 GET    /api/v1/admin/user-recipes
