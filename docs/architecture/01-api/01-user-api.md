@@ -118,7 +118,7 @@ Chat API는 추천 또는 일반 답변을 반환한다.
 - 프로필 업데이트 후보 또는 확인 정보
 - live research 사용 여부
 
-## Pending Recipes
+## User Recipes
 
 ```text
 GET    /api/v1/user-recipes
