@@ -15,12 +15,12 @@ api_router.include_router(recipes.router, prefix="/recipes", tags=["recipes"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(
     pending_recipes.router,
-    prefix="/pending-recipes",
-    tags=["pending-recipes"],
+    prefix="/user-recipes",
+    tags=["user-recipes"],
 )
 api_router.include_router(
     admin_pending_recipes.router,
-    prefix="/admin/pending-recipes",
+    prefix="/admin/user-recipes",
     tags=["admin"],
     dependencies=[Depends(require_admin)],
 )
