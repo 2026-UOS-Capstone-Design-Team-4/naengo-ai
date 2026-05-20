@@ -403,7 +403,7 @@ CREATE TABLE recipe_stats (
 );
 
 CREATE TABLE user_recipes (
-    pending_recipe_id SERIAL PRIMARY KEY,
+    user_recipe_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     submission_text TEXT NOT NULL,
@@ -654,7 +654,7 @@ CREATE INDEX idx_chat_rooms_user_active_updated
 ON chat_rooms(user_id, is_active, updated_at DESC);
 CREATE INDEX idx_chat_messages_room_created ON chat_messages(room_id, created_at);
 CREATE INDEX idx_user_recipes_user_status_created
-ON user_recipes(user_id, is_active, status, created_at DESC);
+ON user_recipes(user_id, is_active, status, user_recipe_id DESC);
 CREATE INDEX idx_likes_recipe_id ON likes(recipe_id);
 CREATE INDEX idx_scraps_recipe_id ON scraps(recipe_id);
 CREATE INDEX idx_scraps_user_created ON scraps(user_id, scrap_id DESC);
