@@ -13,13 +13,13 @@ class AgentRoute(StrEnum):
     PROFILE_UPDATE = "PROFILE_UPDATE"
     RECIPE_AGENT = "RECIPE_AGENT"
     COOKING_AGENT = "COOKING_AGENT"
+    SMALLTALK_AGENT = "SMALLTALK_AGENT"
 
 
 @dataclass(frozen=True)
 class AgentRouteDecision:
     route: AgentRoute
     message: str | None = None
-    use_smalltalk_responder: bool = False
     should_plan_retrieval: bool = False
 
 
@@ -49,10 +49,7 @@ class IntentAgentRouter:
                 message=IDENTITY_MESSAGE,
             )
         if intent_type == "SMALLTALK":
-            return AgentRouteDecision(
-                route=AgentRoute.FIXED_RESPONSE,
-                use_smalltalk_responder=True,
-            )
+            return AgentRouteDecision(route=AgentRoute.SMALLTALK_AGENT)
         if intent_type == "PROFILE_UPDATE":
             return AgentRouteDecision(route=AgentRoute.PROFILE_UPDATE)
         if intent_type in _RECIPE_INTENTS and confidence < _LOW_CONFIDENCE_THRESHOLD:
