@@ -479,7 +479,7 @@ class RecipeEmbedding(Base):
 
 
 class PendingRecipe(Base):
-    __tablename__ = "pending_recipes"
+    __tablename__ = "user_recipes"
 
     pending_recipe_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(
