@@ -41,9 +41,9 @@ Hard deletes a chat room and its messages from the database. User-facing
 
 ```text
 GET    /api/v1/admin/user-recipes
-GET    /api/v1/admin/user-recipes/{pending_recipe_id}
-PATCH  /api/v1/admin/user-recipes/{pending_recipe_id}
-DELETE /api/v1/admin/user-recipes/{pending_recipe_id}
+GET    /api/v1/admin/user-recipes/{user_recipe_id}
+PATCH  /api/v1/admin/user-recipes/{user_recipe_id}
+DELETE /api/v1/admin/user-recipes/{user_recipe_id}
 ```
 
 사용자가 제출한 레시피 검수 및 승인 처리다. `APPROVED` 처리 시 제출 레시피가 서비스에 노출 가능한 상태가 된다. `recipes*` production 테이블 import는 별도 작업으로 처리한다.
@@ -73,17 +73,17 @@ POST   /api/v1/admin/recipes/{recipe_id}/image-generations/{generation_id}/rejec
 
 AI 이미지 생성 결과는 `recipe_image_generations`와 `recipe_media(image_role = GENERATED_CANDIDATE)`에 보관한다. 관리자가 선택한 후보가 `MAIN` 또는 `THUMBNAIL`로 지정된다.
 
-### Pending Recipe AI Enrichment
+### User Recipe AI Enrichment
 
 ```text
-POST /api/v1/admin/user-recipes/{pending_recipe_id}/enrich
+POST /api/v1/admin/user-recipes/{user_recipe_id}/enrich
 ```
 
 정책:
 
 - AI 보정 patch는 기본적으로 `draft_payload`에 바로 덮어쓰지 않는다.
 - 응답 또는 저장 후보는 `ai_suggested_patch`로 관리한다.
-- 관리자가 확인한 값만 `PATCH /api/v1/admin/user-recipes/{pending_recipe_id}`로 `draft_payload`에 반영한다.
+- 관리자가 확인한 값만 `PATCH /api/v1/admin/user-recipes/{user_recipe_id}`로 `draft_payload`에 반영한다.
 
 ### Scraper Operations
 

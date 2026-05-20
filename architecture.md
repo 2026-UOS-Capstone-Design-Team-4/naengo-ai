@@ -140,9 +140,9 @@ DELETE /api/v1/users/me/profile
 GET    /api/v1/users/me/scraps?cursor=...&limit=20
 
 GET    /api/v1/user-recipes
-GET    /api/v1/user-recipes/{pending_recipe_id}
+GET    /api/v1/user-recipes/{user_recipe_id}
 POST   /api/v1/user-recipes
-DELETE /api/v1/user-recipes/{pending_recipe_id}
+DELETE /api/v1/user-recipes/{user_recipe_id}
 
 GET    /api/v1/admin/recipes
 GET    /api/v1/admin/recipes/{recipe_id}
@@ -156,9 +156,9 @@ POST   /api/v1/admin/recipe-sources/{source_id}/reject
 POST   /api/v1/admin/recipe-sources/{source_id}/import
 
 GET    /api/v1/admin/user-recipes?status=...&cursor=...
-GET    /api/v1/admin/user-recipes/{pending_recipe_id}
-PATCH  /api/v1/admin/user-recipes/{pending_recipe_id}
-DELETE /api/v1/admin/user-recipes/{pending_recipe_id}
+GET    /api/v1/admin/user-recipes/{user_recipe_id}
+PATCH  /api/v1/admin/user-recipes/{user_recipe_id}
+DELETE /api/v1/admin/user-recipes/{user_recipe_id}
 ```
 
 ## 7. Near-Term Priorities

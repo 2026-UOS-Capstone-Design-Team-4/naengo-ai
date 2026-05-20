@@ -49,7 +49,7 @@ docs/
 - source 원본은 staging에 보존하고, production import 전에 Naengo 문체로 재작성합니다.
 - production import는 원본 이미지 URL을 `recipe_media`로 바로 복사하지 않습니다.
 - S3는 AI 생성 이미지 저장을 중심으로 나중에 도입합니다.
-- 관리자 UI/API는 pending recipe와 production recipe 조회/검수에 사용합니다.
+- 관리자 UI/API는 user recipe와 production recipe 조회/검수에 사용합니다.
 - source ingestion과 대량 import는 아직 script-first로 운영합니다.
 
 ## Detailed Docs
