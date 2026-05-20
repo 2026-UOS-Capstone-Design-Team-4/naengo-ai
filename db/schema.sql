@@ -2,8 +2,8 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    username VARCHAR(255) UNIQUE,
+    password_hash VARCHAR(255),
     nickname VARCHAR(50) UNIQUE NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'USER'
         CHECK (role IN ('USER', 'ADMIN')),
@@ -11,6 +11,17 @@ CREATE TABLE users (
     is_blocked BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_identities (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    email VARCHAR(255),
+    provider VARCHAR(30) NOT NULL
+        CHECK (provider IN ('KAKAO', 'GOOGLE', 'NAVER', 'APPLE')),
+    provider_user_id VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (provider, provider_user_id)
 );
 
 CREATE TABLE user_profiles (
@@ -391,7 +402,7 @@ CREATE TABLE recipe_stats (
     scrap_count INTEGER NOT NULL DEFAULT 0 CHECK (scrap_count >= 0)
 );
 
-CREATE TABLE pending_recipes (
+CREATE TABLE user_recipes (
     pending_recipe_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
@@ -598,8 +609,9 @@ CREATE TRIGGER trigger_scrap_count
 AFTER INSERT OR DELETE ON scraps
 FOR EACH ROW EXECUTE FUNCTION update_scrap_count();
 
-CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_users_nickname ON users(nickname);
+CREATE INDEX idx_social_accounts_user_id ON social_accounts(user_id);
 
 CREATE INDEX idx_recipe_sources_lifecycle
 ON recipe_sources(parse_status, review_status, import_status, source_id DESC);
@@ -641,8 +653,8 @@ ON recipe_embeddings(recipe_id, embedding_type);
 CREATE INDEX idx_chat_rooms_user_active_updated
 ON chat_rooms(user_id, is_active, updated_at DESC);
 CREATE INDEX idx_chat_messages_room_created ON chat_messages(room_id, created_at);
-CREATE INDEX idx_pending_recipes_user_status_created
-ON pending_recipes(user_id, is_active, status, created_at DESC);
+CREATE INDEX idx_user_recipes_user_status_created
+ON user_recipes(user_id, is_active, status, created_at DESC);
 CREATE INDEX idx_likes_recipe_id ON likes(recipe_id);
 CREATE INDEX idx_scraps_recipe_id ON scraps(recipe_id);
 CREATE INDEX idx_scraps_user_created ON scraps(user_id, scrap_id DESC);
