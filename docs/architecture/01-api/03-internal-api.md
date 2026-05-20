@@ -29,7 +29,7 @@ POST /api/v1/internal/jobs/live-research-cache-refresh
 
 초기에는 CLI script 또는 scheduled command로 충분하다. API가 필요한 시점은 외부 scheduler, admin UI, worker fleet이 생기는 때다.
 
-`pending-recipes/{id}/enrich`는 관리자가 화면에서 즉시 미리보는 기능에 가까우므로 초기 설계에서는 internal job으로 분리하지 않는다. 대량 보정이 필요해지면 별도 batch job으로 확장한다.
+`user-recipes/{id}/enrich`는 관리자가 화면에서 즉시 미리보는 기능에 가까우므로 초기 설계에서는 internal job으로 분리하지 않는다. 대량 보정이 필요해지면 별도 batch job으로 확장한다.
 
 ## Job Response
 
