@@ -32,11 +32,14 @@ AgentService
         -> ProfileUpdatePolicy (AUTO_SAVE / REQUIRE_CONFIRMATION / IGNORE)
         -> UserProfileService
 
-      IDENTITY / SMALLTALK
-        -> lightweight answer
+      SMALLTALK
+        -> smalltalk_agent (LLM, 짧고 친근한 응답)
+
+      IDENTITY
+        -> 고정 응답
 
       OFF_TOPIC
-        -> polite refusal
+        -> 고정 응답 (polite refusal)
   -> StreamEventBuilder (SSE)
 ```
 
