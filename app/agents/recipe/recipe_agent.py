@@ -5,7 +5,11 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from app.agents.core.dependencies import RecipeDeps
-from app.agents.core.system_prompts import COOKING_ANSWER_PROMPT, RECIPE_AGENT_PROMPT
+from app.agents.core.system_prompts import (
+    COOKING_ANSWER_PROMPT,
+    RECIPE_AGENT_PROMPT,
+    SMALLTALK_AGENT_PROMPT,
+)
 from app.core import config
 from app.services.recipe_retrieval_service import recipe_retrieval_service
 
@@ -25,6 +29,11 @@ recipe_agent = Agent(
 cooking_agent = Agent(
     _model,
     system_prompt=COOKING_ANSWER_PROMPT,
+)
+
+smalltalk_agent = Agent(
+    _model,
+    system_prompt=SMALLTALK_AGENT_PROMPT,
 )
 
 
