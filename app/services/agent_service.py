@@ -16,9 +16,8 @@ from app.agents.core.system_prompts import PROFILE_UPDATE_EMPTY_MESSAGE
 from app.agents.core.user_context import user_context_builder
 from app.agents.intent.intent_agent_router import AgentRoute, intent_agent_router
 from app.agents.intent.intent_classifier import intent_classifier
-from app.agents.recipe.recipe_agent import cooking_agent, recipe_agent
+from app.agents.recipe.recipe_agent import cooking_agent, recipe_agent, smalltalk_agent
 from app.agents.recipe.search_planner import recipe_search_planner
-from app.agents.responders.smalltalk import smalltalk_responder
 from app.core import config
 from app.models.user import UserProfile
 from app.services.chat_service import ChatService
@@ -178,11 +177,7 @@ class AgentService:
         # 2. 단순 라우트(agent 미호출)
         route_decision = intent_agent_router.decide(intent_type, confidence)
         if route_decision.route == AgentRoute.FIXED_RESPONSE:
-            message = (
-                smalltalk_responder.respond(prompt)
-                if route_decision.use_smalltalk_responder
-                else route_decision.message or ""
-            )
+            message = route_decision.message or ""
             yield stream_event_builder.message(message)
             msg_id = chat_service.save_messages(
                 room_id, prompt, message, image_url=stored_image_url
@@ -268,11 +263,12 @@ class AgentService:
                 logger.warning("RAG 사전 검색 실패: %s", exc)
 
         # 5. Agent 선택
-        agent = (
-            cooking_agent
-            if route_decision.route == AgentRoute.COOKING_AGENT
-            else recipe_agent
-        )
+        if route_decision.route == AgentRoute.COOKING_AGENT:
+            agent = cooking_agent
+        elif route_decision.route == AgentRoute.SMALLTALK_AGENT:
+            agent = smalltalk_agent
+        else:
+            agent = recipe_agent
 
         # 6. 별도 asyncio 태스크에서 agent 스트리밍
         # anyio CancelScope는 yield 경계를 넘을 수 없으므로 Queue로 분리한다.
