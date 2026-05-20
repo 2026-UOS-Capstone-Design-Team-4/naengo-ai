@@ -71,7 +71,7 @@ USER_PROFILE_EXAMPLE = {
     ],
 }
 
-PENDING_RECIPE_EXAMPLE = {
+USER_RECIPE_EXAMPLE = {
     "pending_recipe_id": 1,
     "user_id": 7,
     "title": "엄마한테 배운 김치찌개",
@@ -149,8 +149,8 @@ PENDING_RECIPE_EXAMPLE = {
     "updated_at": "2026-05-04T12:00:00+09:00",
 }
 
-PENDING_RECIPE_REVIEWED_EXAMPLE = {
-    **PENDING_RECIPE_EXAMPLE,
+USER_RECIPE_REVIEWED_EXAMPLE = {
+    **USER_RECIPE_EXAMPLE,
     "status": "APPROVED",
     "admin_note": "재료 구성과 조리 순서가 명확합니다. 승인합니다.",
     "reviewed_by": 1,
