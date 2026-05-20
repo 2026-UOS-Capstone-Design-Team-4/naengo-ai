@@ -4,7 +4,7 @@ from app.api.v1.openapi.errors import (
     VALIDATION_ERROR_RESPONSE,
     error_response,
 )
-from app.api.v1.openapi.examples import PENDING_RECIPE_REVIEWED_EXAMPLE
+from app.api.v1.openapi.examples import USER_RECIPE_REVIEWED_EXAMPLE
 
 PENDING_RECIPE_NOT_FOUND_RESPONSE = error_response(
     "제출 레시피를 찾을 수 없습니다.",
@@ -81,7 +81,7 @@ PATCH_ADMIN_PENDING_RECIPE_RESPONSES = {
     200: {
         "description": "수정된 제출 레시피",
         "content": {
-            "application/json": {"example": PENDING_RECIPE_REVIEWED_EXAMPLE}
+            "application/json": {"example": USER_RECIPE_REVIEWED_EXAMPLE}
         },
     },
     400: VALIDATION_ERROR_RESPONSE,

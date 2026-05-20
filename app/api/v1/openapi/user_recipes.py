@@ -1,5 +1,5 @@
 from app.api.v1.openapi.errors import VALIDATION_ERROR_RESPONSE, error_response
-from app.api.v1.openapi.examples import PENDING_RECIPE_EXAMPLE
+from app.api.v1.openapi.examples import USER_RECIPE_EXAMPLE
 
 PENDING_RECIPE_NOT_FOUND_RESPONSE = error_response(
     "제출 레시피를 찾을 수 없습니다.",
@@ -25,7 +25,7 @@ GET_PENDING_RECIPES_DESCRIPTION = r"""
 GET_PENDING_RECIPES_RESPONSES = {
     200: {
         "description": "제출 레시피 목록",
-        "content": {"application/json": {"example": [PENDING_RECIPE_EXAMPLE]}},
+        "content": {"application/json": {"example": [USER_RECIPE_EXAMPLE]}},
     },
 }
 
@@ -39,7 +39,7 @@ GET_PENDING_RECIPE_DESCRIPTION = r"""
 GET_PENDING_RECIPE_RESPONSES = {
     200: {
         "description": "제출 레시피 상세",
-        "content": {"application/json": {"example": PENDING_RECIPE_EXAMPLE}},
+        "content": {"application/json": {"example": USER_RECIPE_EXAMPLE}},
     },
     404: PENDING_RECIPE_NOT_FOUND_RESPONSE,
 }
@@ -63,7 +63,7 @@ POST_PENDING_RECIPE_DESCRIPTION = r"""
 POST_PENDING_RECIPE_RESPONSES = {
     201: {
         "description": "제출 성공",
-        "content": {"application/json": {"example": PENDING_RECIPE_EXAMPLE}},
+        "content": {"application/json": {"example": USER_RECIPE_EXAMPLE}},
     },
     404: USER_NOT_FOUND_RESPONSE,
     422: VALIDATION_ERROR_RESPONSE,
