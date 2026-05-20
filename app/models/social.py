@@ -3,12 +3,34 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
+    String,
     UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
+
+
+class SocialAccount(Base):
+    __tablename__ = "user_identities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    email = Column(String(255))
+    provider = Column(String(30), nullable=False)
+    provider_user_id = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_id", name="uq_provider_user"),
+    )
+
+    user = relationship("User", back_populates="social_accounts")
 
 
 class Scrap(Base):
