@@ -18,8 +18,8 @@ class User(Base):
     __tablename__ = "users"
 
     user_id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
+    username = Column(String(255), unique=True, nullable=True, index=True)
+    password_hash = Column(String(255))
     nickname = Column(String(50), unique=True, nullable=False)
     role = Column(String(20), default="USER")  # USER, ADMIN
     is_active = Column(BOOLEAN, nullable=False, default=True)
@@ -37,6 +37,7 @@ class User(Base):
     scraps = relationship("Scrap", back_populates="user")
     likes = relationship("Like", back_populates="user")
     chat_rooms = relationship("ChatRoom", back_populates="user")
+    social_accounts = relationship("SocialAccount", back_populates="user")
 
 
 class UserProfile(Base):
@@ -86,4 +87,4 @@ class UserProfile(Base):
 # Register related models for standalone User imports.
 from app.models.chat import ChatMessage, ChatRoom  # noqa: E402,F401
 from app.models.recipe import PendingRecipe, Recipe  # noqa: E402,F401
-from app.models.social import Like, Scrap  # noqa: E402,F401
+from app.models.social import Like, Scrap, SocialAccount  # noqa: E402,F401
