@@ -29,10 +29,10 @@ class User(Base):
     # 관계 설정
     profile = relationship("UserProfile", back_populates="user", uselist=False)
     recipes = relationship("Recipe", back_populates="author")
-    pending_recipes = relationship(
-        "PendingRecipe",
+    user_recipes = relationship(
+        "UserRecipe",
         back_populates="user",
-        foreign_keys="PendingRecipe.user_id",
+        foreign_keys="UserRecipe.user_id",
     )
     scraps = relationship("Scrap", back_populates="user")
     likes = relationship("Like", back_populates="user")
@@ -86,5 +86,5 @@ class UserProfile(Base):
 
 # Register related models for standalone User imports.
 from app.models.chat import ChatMessage, ChatRoom  # noqa: E402,F401
-from app.models.recipe import PendingRecipe, Recipe  # noqa: E402,F401
+from app.models.recipe import UserRecipe, Recipe  # noqa: E402,F401
 from app.models.social import Like, Scrap, SocialAccount  # noqa: E402,F401
