@@ -6,9 +6,11 @@
 
 ```text
 User Message
-  -> RuleBasedFastPath       명백한 smalltalk/off-topic은 LLM 없이 처리
-  -> LLMIntentClassifier     나머지는 LLM으로 분류
+  -> LLMIntentClassifier     LLM으로 intent 분류
   -> IntentAgentRouter       intent에 따라 route 결정
+      SMALLTALK -> smalltalk_agent (LLM, 짧고 친근한 응답)
+      OFF_TOPIC / IDENTITY -> 고정 응답
+      나머지 -> 요리/레시피 agent
 ```
 
 ## Intent Result
