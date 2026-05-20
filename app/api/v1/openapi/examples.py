@@ -72,7 +72,7 @@ USER_PROFILE_EXAMPLE = {
 }
 
 USER_RECIPE_EXAMPLE = {
-    "pending_recipe_id": 1,
+    "user_recipe_id": 1,
     "user_id": 7,
     "title": "엄마한테 배운 김치찌개",
     "submission_text": (
