@@ -20,7 +20,7 @@ def _as_list(value):
     return value if isinstance(value, list) else []
 
 
-def _default_pending_recipe_payload():
+def _default_user_recipe_payload():
     return {
         "description": None,
         "ingredients": [],
@@ -478,10 +478,10 @@ class RecipeEmbedding(Base):
     recipe = relationship("Recipe", back_populates="embeddings")
 
 
-class PendingRecipe(Base):
+class UserRecipe(Base):
     __tablename__ = "user_recipes"
 
-    pending_recipe_id = Column(Integer, primary_key=True, index=True)
+    user_recipe_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(
         Integer,
         ForeignKey("users.user_id", ondelete="CASCADE"),
@@ -492,12 +492,12 @@ class PendingRecipe(Base):
     draft_payload = Column(
         JSONB,
         nullable=False,
-        default=_default_pending_recipe_payload,
+        default=_default_user_recipe_payload,
     )
     ai_suggested_patch = Column(
         JSONB,
         nullable=False,
-        default=_default_pending_recipe_payload,
+        default=_default_user_recipe_payload,
     )
     validation_errors = Column(JSONB, nullable=False, default=list)
     status = Column(String(20), nullable=False, default="PENDING")
@@ -517,7 +517,7 @@ class PendingRecipe(Base):
 
     user = relationship(
         "User",
-        back_populates="pending_recipes",
+        back_populates="user_recipes",
         foreign_keys=[user_id],
     )
     imported_recipe = relationship("Recipe", foreign_keys=[imported_recipe_id])
