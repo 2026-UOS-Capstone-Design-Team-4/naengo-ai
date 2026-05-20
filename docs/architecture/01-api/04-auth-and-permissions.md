@@ -17,7 +17,7 @@
 | --- | --- | --- | --- | --- |
 | `GET /recipes` | 허용 가능 | 허용 | 허용 | 제한 |
 | `POST /recipes/{id}/likes` | 불가 | 허용 | 허용 | 불가 |
-| `POST /pending-recipes` | 불가 | 허용 | 허용 | 불가 |
+| `POST /user-recipes` | 불가 | 허용 | 허용 | 불가 |
 | `/admin/*` | 불가 | 불가 | 허용 | 제한 |
 | `/internal/*` | 불가 | 불가 | 불가 | 허용 |
 
