@@ -30,6 +30,7 @@ build/
 *.sql
 !db/schema.sql
 !db/seeds/*.sql
+!db/migrations/*.sql
 *.csv
 *.sqlite3
 
