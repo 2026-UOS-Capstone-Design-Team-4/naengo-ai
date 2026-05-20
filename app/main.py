@@ -63,7 +63,7 @@ app = FastAPI(
             "description": "사용자 정보, 프로필, 내 스크랩 레시피 조회 API입니다.",
         },
         {
-            "name": "pending-recipes",
+            "name": "user-recipes",
             "description": "사용자가 제출한 레시피를 조회, 생성, 삭제하는 API입니다.",
         },
         {
