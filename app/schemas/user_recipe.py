@@ -4,10 +4,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-PendingRecipeStatus = Literal["PENDING", "APPROVED", "REJECTED"]
-PendingRecipeImportStatus = Literal["NOT_IMPORTED", "IMPORTED", "FAILED"]
+UserRecipeStatus = Literal["PENDING", "APPROVED", "REJECTED"]
+UserRecipeImportStatus = Literal["NOT_IMPORTED", "IMPORTED", "FAILED"]
 
-DEFAULT_PENDING_RECIPE_PAYLOAD = {
+DEFAULT_USER_RECIPE_PAYLOAD = {
     "description": None,
     "ingredients": [],
     "ingredients_raw": [],
@@ -24,32 +24,32 @@ DEFAULT_PENDING_RECIPE_PAYLOAD = {
 }
 
 
-def build_pending_recipe_payload(values: dict | None = None) -> dict:
-    payload = deepcopy(DEFAULT_PENDING_RECIPE_PAYLOAD)
+def build_user_recipe_payload(values: dict | None = None) -> dict:
+    payload = deepcopy(DEFAULT_USER_RECIPE_PAYLOAD)
     if values:
         payload.update(values)
     return payload
 
 
-class PendingRecipeCreate(BaseModel):
+class UserRecipeCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str = Field(min_length=1, max_length=255)
     submission_text: str = Field(min_length=1)
 
 
-class PendingRecipeResponse(BaseModel):
+class UserRecipeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    pending_recipe_id: int
+    user_recipe_id: int
     user_id: int
     title: str
     submission_text: str
-    draft_payload: dict = Field(default_factory=build_pending_recipe_payload)
-    ai_suggested_patch: dict = Field(default_factory=build_pending_recipe_payload)
+    draft_payload: dict = Field(default_factory=build_user_recipe_payload)
+    ai_suggested_patch: dict = Field(default_factory=build_user_recipe_payload)
     validation_errors: list[dict] = Field(default_factory=list)
     status: str
-    import_status: PendingRecipeImportStatus = "NOT_IMPORTED"
+    import_status: UserRecipeImportStatus = "NOT_IMPORTED"
     is_active: bool = True
     admin_note: str | None = None
     rejection_reason: str | None = None
@@ -63,16 +63,16 @@ class PendingRecipeResponse(BaseModel):
     @field_validator("draft_payload", "ai_suggested_patch", mode="before")
     @classmethod
     def normalize_payloads(cls, value: dict | None) -> dict:
-        return build_pending_recipe_payload(value)
+        return build_user_recipe_payload(value)
 
 
-class PendingRecipeListResponse(BaseModel):
-    items: list[PendingRecipeResponse]
+class UserRecipeListResponse(BaseModel):
+    items: list[UserRecipeResponse]
     next_cursor: str | None
     has_next: bool
 
 
-class PendingRecipeAdminUpdate(BaseModel):
+class UserRecipeAdminUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = None
@@ -80,7 +80,7 @@ class PendingRecipeAdminUpdate(BaseModel):
     draft_payload: dict | None = None
     ai_suggested_patch: dict | None = None
     validation_errors: list[dict] | None = None
-    status: PendingRecipeStatus | None = None
+    status: UserRecipeStatus | None = None
     admin_note: str | None = None
     rejection_reason: str | None = None
 
@@ -89,4 +89,4 @@ class PendingRecipeAdminUpdate(BaseModel):
     def normalize_payloads(cls, value: dict | None) -> dict | None:
         if value is None:
             return None
-        return build_pending_recipe_payload(value)
+        return build_user_recipe_payload(value)
