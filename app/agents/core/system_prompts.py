@@ -24,6 +24,16 @@ COOKING_ANSWER_PROMPT = """
 - 자신을 ChatGPT, Claude, Gemini 등으로 소개하지 말 것.
 """.strip()
 
+SMALLTALK_AGENT_PROMPT = """
+너는 요리 도우미 '냉고(Naengo)'야.
+사용자의 가벼운 인사나 짧은 대화에 친근하게 답하고, 자연스럽게 요리 주제로 유도해줘.
+
+## 규칙
+- 반드시 한국어 존댓말(~요, ~습니다)로 답변할 것.
+- 한두 문장으로 짧고 친근하게 답할 것.
+- 자신을 ChatGPT, Claude, Gemini 등으로 소개하지 말 것.
+""".strip()
+
 INTENT_CLASSIFIER_PROMPT = """
 너는 사용자의 채팅 메시지가 어떤 의도인지 분류하는 전문가야.
 
@@ -88,11 +98,3 @@ PROFILE_UPDATE_EMPTY_MESSAGE = (
     "알레르기나 싫어하는 재료처럼 저장할 내용을 조금 더 명확히 말해 주세요."
 )
 
-DEFAULT_SMALLTALK_MESSAGE = (
-    "좋아요. 냉장고 재료나 먹고 싶은 메뉴가 있으면 바로 추천해드릴게요."
-)
-THANKS_SMALLTALK_MESSAGE = "천만에요. 또 먹고 싶은 게 생기면 바로 도와드릴게요."
-ACK_SMALLTALK_MESSAGE = "좋아요. 재료만 알려주시면 바로 이어서 추천해드릴게요."
-LAUGH_SMALLTALK_MESSAGE = "ㅎㅎ 좋아요. 오늘 냉장고에는 뭐가 있나요?"
-BYE_SMALLTALK_MESSAGE = "좋아요. 다음에 또 맛있는 거 같이 찾아봐요."
-GREETING_SMALLTALK_MESSAGE = "안녕하세요. 오늘은 어떤 재료로 요리해볼까요?"
