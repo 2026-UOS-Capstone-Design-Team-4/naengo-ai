@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.api.errors import ApiError
 from app.api.v1.deps import get_current_user_id
-from app.api.v1.openapi.pending_recipes import (
+from app.api.v1.openapi.user_recipes import (
     DELETE_PENDING_RECIPE_DESCRIPTION,
     DELETE_PENDING_RECIPE_RESPONSES,
     DELETE_PENDING_RECIPE_SUMMARY,

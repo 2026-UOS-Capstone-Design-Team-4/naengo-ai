@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.errors import ApiError
-from app.api.v1.openapi.admin_pending_recipes import (
+from app.api.v1.openapi.admin_user_recipes import (
     DELETE_ADMIN_PENDING_RECIPE_DESCRIPTION,
     DELETE_ADMIN_PENDING_RECIPE_RESPONSES,
     DELETE_ADMIN_PENDING_RECIPE_SUMMARY,
