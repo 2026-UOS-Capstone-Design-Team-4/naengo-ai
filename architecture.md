@@ -99,7 +99,7 @@ Service Layer (app/services)
 app/
   agents/                 # Agent routing, prompts, user context, stream events
   api/v1/
-    endpoints/            # chat, recipes, users, pending-recipes
+    endpoints/            # chat, recipes, users, user-recipes
     endpoints/admin/      # admin endpoints
     openapi/              # OpenAPI metadata and examples
     deps.py               # shared API dependencies
@@ -139,10 +139,10 @@ POST   /api/v1/users/me/profile
 DELETE /api/v1/users/me/profile
 GET    /api/v1/users/me/scraps?cursor=...&limit=20
 
-GET    /api/v1/pending-recipes
-GET    /api/v1/pending-recipes/{pending_recipe_id}
-POST   /api/v1/pending-recipes
-DELETE /api/v1/pending-recipes/{pending_recipe_id}
+GET    /api/v1/user-recipes
+GET    /api/v1/user-recipes/{pending_recipe_id}
+POST   /api/v1/user-recipes
+DELETE /api/v1/user-recipes/{pending_recipe_id}
 
 GET    /api/v1/admin/recipes
 GET    /api/v1/admin/recipes/{recipe_id}
@@ -155,10 +155,10 @@ POST   /api/v1/admin/recipe-sources/{source_id}/approve
 POST   /api/v1/admin/recipe-sources/{source_id}/reject
 POST   /api/v1/admin/recipe-sources/{source_id}/import
 
-GET    /api/v1/admin/pending-recipes?status=...&cursor=...
-GET    /api/v1/admin/pending-recipes/{pending_recipe_id}
-PATCH  /api/v1/admin/pending-recipes/{pending_recipe_id}
-DELETE /api/v1/admin/pending-recipes/{pending_recipe_id}
+GET    /api/v1/admin/user-recipes?status=...&cursor=...
+GET    /api/v1/admin/user-recipes/{pending_recipe_id}
+PATCH  /api/v1/admin/user-recipes/{pending_recipe_id}
+DELETE /api/v1/admin/user-recipes/{pending_recipe_id}
 ```
 
 ## 7. Near-Term Priorities
