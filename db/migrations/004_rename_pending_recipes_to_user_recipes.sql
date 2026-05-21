@@ -1,2 +1,0 @@
-ALTER TABLE pending_recipes RENAME TO user_recipes;
-ALTER INDEX idx_pending_recipes_user_status_created RENAME TO idx_user_recipes_user_status_created;
