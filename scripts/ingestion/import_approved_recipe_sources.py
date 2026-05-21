@@ -2,8 +2,8 @@
 APPROVED 상태 recipe_sources를 recipes 테이블로 import하는 CLI.
 
 Usage:
-    uv run python scripts/import_approved_recipe_sources.py --limit 200
-    uv run python scripts/import_approved_recipe_sources.py --limit 200 --workers 4
+    uv run python scripts/ingestion/import_approved_recipe_sources.py --limit 200
+    uv run python scripts/ingestion/import_approved_recipe_sources.py --limit 200 --workers 4
 """
 
 import argparse
@@ -12,7 +12,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from app.db.session import SessionLocal
 from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
@@ -90,3 +90,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

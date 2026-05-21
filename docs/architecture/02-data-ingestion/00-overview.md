@@ -9,7 +9,7 @@ Data ingestion은 외부 레시피 원본을 Naengo 서비스용 정식 레시�
 | foodsafetykorea 공공데이터 | 초기 대량 레시피, 구조화된 영양 정보 | `source_type = PUBLIC_DATA`, `source_site = foodsafetykorea`, `parser_type = DATASET` |
 | 만개의레시피 | 실제 사용자형 레시피 표현, 조리 흐름, 이미지 출처 | `source_type = WEB_SCRAPE`, `source_site = 10000recipe`, `parser_type = HTML` |
 
-foodsafetykorea는 `../open-recipe/data/recipes.json`을 `scripts/import_foodsafetykorea_sources.py`로 `recipe_sources`에 적재한다. 만개의레시피는 `scripts/scrape_10000recipe.py`가 목록/상세 HTML을 읽어 raw payload를 만든다.
+foodsafetykorea는 `../open-recipe/data/recipes.json`을 `scripts/ingestion/import_foodsafetykorea_sources.py`로 `recipe_sources`에 적재한다. 만개의레시피는 `scripts/ingestion/scrape_10000recipe.py`가 목록/상세 HTML을 읽어 raw payload를 만든다.
 
 ## Main Flow
 

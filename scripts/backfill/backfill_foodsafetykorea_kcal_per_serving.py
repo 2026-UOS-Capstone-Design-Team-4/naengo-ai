@@ -2,8 +2,8 @@
 foodsafetykorea extraction의 kcal_per_serving 필드를 backfill합니다.
 
 Usage:
-    uv run python scripts/backfill_foodsafetykorea_kcal_per_serving.py --limit 100
-    uv run python scripts/backfill_foodsafetykorea_kcal_per_serving.py --dry-run
+    uv run python scripts/backfill/backfill_foodsafetykorea_kcal_per_serving.py --limit 100
+    uv run python scripts/backfill/backfill_foodsafetykorea_kcal_per_serving.py --dry-run
 """
 
 # ruff: noqa: I001
@@ -20,7 +20,7 @@ from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from sqlalchemy.orm import joinedload
 
@@ -226,3 +226,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

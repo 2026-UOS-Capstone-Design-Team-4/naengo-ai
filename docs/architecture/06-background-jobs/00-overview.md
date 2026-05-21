@@ -22,15 +22,15 @@ Background job 문서는 오래 걸리거나 재시도가 필요한 작업을 �
 초기 운영은 CLI batch를 기준으로 한다.
 
 ```bash
-uv run python scripts/import_foodsafetykorea_sources.py --input ../open-recipe/data/recipes.json
-uv run python scripts/parse_foodsafetykorea_sources.py --limit 100 --refresh
+uv run python scripts/ingestion/import_foodsafetykorea_sources.py --input ../open-recipe/data/recipes.json
+uv run python scripts/ingestion/parse_foodsafetykorea_sources.py --limit 100 --refresh
 
-uv run python scripts/scrape_10000recipe.py --limit 300 --delay-min 0.5 --delay-max 1.0
-uv run python scripts/parse_10000recipe_sources.py --limit 300 --refresh
+uv run python scripts/ingestion/scrape_10000recipe.py --limit 300 --delay-min 0.5 --delay-max 1.0
+uv run python scripts/ingestion/parse_10000recipe_sources.py --limit 300 --refresh
 
-uv run python scripts/bulk_approve_sources.py --limit 300
-uv run python scripts/import_approved_recipe_sources.py --limit 300
-uv run python scripts/backfill_recipe_classifications.py --limit 300
+uv run python scripts/ingestion/bulk_approve_sources.py --limit 300
+uv run python scripts/ingestion/import_approved_recipe_sources.py --limit 300
+uv run python scripts/backfill/backfill_recipe_classifications.py --limit 300
 ```
 
 각 script는 반복 실행 가능해야 한다.

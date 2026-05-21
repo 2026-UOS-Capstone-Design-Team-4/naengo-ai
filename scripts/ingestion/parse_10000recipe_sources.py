@@ -2,8 +2,8 @@
 10000recipe recipe_sources parsing CLI.
 
 Usage:
-    uv run python scripts/parse_10000recipe_sources.py --limit 300
-    uv run python scripts/parse_10000recipe_sources.py --limit 300 --refresh
+    uv run python scripts/ingestion/parse_10000recipe_sources.py --limit 300
+    uv run python scripts/ingestion/parse_10000recipe_sources.py --limit 300 --refresh
 """
 
 import argparse
@@ -19,7 +19,7 @@ from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from openai import OpenAI
 
@@ -842,3 +842,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

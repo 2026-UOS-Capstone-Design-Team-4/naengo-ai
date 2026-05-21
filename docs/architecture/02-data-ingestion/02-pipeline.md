@@ -48,8 +48,8 @@
 
 | Source | Collect | Extract | Version |
 | --- | --- | --- | --- |
-| foodsafetykorea | `scripts/import_foodsafetykorea_sources.py` | `scripts/parse_foodsafetykorea_sources.py` | `foodsafetykorea-extraction-v1` |
-| 10000recipe | `scripts/scrape_10000recipe.py` | `scripts/parse_10000recipe_sources.py` | `10000recipe-extraction-v1` |
+| foodsafetykorea | `scripts/ingestion/import_foodsafetykorea_sources.py` | `scripts/ingestion/parse_foodsafetykorea_sources.py` | `foodsafetykorea-extraction-v1` |
+| 10000recipe | `scripts/ingestion/scrape_10000recipe.py` | `scripts/ingestion/parse_10000recipe_sources.py` | `10000recipe-extraction-v1` |
 
 foodsafetykorea는 `source_dataset_id + source_record_id`가 핵심 식별자다. 만개의레시피는 `source_site + source_recipe_id`와 `source_url`이 핵심 식별자다.
 
@@ -115,7 +115,7 @@ AI metadata/rewrite 호출은 `RECIPE_IMPORT_AI_TIMEOUT_SECONDS` 안에 끝나�
 
 ## Import Conditions
 
-`scripts/import_approved_recipe_sources.py`는 다음 조건을 만족하는 source만 처리한다.
+`scripts/ingestion/import_approved_recipe_sources.py`는 다음 조건을 만족하는 source만 처리한다.
 
 - `parse_status = PARSED`
 - `review_status = APPROVED`

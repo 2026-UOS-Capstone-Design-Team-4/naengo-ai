@@ -2,8 +2,8 @@
 Move parenthesized amount hints from amount_text to note.
 
 Usage:
-    uv run python scripts/backfill_ingredient_amount_notes.py
-    uv run python scripts/backfill_ingredient_amount_notes.py --dry-run
+    uv run python scripts/backfill/backfill_ingredient_amount_notes.py
+    uv run python scripts/backfill/backfill_ingredient_amount_notes.py --dry-run
 """
 
 # ruff: noqa: I001
@@ -13,7 +13,7 @@ import logging
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from app.db.session import SessionLocal
 from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
@@ -71,3 +71,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

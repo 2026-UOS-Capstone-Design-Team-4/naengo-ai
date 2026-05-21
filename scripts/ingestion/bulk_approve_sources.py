@@ -4,8 +4,8 @@ PARSED 상태 recipe_sources를 일괄 APPROVED 처리하는 CLI.
 신뢰할 수 있는 소스(공공데이터 등)를 관리자 검수 없이 bulk approve할 때 사용.
 
 Usage:
-    uv run python scripts/bulk_approve_sources.py --dataset-id foodsafetykorea-recipe
-    uv run python scripts/bulk_approve_sources.py  # 전체 PARSED 대상
+    uv run python scripts/ingestion/bulk_approve_sources.py --dataset-id foodsafetykorea-recipe
+    uv run python scripts/ingestion/bulk_approve_sources.py  # 전체 PARSED 대상
 """
 
 import argparse
@@ -14,7 +14,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
@@ -65,3 +65,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

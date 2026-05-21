@@ -2,8 +2,8 @@
 공공데이터 foodsafetykorea recipe_sources를 recipe_source_extractions로 파싱합니다.
 
 Usage:
-    uv run python scripts/parse_foodsafetykorea_sources.py --limit 100
-    uv run python scripts/parse_foodsafetykorea_sources.py --limit 100 --refresh
+    uv run python scripts/ingestion/parse_foodsafetykorea_sources.py --limit 100
+    uv run python scripts/ingestion/parse_foodsafetykorea_sources.py --limit 100 --refresh
 """
 
 # ruff: noqa: I001
@@ -26,7 +26,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from sqlalchemy.orm import Session, joinedload
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from app.core.config import (
     API_KEY,
@@ -743,3 +743,5 @@ Rules:
 
 if __name__ == "__main__":
     main()
+
+

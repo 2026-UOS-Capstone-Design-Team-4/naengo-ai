@@ -2,8 +2,8 @@
 기존 recipes에 recipe_classifications를 백필하는 CLI.
 
 Usage:
-    uv run python scripts/backfill_recipe_classifications.py --limit 500
-    uv run python scripts/backfill_recipe_classifications.py --limit 500 --refresh
+    uv run python scripts/backfill/backfill_recipe_classifications.py --limit 500
+    uv run python scripts/backfill/backfill_recipe_classifications.py --limit 500 --refresh
 """
 
 import argparse
@@ -12,7 +12,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from sqlalchemy.orm import selectinload
 
@@ -123,3 +123,5 @@ def _save_result(db, result: ClassificationBuildResult) -> None:
 
 if __name__ == "__main__":
     main()
+
+

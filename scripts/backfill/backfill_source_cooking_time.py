@@ -2,8 +2,8 @@
 Backfill recipe_source_extractions.cooking_time_minutes with AI estimates.
 
 Usage:
-    uv run python scripts/backfill_source_cooking_time.py --threshold 40
-    uv run python scripts/backfill_source_cooking_time.py --threshold 40 --dry-run
+    uv run python scripts/backfill/backfill_source_cooking_time.py --threshold 40
+    uv run python scripts/backfill/backfill_source_cooking_time.py --threshold 40 --dry-run
 """
 
 # ruff: noqa: I001
@@ -21,7 +21,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from sqlalchemy.orm import joinedload
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from app.core.config import API_KEY, BASE_URL, MODEL_NAME
 from app.db.session import SessionLocal
@@ -250,3 +250,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

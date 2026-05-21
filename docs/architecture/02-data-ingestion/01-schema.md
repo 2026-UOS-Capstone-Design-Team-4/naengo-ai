@@ -113,7 +113,7 @@ source 원본 정보(URL, 작성자, 라이선스 등)는 `recipes`에 복사하
 
 ### `recipe_classifications`
 
-추천, 검색 필터, rerank에 쓰는 분류 축이다. import 이후 `scripts/backfill_recipe_classifications.py`가 생성한다.
+추천, 검색 필터, rerank에 쓰는 분류 축이다. import 이후 `scripts/backfill/backfill_recipe_classifications.py`가 생성한다.
 
 ### `recipe_media`
 

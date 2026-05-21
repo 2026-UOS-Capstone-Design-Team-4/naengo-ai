@@ -2,11 +2,11 @@
 공공데이터 foodsafetykorea 레시피 원본 JSON을 recipe_sources 테이블에 적재합니다.
 
 Usage:
-    uv run python scripts/import_foodsafetykorea_sources.py ^
+    uv run python scripts/ingestion/import_foodsafetykorea_sources.py ^
       --input ..\\open-recipe\\data\\recipes.envcheck.json
 
 recipe_source_extractions 생성은
-scripts/parse_foodsafetykorea_sources.py에서 별도로 수행합니다.
+scripts/ingestion/parse_foodsafetykorea_sources.py에서 별도로 수행합니다.
 """
 
 # ruff: noqa: I001
@@ -22,7 +22,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
+ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
@@ -122,3 +122,5 @@ def _build_source(row: dict[str, Any], source_record_id: str) -> RecipeSource:
 
 if __name__ == "__main__":
     main()
+
+

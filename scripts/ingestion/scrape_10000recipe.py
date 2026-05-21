@@ -2,9 +2,9 @@
 만개의레시피 스크래퍼 CLI.
 
 Usage:
-    uv run python scripts/scrape_10000recipe.py --limit 100
-    uv run python scripts/scrape_10000recipe.py --limit 5 --dry-run
-    uv run python scripts/scrape_10000recipe.py --limit 5 --force
+    uv run python scripts/ingestion/scrape_10000recipe.py --limit 100
+    uv run python scripts/ingestion/scrape_10000recipe.py --limit 5 --dry-run
+    uv run python scripts/ingestion/scrape_10000recipe.py --limit 5 --force
 """
 
 import argparse
@@ -23,7 +23,7 @@ import requests
 from bs4 import BeautifulSoup
 from sqlalchemy.exc import IntegrityError
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from app.db.session import SessionLocal
 from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
@@ -434,3 +434,5 @@ def _run_scrape(args) -> None:
 
 if __name__ == "__main__":
     main()
+
+
