@@ -82,16 +82,16 @@ Service Layer (app/services)
   +-- Database / Storage / Import
 ```
 
-| Layer | Responsibility |
-| --- | --- |
-| Router | HTTP request/response, dependency injection, status mapping |
-| Service | Use case execution, transaction boundary, domain rules |
-| Agent | LLM orchestration, route decision, tool selection, response generation |
-| Retrieval | Embedding generation, vector search, result normalization |
-| Ingestion | External/public recipe collection, staging, normalization, import |
-| Schema | Public API contract |
-| Model | Database mapping |
-| Config | Environment and runtime settings |
+| Layer     | Responsibility                                                         |
+| --------- | ---------------------------------------------------------------------- |
+| Router    | HTTP request/response, dependency injection, status mapping            |
+| Service   | Use case execution, transaction boundary, domain rules                 |
+| Agent     | LLM orchestration, route decision, tool selection, response generation |
+| Retrieval | Embedding generation, vector search, result normalization              |
+| Ingestion | External/public recipe collection, staging, normalization, import      |
+| Schema    | Public API contract                                                    |
+| Model     | Database mapping                                                       |
+| Config    | Environment and runtime settings                                       |
 
 ## 5. Current Code Structure
 
