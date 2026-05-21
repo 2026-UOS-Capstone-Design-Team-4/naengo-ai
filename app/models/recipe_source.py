@@ -117,15 +117,10 @@ class RecipeSourceExtraction(Base):
     summary = Column(Text)
     description = Column(Text)
     servings = Column(Numeric(4, 1))
+    yield_quantity = Column(Numeric(10, 2))
+    yield_unit = Column(String(50))
     cooking_time_minutes = Column(Integer)
     kcal_per_serving = Column(Integer)
-    serving_weight_grams = Column(Numeric(10, 2))
-    carbohydrate_grams = Column(Numeric(10, 2))
-    protein_grams = Column(Numeric(10, 2))
-    fat_grams = Column(Numeric(10, 2))
-    sodium_milligrams = Column(Numeric(10, 2))
-    nutrition_source = Column(String(30))
-    nutrition_raw = Column(JSONB, nullable=False, default=dict)
     difficulty = Column(String(10))
     source_main_image_url = Column(String(1024))
     source_thumbnail_url = Column(String(1024))
@@ -159,6 +154,12 @@ class RecipeSourceExtraction(Base):
         back_populates="extraction",
         order_by="RecipeSourceExtractedLabel.sort_order",
         cascade="all, delete-orphan",
+    )
+    nutrition = relationship(
+        "RecipeSourceExtractedNutrition",
+        back_populates="extraction",
+        cascade="all, delete-orphan",
+        uselist=False,
     )
 
 
@@ -245,6 +246,26 @@ class RecipeSourceExtractedLabel(Base):
     sort_order = Column(Integer, nullable=False, default=0)
 
     extraction = relationship("RecipeSourceExtraction", back_populates="labels")
+
+
+class RecipeSourceExtractedNutrition(Base):
+    __tablename__ = "recipe_source_extracted_nutrition"
+
+    extraction_id = Column(
+        Integer,
+        ForeignKey("recipe_source_extractions.extraction_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    serving_weight_grams = Column(Numeric(10, 2))
+    carbohydrate_grams = Column(Numeric(10, 2))
+    protein_grams = Column(Numeric(10, 2))
+    fat_grams = Column(Numeric(10, 2))
+    sodium_milligrams = Column(Numeric(10, 2))
+    source = Column(String(30), nullable=False, default="SOURCE")
+    raw = Column(JSONB, nullable=False, default=dict)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    extraction = relationship("RecipeSourceExtraction", back_populates="nutrition")
 
 
 class RecipeImageGeneration(Base):

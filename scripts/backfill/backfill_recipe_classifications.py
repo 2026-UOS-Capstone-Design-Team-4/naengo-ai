@@ -3,7 +3,8 @@
 
 Usage:
     uv run python scripts/backfill/backfill_recipe_classifications.py --limit 500
-    uv run python scripts/backfill/backfill_recipe_classifications.py --limit 500 --refresh
+    uv run python scripts/backfill/backfill_recipe_classifications.py \
+        --limit 500 --refresh
 """
 
 import argparse

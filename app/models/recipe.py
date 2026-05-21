@@ -20,24 +20,6 @@ def _as_list(value):
     return value if isinstance(value, list) else []
 
 
-def _default_user_recipe_payload():
-    return {
-        "description": None,
-        "ingredients": [],
-        "ingredients_raw": [],
-        "instructions": [],
-        "servings": None,
-        "cooking_time_minutes": None,
-        "kcal_per_serving": None,
-        "difficulty": None,
-        "category": [],
-        "tags": [],
-        "tips": [],
-        "video_url": None,
-        "image_url": None,
-    }
-
-
 class Recipe(Base):
     __tablename__ = "recipes"
 
@@ -46,10 +28,14 @@ class Recipe(Base):
         Integer,
         ForeignKey("recipe_sources.source_id", ondelete="SET NULL"),
     )
+    source_url = Column(String(1024))
+    source_main_image_url = Column(String(1024))
     title = Column(String(255), nullable=False)
     summary = Column(Text)
     description = Column(Text, nullable=False)
     servings = Column(Numeric(4, 1), nullable=False)
+    yield_quantity = Column(Numeric(10, 2))
+    yield_unit = Column(String(50))
     cooking_time_minutes = Column(Integer, nullable=False)
     kcal_per_serving = Column(Integer)
     difficulty = Column(String(10), nullable=False)
@@ -344,6 +330,7 @@ class RecipeStep(Base):
     )
     step_no = Column(Integer, nullable=False)
     instruction = Column(Text, nullable=False)
+    source_image_url = Column(String(1024))
     tip = Column(Text)
     sort_order = Column(Integer, nullable=False, default=0)
 
@@ -489,21 +476,18 @@ class UserRecipe(Base):
     )
     title = Column(String(255), nullable=False)
     submission_text = Column(Text, nullable=False)
-    draft_payload = Column(
-        JSONB,
-        nullable=False,
-        default=_default_user_recipe_payload,
-    )
-    ai_suggested_patch = Column(
-        JSONB,
-        nullable=False,
-        default=_default_user_recipe_payload,
-    )
-    validation_errors = Column(JSONB, nullable=False, default=list)
+    description = Column(Text)
+    servings = Column(Numeric(4, 1))
+    yield_quantity = Column(Numeric(10, 2))
+    yield_unit = Column(String(50))
+    cooking_time_minutes = Column(Integer)
+    kcal_per_serving = Column(Integer)
+    difficulty = Column(String(10))
+    video_url = Column(String(1024))
+    source_main_image_url = Column(String(1024))
     status = Column(String(20), nullable=False, default="PENDING")
     import_status = Column(String(30), nullable=False, default="NOT_IMPORTED")
     is_active = Column(BOOLEAN, nullable=False, default=True)
-    admin_note = Column(Text)
     rejection_reason = Column(Text)
     reviewed_by = Column(Integer, ForeignKey("users.user_id", ondelete="SET NULL"))
     reviewed_at = Column(DateTime(timezone=True))
@@ -520,7 +504,110 @@ class UserRecipe(Base):
         back_populates="user_recipes",
         foreign_keys=[user_id],
     )
+    ingredients = relationship(
+        "UserRecipeIngredient",
+        back_populates="user_recipe",
+        order_by="UserRecipeIngredient.sort_order",
+        cascade="all, delete-orphan",
+    )
+    steps = relationship(
+        "UserRecipeStep",
+        back_populates="user_recipe",
+        order_by="UserRecipeStep.step_no",
+        cascade="all, delete-orphan",
+    )
+    labels = relationship(
+        "UserRecipeLabel",
+        back_populates="user_recipe",
+        order_by="UserRecipeLabel.sort_order",
+        cascade="all, delete-orphan",
+    )
+    nutrition = relationship(
+        "UserRecipeNutrition",
+        back_populates="user_recipe",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
     imported_recipe = relationship("Recipe", foreign_keys=[imported_recipe_id])
+
+
+class UserRecipeIngredient(Base):
+    __tablename__ = "user_recipe_ingredients"
+
+    user_recipe_ingredient_id = Column(Integer, primary_key=True)
+    user_recipe_id = Column(
+        Integer,
+        ForeignKey("user_recipes.user_recipe_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    group_name = Column(String(100))
+    name = Column(String(100), nullable=False)
+    normalized_name = Column(String(100))
+    amount_text = Column(String(100))
+    quantity = Column(Numeric(10, 3))
+    unit = Column(String(50))
+    note = Column(Text)
+    raw_text = Column(Text)
+    is_optional = Column(BOOLEAN, nullable=False, default=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    user_recipe = relationship("UserRecipe", back_populates="ingredients")
+
+
+class UserRecipeStep(Base):
+    __tablename__ = "user_recipe_steps"
+
+    user_recipe_step_id = Column(Integer, primary_key=True)
+    user_recipe_id = Column(
+        Integer,
+        ForeignKey("user_recipes.user_recipe_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    step_no = Column(Integer, nullable=False)
+    instruction = Column(Text, nullable=False)
+    source_image_url = Column(String(1024))
+    tip = Column(Text)
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    user_recipe = relationship("UserRecipe", back_populates="steps")
+
+
+class UserRecipeLabel(Base):
+    __tablename__ = "user_recipe_labels"
+
+    user_recipe_label_id = Column(Integer, primary_key=True)
+    user_recipe_id = Column(
+        Integer,
+        ForeignKey("user_recipes.user_recipe_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    label_type = Column(String(30), nullable=False)
+    label_value = Column(Text, nullable=False)
+    confidence_score = Column(Numeric(5, 2))
+    source = Column(String(30), nullable=False, default="ADMIN")
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    user_recipe = relationship("UserRecipe", back_populates="labels")
+
+
+class UserRecipeNutrition(Base):
+    __tablename__ = "user_recipe_nutrition"
+
+    user_recipe_id = Column(
+        Integer,
+        ForeignKey("user_recipes.user_recipe_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    serving_weight_grams = Column(Numeric(10, 2))
+    carbohydrate_grams = Column(Numeric(10, 2))
+    protein_grams = Column(Numeric(10, 2))
+    fat_grams = Column(Numeric(10, 2))
+    sodium_milligrams = Column(Numeric(10, 2))
+    source = Column(String(30), nullable=False, default="ADMIN")
+    raw = Column(JSONB, nullable=False, default=dict)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user_recipe = relationship("UserRecipe", back_populates="nutrition")
 
 
 class RecipeQualityScore(Base):

@@ -6,6 +6,7 @@ from app.models.recipe_source import (
     RecipeSource,
     RecipeSourceExtractedIngredient,
     RecipeSourceExtractedLabel,
+    RecipeSourceExtractedNutrition,
     RecipeSourceExtractedStep,
     RecipeSourceExtraction,
     RecipeSourceQualityScore,
@@ -77,6 +78,9 @@ class RecipeSourceService:
                 joinedload(RecipeSource.extraction).joinedload(
                     RecipeSourceExtraction.quality_score
                 ),
+                joinedload(RecipeSource.extraction).joinedload(
+                    RecipeSourceExtraction.nutrition
+                ),
             )
             .filter(RecipeSource.source_id == source_id)
             .first()
@@ -146,15 +150,10 @@ def _build_extraction(source_id: int, data) -> RecipeSourceExtraction:
         summary=data.summary,
         description=data.description,
         servings=data.servings,
+        yield_quantity=data.yield_quantity,
+        yield_unit=data.yield_unit,
         cooking_time_minutes=data.cooking_time_minutes,
         kcal_per_serving=data.kcal_per_serving,
-        serving_weight_grams=data.serving_weight_grams,
-        carbohydrate_grams=data.carbohydrate_grams,
-        protein_grams=data.protein_grams,
-        fat_grams=data.fat_grams,
-        sodium_milligrams=data.sodium_milligrams,
-        nutrition_source=data.nutrition_source,
-        nutrition_raw=data.nutrition_raw,
         difficulty=data.difficulty,
         source_main_image_url=data.source_main_image_url,
         source_thumbnail_url=data.source_thumbnail_url,
@@ -177,6 +176,10 @@ def _build_extraction(source_id: int, data) -> RecipeSourceExtraction:
         RecipeSourceExtractedLabel(**item.model_dump(exclude_none=True))
         for item in data.labels
     ]
+    if data.nutrition is not None:
+        extraction.nutrition = RecipeSourceExtractedNutrition(
+            **data.nutrition.model_dump(exclude_none=True)
+        )
     return extraction
 
 

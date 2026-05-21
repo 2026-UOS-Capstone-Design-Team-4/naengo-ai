@@ -1,9 +1,10 @@
 """
-APPROVED 상태 recipe_sources를 recipes 테이블로 import하는 CLI.
+10000recipe APPROVED 상태 recipe_sources를 recipes 테이블로 import하는 CLI.
 
 Usage:
-    uv run python scripts/ingestion/import_approved_recipe_sources.py --limit 200
-    uv run python scripts/ingestion/import_approved_recipe_sources.py --limit 200 --workers 4
+    uv run python scripts/ingestion/import_approved_10000recipe_sources.py --limit 200
+    uv run python scripts/ingestion/import_approved_10000recipe_sources.py ^
+        --limit 200 --workers 4
 """
 
 import argparse
@@ -24,6 +25,7 @@ from app.services.ingestion.recipe_import_service import RecipeImportService
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+SOURCE_SITE = "10000recipe"
 
 
 def import_one(source_id: int) -> tuple[str, int, int | None]:
@@ -43,7 +45,9 @@ def import_one(source_id: int) -> tuple[str, int, int | None]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="recipe_sources -> recipes import")
+    parser = argparse.ArgumentParser(
+        description="10000recipe recipe_sources -> recipes import"
+    )
     parser.add_argument("--limit", type=int, default=200)
     parser.add_argument(
         "--workers",
@@ -62,6 +66,8 @@ def main() -> None:
             row[0]
             for row in db.query(RecipeSource.source_id)
             .filter(
+                RecipeSource.source_site == SOURCE_SITE,
+                RecipeSource.parse_status == "PARSED",
                 RecipeSource.review_status == "APPROVED",
                 RecipeSource.import_status == "NOT_IMPORTED",
             )
@@ -69,7 +75,12 @@ def main() -> None:
             .all()
         ]
 
-    logger.info("%d개 import 시작 (workers=%d)", len(source_ids), workers)
+    logger.info(
+        "%s %d개 import 시작 (workers=%d)",
+        SOURCE_SITE,
+        len(source_ids),
+        workers,
+    )
 
     counts: dict[str, int] = {}
     if workers == 1:

@@ -4,14 +4,19 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
-from app.models.recipe import UserRecipe
+from app.models.recipe import (
+    UserRecipe,
+    UserRecipeIngredient,
+    UserRecipeLabel,
+    UserRecipeNutrition,
+    UserRecipeStep,
+)
 from app.models.user import User
 from app.schemas.user_recipe import (
     UserRecipeAdminUpdate,
     UserRecipeCreate,
-    build_user_recipe_payload,
 )
 
 
@@ -30,6 +35,12 @@ class UserRecipeService:
     def get_user_recipes(self, user_id: int) -> list[UserRecipe]:
         return (
             self.db.query(UserRecipe)
+            .options(
+                selectinload(UserRecipe.ingredients),
+                selectinload(UserRecipe.steps),
+                selectinload(UserRecipe.labels),
+                selectinload(UserRecipe.nutrition),
+            )
             .filter(
                 UserRecipe.user_id == user_id,
                 UserRecipe.is_active.is_(True),
@@ -53,7 +64,12 @@ class UserRecipeService:
             if cursor is not None
             else None
         )
-        query = self.db.query(UserRecipe)
+        query = self.db.query(UserRecipe).options(
+            selectinload(UserRecipe.ingredients),
+            selectinload(UserRecipe.steps),
+            selectinload(UserRecipe.labels),
+            selectinload(UserRecipe.nutrition),
+        )
         if status:
             query = query.filter(UserRecipe.status == status)
         if is_active is not None:
@@ -90,6 +106,12 @@ class UserRecipeService:
     ) -> UserRecipe | None:
         return (
             self.db.query(UserRecipe)
+            .options(
+                selectinload(UserRecipe.ingredients),
+                selectinload(UserRecipe.steps),
+                selectinload(UserRecipe.labels),
+                selectinload(UserRecipe.nutrition),
+            )
             .filter(
                 UserRecipe.user_recipe_id == user_recipe_id,
                 UserRecipe.user_id == user_id,
@@ -111,8 +133,6 @@ class UserRecipeService:
             user_id=user_id,
             title=body.title,
             submission_text=body.submission_text,
-            draft_payload=build_user_recipe_payload(),
-            ai_suggested_patch=build_user_recipe_payload(),
         )
         self.db.add(recipe)
         self.db.commit()
@@ -159,20 +179,43 @@ class UserRecipeService:
             if value is not None:
                 setattr(recipe, field, value)
 
-        nullable_fields = ["admin_note", "rejection_reason"]
+        nullable_fields = [
+            "description",
+            "servings",
+            "yield_quantity",
+            "yield_unit",
+            "cooking_time_minutes",
+            "kcal_per_serving",
+            "difficulty",
+            "video_url",
+            "source_main_image_url",
+            "rejection_reason",
+        ]
         for field in nullable_fields:
             if field in body.model_fields_set:
                 setattr(recipe, field, getattr(body, field))
 
-        if body.draft_payload is not None:
-            recipe.draft_payload = build_user_recipe_payload(body.draft_payload)
-        if body.ai_suggested_patch is not None:
-            recipe.ai_suggested_patch = build_user_recipe_payload(
-                body.ai_suggested_patch,
+        if body.ingredients is not None:
+            recipe.ingredients = [
+                UserRecipeIngredient(**item.model_dump(exclude_unset=True))
+                for item in body.ingredients
+            ]
+        if body.steps is not None:
+            recipe.steps = [
+                UserRecipeStep(**item.model_dump(exclude_unset=True))
+                for item in body.steps
+            ]
+        if body.labels is not None:
+            recipe.labels = [
+                UserRecipeLabel(**item.model_dump(exclude_unset=True))
+                for item in body.labels
+            ]
+        if "nutrition" in body.model_fields_set:
+            recipe.nutrition = (
+                UserRecipeNutrition(**body.nutrition.model_dump(exclude_unset=True))
+                if body.nutrition is not None
+                else None
             )
-        if body.validation_errors is not None:
-            recipe.validation_errors = body.validation_errors
-
         if body.status is not None and body.status != recipe.status:
             recipe.status = body.status
             recipe.reviewed_at = datetime.now(UTC)

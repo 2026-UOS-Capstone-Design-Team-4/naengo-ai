@@ -114,7 +114,12 @@ class ChatService:
         image_url: str | None = None,
     ) -> int:
         self.db.add(
-            ChatMessage(room_id=room_id, role="user", content=user_content, image_url=image_url)
+            ChatMessage(
+                room_id=room_id,
+                role="user",
+                content=user_content,
+                image_url=image_url,
+            )
         )
         ai_message = ChatMessage(
             room_id=room_id,

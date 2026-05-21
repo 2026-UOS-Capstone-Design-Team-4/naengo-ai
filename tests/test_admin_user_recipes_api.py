@@ -20,13 +20,13 @@ def _user_recipe(**overrides) -> UserRecipe:
         "user_id": 7,
         "title": "Kimchi stew",
         "submission_text": "I made kimchi stew.",
-        "draft_payload": {"description": "A spicy stew."},
-        "ai_suggested_patch": {},
-        "validation_errors": [],
+        "description": "A spicy stew.",
+        "ingredients": [],
+        "steps": [],
+        "labels": [],
         "status": "PENDING",
         "import_status": "NOT_IMPORTED",
         "is_active": True,
-        "admin_note": None,
         "rejection_reason": None,
         "reviewed_by": None,
         "reviewed_at": None,
@@ -127,10 +127,9 @@ def test_admin_can_get_user_recipe_detail(monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["user_recipe_id"] == 11
-    assert body["draft_payload"]["description"] == "A spicy stew."
-    assert body["draft_payload"]["ingredients"] == []
-    assert body["ai_suggested_patch"]["description"] is None
-    assert body["ai_suggested_patch"]["ingredients"] == []
+    assert body["description"] == "A spicy stew."
+    assert body["ingredients"] == []
+    assert body["steps"] == []
     assert body["import_status"] == "NOT_IMPORTED"
     assert body["imported_recipe_id"] is None
     assert body["imported_at"] is None

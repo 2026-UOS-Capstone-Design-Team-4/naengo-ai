@@ -56,7 +56,7 @@ def list_admin_recipes(
     ),
     source_site: str | None = Query(
         default=None,
-        description="원천 사이트로 필터링합니다. 예: `10000recipe`, `foodsafetykorea`",
+        description="원천 사이트로 필터링합니다. 예: `10000recipe`",
     ),
     author_type: Literal["ADMIN", "USER", "SOURCE"] | None = Query(
         default=None,

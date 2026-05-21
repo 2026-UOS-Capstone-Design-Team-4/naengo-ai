@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 
 from app.api.v1.deps import require_admin
-from app.api.v1.endpoints import chat, user_recipes, recipes, users
+from app.api.v1.endpoints import chat, recipes, user_recipes, users
 from app.api.v1.endpoints.admin import (
     chat_rooms as admin_chat_rooms,
-    user_recipes as admin_user_recipes,
     recipes as admin_recipes,
+    user_recipes as admin_user_recipes,
 )
 
 api_router = APIRouter()

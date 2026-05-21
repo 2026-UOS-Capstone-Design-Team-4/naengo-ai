@@ -6,7 +6,6 @@
 
 ```text
 1. Source collection
-   - foodsafetykorea: import JSON dataset
    - 10000recipe: scrape web list/detail pages
 
 2. Raw staging
@@ -48,10 +47,12 @@
 
 | Source | Collect | Extract | Version |
 | --- | --- | --- | --- |
-| foodsafetykorea | `scripts/ingestion/import_foodsafetykorea_sources.py` | `scripts/ingestion/parse_foodsafetykorea_sources.py` | `foodsafetykorea-extraction-v1` |
 | 10000recipe | `scripts/ingestion/scrape_10000recipe.py` | `scripts/ingestion/parse_10000recipe_sources.py` | `10000recipe-extraction-v1` |
 
-foodsafetykorea는 `source_dataset_id + source_record_id`가 핵심 식별자다. 만개의레시피는 `source_site + source_recipe_id`와 `source_url`이 핵심 식별자다.
+만개의레시피는 `source_site + source_recipe_id`와 `source_url`이 핵심 식별자다.
+
+`servings`는 식사 인분 수를 의미한다. 쿠키, 빵, 소스처럼 완성 개수나 총량이
+중요한 레시피는 `yield_quantity`와 `yield_unit`에 완성 분량을 별도로 저장한다.
 
 ## Lifecycle Fields
 
@@ -67,14 +68,6 @@ foodsafetykorea는 `source_dataset_id + source_record_id`가 핵심 식별자다
 
 ## Extraction Policy
 
-### foodsafetykorea
-
-- 재료 문자열은 `foodsafetykorea_ingredient_parser_service.py`가 Naengo ingredient schema로 구조화한다.
-- 영양 정보는 원본 구조화 값이 있으면 `nutrition_source = SOURCE`로 보관한다.
-- 인분/시간은 source 값 또는 recipe evidence 기반 추정을 사용한다.
-- `servings`와 `cooking_time_minutes`가 없으면 invalid다.
-- 준비 시간과 조리 시간은 source extraction 단계에서 따로 저장하지 않는다.
-
 ### 10000recipe
 
 - HTML에서 제목, 설명, 재료, 단계, 작성자, 이미지 URL, tag를 raw payload로 만든다.
@@ -86,7 +79,6 @@ foodsafetykorea는 `source_dataset_id + source_record_id`가 핵심 식별자다
 
 extraction version이 아래 값이면 import 단계에서 rewrite를 다시 하지 않는다.
 
-- `foodsafetykorea-extraction-v1`
 - `10000recipe-extraction-v1`
 
 이 버전들은 extraction 단계에서 이미 Naengo staging format을 만든 것으로 본다. import 단계는 가능한 한 extraction 값을 그대로 production table로 옮긴다.
@@ -115,8 +107,9 @@ AI metadata/rewrite 호출은 `RECIPE_IMPORT_AI_TIMEOUT_SECONDS` 안에 끝나�
 
 ## Import Conditions
 
-`scripts/ingestion/import_approved_recipe_sources.py`는 다음 조건을 만족하는 source만 처리한다.
+`scripts/ingestion/import_approved_10000recipe_sources.py`는 만개의레시피 전용 import CLI이며 다음 조건을 만족하는 source만 처리한다.
 
+- `source_site = 10000recipe`
 - `parse_status = PARSED`
 - `review_status = APPROVED`
 - `import_status = NOT_IMPORTED`
@@ -144,7 +137,7 @@ import 중 실패하면 `import_status = FAILED`로 남기고 원인을 기록�
 classification과 embedding은 import와 분리한다.
 
 ```text
-import_approved_recipe_sources.py
+import_approved_10000recipe_sources.py
   -> backfill_recipe_classifications.py
   -> embedding backfill job
   -> optional image generation job

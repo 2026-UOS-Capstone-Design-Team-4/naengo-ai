@@ -17,7 +17,6 @@ Internal API는 worker, scheduler, batch process가 호출하는 시스템 API�
 예정 API:
 
 ```text
-POST /api/v1/internal/jobs/import-foodsafetykorea-sources
 POST /api/v1/internal/jobs/scrape-10000recipe-sources
 POST /api/v1/internal/jobs/parse-recipe-sources
 POST /api/v1/internal/jobs/import-approved-sources

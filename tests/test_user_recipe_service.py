@@ -1,7 +1,7 @@
 from pydantic import ValidationError
 
 from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
-from app.models.recipe import UserRecipe, Recipe
+from app.models.recipe import Recipe, UserRecipe
 from app.models.social import Like, Scrap  # noqa: F401
 from app.models.user import User, UserProfile  # noqa: F401
 from app.schemas.user_recipe import UserRecipeAdminUpdate, UserRecipeCreate
@@ -57,40 +57,19 @@ class FakeCreateDb(FakeDb):
         return FakeUserQuery(self.user)
 
 
-def _draft(**overrides) -> dict:
-    values = {
-        "description": "Spicy kimchi tofu stew.",
-        "ingredients": [
-            {"name": "kimchi", "amount": "200", "unit": "g", "type": "main"}
-        ],
-        "ingredients_raw": "kimchi 200g, tofu 1 block",
-        "instructions": ["Cook kimchi.", "Add tofu and simmer."],
-        "servings": 2,
-        "cooking_time_minutes": 20,
-        "kcal_per_serving": 180,
-        "difficulty": "easy",
-        "category": ["Korean", "stew"],
-        "tags": ["spicy"],
-        "tips": ["Cook kimchi first."],
-        "video_url": "https://example.com/video",
-        "image_url": "https://example.com/image.jpg",
-    }
-    values.update(overrides)
-    return values
-
-
 def make_user_recipe(**overrides) -> UserRecipe:
     values = {
         "user_recipe_id": 1,
         "user_id": 7,
         "title": "Kimchi tofu stew",
         "submission_text": "I cooked kimchi with tofu.",
-        "draft_payload": _draft(),
-        "ai_suggested_patch": {},
-        "validation_errors": [],
+        "description": "Spicy kimchi tofu stew.",
+        "servings": 2,
+        "cooking_time_minutes": 20,
+        "kcal_per_serving": 180,
+        "difficulty": "easy",
         "status": "PENDING",
         "is_active": True,
-        "admin_note": None,
     }
     values.update(overrides)
     return UserRecipe(**values)
@@ -101,15 +80,18 @@ def test_create_user_recipe_stores_title_and_submission_text():
     service = UserRecipeService(db)
 
     result = service.create_user_recipe(
-        UserRecipeCreate(title="엄마 김치찌개", submission_text="묵은지로 끓인 진한 김치찌개입니다."),
+        UserRecipeCreate(
+            title="엄마 김치찌개",
+            submission_text="묵은지로 끓인 진한 김치찌개입니다.",
+        ),
         user_id=7,
     )
 
     assert result is db.added[0]
     assert result.title == "엄마 김치찌개"
     assert result.submission_text == "묵은지로 끓인 진한 김치찌개입니다."
-    assert result.draft_payload["ingredients"] == []
-    assert result.ai_suggested_patch["ingredients"] == []
+    assert result.ingredients == []
+    assert result.steps == []
     assert db.committed is True
     assert db.refreshed is result
 
@@ -118,14 +100,14 @@ def test_user_recipe_create_rejects_server_managed_fields():
     try:
         UserRecipeCreate(
             submission_text="김치찌개를 만들었어요.",
-            draft_payload={"description": "client draft"},
+            ingredients=[{"name": "김치"}],
         )
     except ValidationError as exc:
         error_locations = {tuple(error["loc"]) for error in exc.errors()}
     else:
         raise AssertionError("Expected server-managed fields to be rejected.")
 
-    assert ("draft_payload",) in error_locations
+    assert ("ingredients",) in error_locations
 
 
 def test_user_recipe_create_requires_title():
@@ -159,21 +141,7 @@ def test_update_user_recipe_status_approves_without_recipe_import():
     assert db.refreshed is pending
 
 
-def test_update_user_recipe_replaces_draft_payload():
-    service = UserRecipeService(FakeDb())
-    pending = make_user_recipe()
-    service.get_active_user_recipe = lambda _: pending
-    next_draft = _draft(description="Updated description")
-
-    service.update_user_recipe_status(
-        pending.user_recipe_id,
-        UserRecipeAdminUpdate(draft_payload=next_draft),
-    )
-
-    assert pending.draft_payload == next_draft
-
-
-def test_update_user_recipe_normalizes_ai_suggested_patch():
+def test_update_user_recipe_replaces_structured_recipe_fields():
     service = UserRecipeService(FakeDb())
     pending = make_user_recipe()
     service.get_active_user_recipe = lambda _: pending
@@ -181,13 +149,29 @@ def test_update_user_recipe_normalizes_ai_suggested_patch():
     service.update_user_recipe_status(
         pending.user_recipe_id,
         UserRecipeAdminUpdate(
-            ai_suggested_patch={"description": "Use a clearer description."},
+            description="Updated description",
+            ingredients=[
+                {
+                    "name": "kimchi",
+                    "amount_text": "200g",
+                    "unit": "g",
+                    "sort_order": 1,
+                }
+            ],
+            steps=[
+                {
+                    "step_no": 1,
+                    "instruction": "Cook kimchi.",
+                    "sort_order": 1,
+                }
+            ],
         ),
     )
 
-    assert pending.ai_suggested_patch["description"] == "Use a clearer description."
-    assert pending.ai_suggested_patch["ingredients"] == []
-    assert pending.ai_suggested_patch["cooking_time_minutes"] is None
+    assert pending.description == "Updated description"
+    assert pending.ingredients[0].name == "kimchi"
+    assert pending.ingredients[0].amount_text == "200g"
+    assert pending.steps[0].instruction == "Cook kimchi."
 
 
 def test_update_user_recipe_clears_rejection_reason_when_reopened():
@@ -207,20 +191,18 @@ def test_update_user_recipe_clears_rejection_reason_when_reopened():
     assert pending.rejection_reason is None
 
 
-def test_update_user_recipe_can_clear_nullable_admin_fields():
+def test_update_user_recipe_can_clear_rejection_reason():
     service = UserRecipeService(FakeDb())
     pending = make_user_recipe(
-        admin_note="확인 필요",
         rejection_reason="내용이 부족합니다.",
     )
     service.get_active_user_recipe = lambda _: pending
 
     service.update_user_recipe_status(
         pending.user_recipe_id,
-        UserRecipeAdminUpdate(admin_note=None, rejection_reason=None),
+        UserRecipeAdminUpdate(rejection_reason=None),
     )
 
-    assert pending.admin_note is None
     assert pending.rejection_reason is None
 
 

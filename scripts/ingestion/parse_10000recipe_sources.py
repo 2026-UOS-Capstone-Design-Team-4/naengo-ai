@@ -21,9 +21,16 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from openai import OpenAI
+from pydantic import BaseModel
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
-from app.core.config import API_KEY, BASE_URL, RECIPE_IMPORT_AI_TIMEOUT_SECONDS
+from app.core.config import (
+    API_KEY,
+    BASE_URL,
+    RECIPE_IMPORT_AI_TIMEOUT_SECONDS,
+)
 from app.db.session import SessionLocal
 from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
 from app.models.recipe import Recipe
@@ -54,8 +61,8 @@ EXTRACTION_VERSION = "10000recipe-extraction-v1"
 SOURCE_SITE = "10000recipe"
 SOURCE_TYPE = "WEB_SCRAPE"
 VALID_DIFFICULTIES = {"easy", "normal", "hard"}
-MAX_COOKING_TIME_MINUTES = 120
-_openai_client: OpenAI | None = None
+_metadata_agent: Agent | None = None
+_difficulty_agent: Agent | None = None
 
 
 class ExtractionBuildError(ValueError):
@@ -67,18 +74,40 @@ class ExtractionBuildError(ValueError):
 @dataclass(frozen=True)
 class EstimatedRecipeMetadata:
     kcal_per_serving: int | None = None
-    cooking_time_minutes: int | None = None
 
 
-def _get_openai_client() -> OpenAI:
-    global _openai_client
-    if _openai_client is None:
-        _openai_client = OpenAI(
-            api_key=API_KEY,
-            base_url=BASE_URL or None,
-            timeout=RECIPE_IMPORT_AI_TIMEOUT_SECONDS,
-        )
-    return _openai_client
+class RecipeMetadataOutput(BaseModel):
+    kcal_per_serving: int | None = None
+
+
+class RecipeDifficultyOutput(BaseModel):
+    difficulty: str
+
+
+def _build_agent(output_type: type[BaseModel]) -> Agent:
+    model = OpenAIChatModel(
+        METADATA_MODEL,
+        provider=OpenAIProvider(api_key=API_KEY, base_url=BASE_URL),
+    )
+    return Agent(
+        model,
+        output_type=output_type,
+        model_settings={"timeout": RECIPE_IMPORT_AI_TIMEOUT_SECONDS},
+    )
+
+
+def _get_metadata_agent() -> Agent:
+    global _metadata_agent
+    if _metadata_agent is None:
+        _metadata_agent = _build_agent(RecipeMetadataOutput)
+    return _metadata_agent
+
+
+def _get_difficulty_agent() -> Agent:
+    global _difficulty_agent
+    if _difficulty_agent is None:
+        _difficulty_agent = _build_agent(RecipeDifficultyOutput)
+    return _difficulty_agent
 
 
 def estimate_recipe_metadata(
@@ -86,12 +115,9 @@ def estimate_recipe_metadata(
     ingredients: list[RecipeSourceExtractedIngredient],
     steps: list[RecipeSourceExtractedStep],
     servings: float | None,
-    stated_total_time: int | None,
 ) -> EstimatedRecipeMetadata:
     if not ingredients or not steps:
-        return EstimatedRecipeMetadata(
-            cooking_time_minutes=_clean_cooking_time(stated_total_time)
-        )
+        return EstimatedRecipeMetadata()
     ingredient_lines = "\n".join(
         f"- {ingredient.name} {ingredient.amount_text or ''}".strip()
         for ingredient in ingredients
@@ -103,102 +129,21 @@ def estimate_recipe_metadata(
         f"Total servings: {servings_text}\n"
         f"Ingredients:\n{ingredient_lines}\n\n"
         f"Steps:\n{step_lines}\n\n"
-        f"Stated total time: {stated_total_time or 'unknown'} minutes\n\n"
-        "Return only JSON with keys: kcal_per_serving, cooking_time_minutes. "
+        "Set kcal_per_serving in the structured output. "
         "kcal_per_serving must be a practical positive integer kcal per serving; "
         "do not return null for kcal_per_serving when ingredients exist. "
-        "cooking_time_minutes should be practical app-facing cooking minutes "
-        "from preparation through serving. Do not count long passive waits "
-        "such as overnight salting, multi-hour marinating, chilling, freezing, "
-        "or storage at full length; estimate active handling plus active "
-        "heating/cooking time. Use null only when uncertain."
+        "Use null only when uncertain."
     )
     try:
-        response = _get_openai_client().chat.completions.create(
-            model=METADATA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            max_completion_tokens=120,
-            temperature=0,
-        )
-        text = response.choices[0].message.content or ""
-        payload = _parse_json_object(text)
-        kcal = _positive_int(payload.get("kcal_per_serving"))
-        if kcal is None:
-            kcal = _estimate_kcal_per_serving_only(title, ingredients, servings)
-        return EstimatedRecipeMetadata(
-            kcal_per_serving=kcal,
-            cooking_time_minutes=_clean_cooking_time(
-                _positive_int(payload.get("cooking_time_minutes"))
-                or stated_total_time
-            ),
-        )
+        output = _get_metadata_agent().run_sync(prompt).output
+        kcal = _positive_int(output.kcal_per_serving)
+        return EstimatedRecipeMetadata(kcal_per_serving=kcal)
     except Exception as exc:
         logger.warning("metadata estimation failed (%s): %s", title, exc)
-    return EstimatedRecipeMetadata(
-        cooking_time_minutes=_clean_cooking_time(stated_total_time)
-    )
+    return EstimatedRecipeMetadata()
 
 
-def estimate_kcal_per_serving(
-    title: str,
-    ingredients: list[RecipeSourceExtractedIngredient],
-    servings: float | None,
-) -> int | None:
-    metadata = estimate_recipe_metadata(title, ingredients, [], servings, None)
-    return metadata.kcal_per_serving or _estimate_kcal_per_serving_only(
-        title,
-        ingredients,
-        servings,
-    )
-
-
-def _estimate_kcal_per_serving_only(
-    title: str,
-    ingredients: list[RecipeSourceExtractedIngredient],
-    servings: float | None,
-) -> int | None:
-    if not ingredients:
-        return None
-    ingredient_lines = "\n".join(
-        f"- {ingredient.name} {ingredient.amount_text or ''}".strip()
-        for ingredient in ingredients
-    )
-    servings_text = f"{int(servings)} servings" if servings else "unknown servings"
-    prompt = (
-        f"Estimate kcal per serving for Korean recipe '{title}'.\n"
-        f"Total servings: {servings_text}\n"
-        f"Ingredients:\n{ingredient_lines}\n\n"
-        "Return only one practical integer kcal value. Do not return null."
-    )
-    try:
-        response = _get_openai_client().chat.completions.create(
-            model=METADATA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            max_completion_tokens=10,
-            temperature=0,
-        )
-        text = response.choices[0].message.content or ""
-        numbers = re.findall(r"\d+", text)
-        if numbers:
-            return int(numbers[0])
-    except Exception as exc:
-        logger.warning("kcal_per_serving estimation failed (%s): %s", title, exc)
-    return None
-
-
-def _parse_json_object(content: str) -> dict[str, Any]:
-    text = content.strip()
-    fenced = re.match(r"^```(?:json)?\s*(.*?)\s*```$", text, re.DOTALL)
-    if fenced:
-        text = fenced.group(1).strip()
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def _positive_int(value: Any) -> int | None:
+def _positive_int(value: object) -> int | None:
     try:
         integer = int(float(value))
     except (TypeError, ValueError):
@@ -209,7 +154,7 @@ def _positive_int(value: Any) -> int | None:
 def _clean_cooking_time(value: int | None) -> int | None:
     if value is None or value <= 0:
         return None
-    return value if value <= MAX_COOKING_TIME_MINUTES else None
+    return value
 
 
 def parse_servings(raw: str) -> float | None:
@@ -252,19 +197,12 @@ def estimate_difficulty(
         f"Classify Korean recipe '{title}' difficulty.\n"
         f"Ingredients:\n{ingredient_lines}\n\n"
         f"Steps:\n{step_lines}\n\n"
-        "Return only one of: easy, normal, hard."
+        "Set difficulty to one of: easy, normal, hard."
     )
     try:
-        response = _get_openai_client().chat.completions.create(
-            model=METADATA_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            max_completion_tokens=20,
-            temperature=0,
-        )
-        text = (response.choices[0].message.content or "").strip().lower()
-        for difficulty in ("easy", "normal", "hard"):
-            if difficulty in text:
-                return difficulty
+        difficulty = _get_difficulty_agent().run_sync(prompt).output.difficulty.lower()
+        if difficulty in VALID_DIFFICULTIES:
+            return difficulty
     except Exception as exc:
         logger.warning("difficulty estimation failed (%s): %s", title, exc)
     return None
@@ -313,8 +251,12 @@ _OPTIONAL_KEYWORDS = ("선택", "없어도", "생략", "빼도", "선택재료",
 _UNIT_REPLACEMENTS: list[tuple[str, str]] = sorted(
     [
         ("테이블스푼", "T"),
+        ("밥숟가락", "T"),
+        ("밥 숟가락", "T"),
         ("큰 술", "T"),
         ("큰술", "T"),
+        ("숟가락", "T"),
+        ("숟갈", "T"),
         ("스푼", "T"),
         ("tbsp", "T"),
         ("Ts", "T"),
@@ -527,7 +469,6 @@ def build_extraction(raw: dict[str, Any]) -> RecipeSourceExtraction:
         ingredients,
         steps,
         servings,
-        cooking_time,
     )
     if metadata.kcal_per_serving is None:
         raise ValueError("kcal_per_serving could not be estimated.")
@@ -537,7 +478,7 @@ def build_extraction(raw: dict[str, Any]) -> RecipeSourceExtraction:
         summary=raw.get("description"),
         description=raw.get("description") or title,
         servings=servings,
-        cooking_time_minutes=metadata.cooking_time_minutes or cooking_time,
+        cooking_time_minutes=cooking_time,
         difficulty=difficulty,
         kcal_per_serving=metadata.kcal_per_serving,
         source_main_image_url=raw.get("image_url"),
@@ -599,8 +540,6 @@ def _build_quality_score(
     estimated_fields = []
     if extraction.kcal_per_serving is not None:
         estimated_fields.append("kcal_per_serving")
-    if extraction.cooking_time_minutes is not None:
-        estimated_fields.append("cooking_time_minutes")
     return RecipeSourceQualityScore(
         completeness_score=_completeness_score(extraction),
         parse_confidence=0.85,

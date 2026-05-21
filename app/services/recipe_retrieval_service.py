@@ -161,6 +161,7 @@ class RecipeRetrievalService:
                 {
                     "step_no": step.step_no,
                     "instruction": step.instruction,
+                    "source_image_url": step.source_image_url,
                     "tip": step.tip,
                 }
                 for step in recipe.steps
@@ -174,6 +175,8 @@ class RecipeRetrievalService:
             "tips": recipe.tips,
             "video_url": recipe.video_url,
             "image_url": recipe.image_url,
+            "source_url": recipe.source_url,
+            "source_main_image_url": recipe.source_main_image_url,
             "author_type": recipe.author_type,
         }
 

@@ -88,12 +88,12 @@ Detail response는 화면에 필요한 값을 한 번에 제공한다.
 
 - 기본 레시피 정보 (`title`, `description`, `summary`, `servings`, `cooking_time_minutes`, `kcal_per_serving`, `difficulty`)
 - 재료 (`ingredients`: IngredientItem 목록)
-- 조리 단계 (`steps`: RecipeStepResponse 목록 — `step_no`, `title`, `instruction`, `tip` 포함)
+- 조리 단계 (`steps`: RecipeStepResponse 목록 — `step_no`, `instruction`, `source_image_url`, `tip` 포함)
 - 카테고리/태그/팁 (`category`, `tags`, `tips`)
-- 미디어 (`video_url`, `image_url`)
+- 미디어 (`video_url`, `image_url`, `source_main_image_url`)
 - 좋아요/스크랩 상태
 - 통계
-- 출처 표시 정보 (SOURCE 타입 레시피의 경우 `source_id`로 `recipe_sources` JOIN)
+- 출처 표시 정보 (`source_url`, SOURCE 타입 레시피의 상세 provenance는 `source_id`로 `recipe_sources` JOIN)
 
 이미지는 `recipes` 본문 컬럼이 아니라 `recipe_media`에서 `MAIN`, `THUMBNAIL` 역할을 조회해 응답한다.
 
@@ -127,7 +127,7 @@ POST   /api/v1/user-recipes
 DELETE /api/v1/user-recipes/{user_recipe_id}
 ```
 
-사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `user_recipes`에 저장한다. 요청 본문은 `title`(필수)과 `submission_text`(필수)를 받는다. 검수 대상 구조화 값인 `draft_payload`와 AI 보정 후보인 `ai_suggested_patch`는 빈 기본 구조로 초기화한다. 사용자가 삭제하면 실제 삭제 대신 `is_active = false`로 바꾸어 관리자 검수 상태(`PENDING`, `APPROVED`, `REJECTED`)와 분리한다.
+사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `user_recipes`에 저장한다. 요청 본문은 `title`(필수)과 `submission_text`(필수)를 받는다. 관리자 검수 단계에서 구조화된 본문, 재료, 조리 단계, 라벨, 영양 정보를 `user_recipe_*` 테이블에 저장한다. 사용자가 삭제하면 실제 삭제 대신 `is_active = false`로 바꾸어 관리자 검수 상태(`PENDING`, `APPROVED`, `REJECTED`)와 분리한다.
 
 ## Excluded From User API
 

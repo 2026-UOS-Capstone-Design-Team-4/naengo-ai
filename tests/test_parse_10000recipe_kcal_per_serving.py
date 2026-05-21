@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from scripts import parse_10000recipe_sources
+from scripts.ingestion import parse_10000recipe_sources
 
 
 class FakeDb:

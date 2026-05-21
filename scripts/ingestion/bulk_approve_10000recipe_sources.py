@@ -1,11 +1,8 @@
 """
-PARSED 상태 recipe_sources를 일괄 APPROVED 처리하는 CLI.
-
-신뢰할 수 있는 소스(공공데이터 등)를 관리자 검수 없이 bulk approve할 때 사용.
+10000recipe PARSED 상태 recipe_sources를 일괄 APPROVED 처리하는 CLI.
 
 Usage:
-    uv run python scripts/ingestion/bulk_approve_sources.py --dataset-id foodsafetykorea-recipe
-    uv run python scripts/ingestion/bulk_approve_sources.py  # 전체 PARSED 대상
+    uv run python scripts/ingestion/bulk_approve_10000recipe_sources.py --limit 300
 """
 
 import argparse
@@ -26,11 +23,13 @@ from app.models.user import User, UserProfile  # noqa: E402,F401
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+SOURCE_SITE = "10000recipe"
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="PARSED sources 일괄 APPROVED 처리")
-    parser.add_argument("--dataset-id", help="특정 dataset_id만 처리 (미지정시 전체)")
+    parser = argparse.ArgumentParser(
+        description="10000recipe PARSED sources APPROVED 처리"
+    )
     parser.add_argument("--limit", type=int, default=2000)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
@@ -38,15 +37,14 @@ def main() -> None:
     db = SessionLocal()
     try:
         query = db.query(RecipeSource).filter(
+            RecipeSource.source_site == SOURCE_SITE,
             RecipeSource.parse_status == "PARSED",
             RecipeSource.review_status == "PENDING",
             RecipeSource.import_status == "NOT_IMPORTED",
         )
-        if args.dataset_id:
-            query = query.filter(RecipeSource.source_dataset_id == args.dataset_id)
 
         sources = query.limit(args.limit).all()
-        logger.info("%d개 approve 대상", len(sources))
+        logger.info("%s %d개 approve 대상", SOURCE_SITE, len(sources))
 
         now = datetime.now(UTC)
         for source in sources:
@@ -55,7 +53,7 @@ def main() -> None:
 
         if not args.dry_run:
             db.commit()
-            logger.info("완료: %d개 APPROVED", len(sources))
+            logger.info("완료: %s %d개 APPROVED", SOURCE_SITE, len(sources))
         else:
             db.rollback()
             logger.info("[dry-run] 커밋하지 않음")

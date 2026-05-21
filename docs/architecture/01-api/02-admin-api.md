@@ -81,9 +81,8 @@ POST /api/v1/admin/user-recipes/{user_recipe_id}/enrich
 
 정책:
 
-- AI 보정 patch는 기본적으로 `draft_payload`에 바로 덮어쓰지 않는다.
-- 응답 또는 저장 후보는 `ai_suggested_patch`로 관리한다.
-- 관리자가 확인한 값만 `PATCH /api/v1/admin/user-recipes/{user_recipe_id}`로 `draft_payload`에 반영한다.
+- AI 보정 patch는 별도 JSON 컬럼에 저장하지 않는다.
+- 관리자가 확인한 값만 `PATCH /api/v1/admin/user-recipes/{user_recipe_id}`로 구조화 필드와 `user_recipe_*` 하위 테이블에 반영한다.
 
 ### Scraper Operations
 

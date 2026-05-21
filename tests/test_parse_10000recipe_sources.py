@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.models.recipe_source import RecipeSourceExtraction
-from scripts import parse_10000recipe_sources
+from scripts.ingestion import parse_10000recipe_sources
 
 
 class FakeDb:
@@ -166,31 +166,44 @@ def test_source_query_with_refresh_includes_existing_parse_statuses():
     assert len(query.filters) == 2
 
 
-def test_openai_client_uses_import_ai_timeout(monkeypatch):
+def test_metadata_agent_uses_import_ai_timeout(monkeypatch):
     calls = []
 
-    class FakeOpenAI:
-        def __init__(self, **kwargs):
+    class FakeModel:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class FakeProvider:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class FakeAgent:
+        def __init__(self, *args, **kwargs):
             calls.append(kwargs)
 
-    monkeypatch.setattr(parse_10000recipe_sources, "_openai_client", None)
-    monkeypatch.setattr(parse_10000recipe_sources, "OpenAI", FakeOpenAI)
+    monkeypatch.setattr(parse_10000recipe_sources, "_metadata_agent", None)
+    monkeypatch.setattr(parse_10000recipe_sources, "OpenAIChatModel", FakeModel)
+    monkeypatch.setattr(parse_10000recipe_sources, "OpenAIProvider", FakeProvider)
+    monkeypatch.setattr(parse_10000recipe_sources, "Agent", FakeAgent)
     monkeypatch.setattr(
         parse_10000recipe_sources,
         "RECIPE_IMPORT_AI_TIMEOUT_SECONDS",
         12.5,
     )
 
-    client = parse_10000recipe_sources._get_openai_client()
+    agent = parse_10000recipe_sources._get_metadata_agent()
 
-    assert isinstance(client, FakeOpenAI)
-    assert calls[0]["timeout"] == 12.5
+    assert isinstance(agent, FakeAgent)
+    assert calls[0]["model_settings"] == {"timeout": 12.5}
 
 
 def test_normalize_amount_text_converts_attached_korean_tablespoon_units():
     assert parse_10000recipe_sources._normalize_amount_text("1큰술") == "1T"
     assert parse_10000recipe_sources._normalize_amount_text("1큰 술") == "1T"
     assert parse_10000recipe_sources._normalize_amount_text("2 큰술") == "2T"
+    assert parse_10000recipe_sources._normalize_amount_text("1숟가락") == "1T"
+    assert parse_10000recipe_sources._normalize_amount_text("1 숟갈") == "1T"
+    assert parse_10000recipe_sources._normalize_amount_text("1밥숟가락") == "1T"
 
 
 def test_build_extraction_fails_before_ai_when_required_structure_is_missing(
@@ -230,7 +243,6 @@ def test_build_extraction_normalizes_parsley_family_root_unit(monkeypatch):
         "estimate_recipe_metadata",
         lambda *args: parse_10000recipe_sources.EstimatedRecipeMetadata(
             kcal_per_serving=100,
-            cooking_time_minutes=15,
         ),
     )
     monkeypatch.setattr(
@@ -252,8 +264,5 @@ def test_build_extraction_normalizes_parsley_family_root_unit(monkeypatch):
     ingredient = extraction.ingredients[0]
     assert ingredient.amount_text == "1/2대"
     assert ingredient.unit == "대"
-    assert extraction.cooking_time_minutes == 15
-    assert extraction.quality_score.estimated_fields == [
-        "kcal_per_serving",
-        "cooking_time_minutes",
-    ]
+    assert extraction.cooking_time_minutes == 10
+    assert extraction.quality_score.estimated_fields == ["kcal_per_serving"]

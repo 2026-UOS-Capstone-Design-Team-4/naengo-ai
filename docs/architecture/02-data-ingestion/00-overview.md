@@ -6,10 +6,9 @@ Data ingestion은 외부 레시피 원본을 Naengo 서비스용 정식 레시�
 
 | Source | Purpose | Identity |
 | --- | --- | --- |
-| foodsafetykorea 공공데이터 | 초기 대량 레시피, 구조화된 영양 정보 | `source_type = PUBLIC_DATA`, `source_site = foodsafetykorea`, `parser_type = DATASET` |
 | 만개의레시피 | 실제 사용자형 레시피 표현, 조리 흐름, 이미지 출처 | `source_type = WEB_SCRAPE`, `source_site = 10000recipe`, `parser_type = HTML` |
 
-foodsafetykorea는 `../open-recipe/data/recipes.json`을 `scripts/ingestion/import_foodsafetykorea_sources.py`로 `recipe_sources`에 적재한다. 만개의레시피는 `scripts/ingestion/scrape_10000recipe.py`가 목록/상세 HTML을 읽어 raw payload를 만든다.
+만개의레시피는 `scripts/ingestion/scrape_10000recipe.py`가 목록/상세 HTML을 읽어 raw payload를 만든다.
 
 ## Main Flow
 
@@ -23,7 +22,7 @@ external dataset / web page
   -> recipe_source_extracted_labels
   -> recipe_source_quality_scores
   -> review_status = APPROVED
-  -> import_approved_recipe_sources.py
+  -> import_approved_10000recipe_sources.py
   -> recipes / recipe_ingredients / recipe_steps / recipe_labels / recipe_nutrition
   -> backfill_recipe_classifications.py
   -> recipe_classifications / recipe_quality_scores
@@ -41,9 +40,8 @@ external dataset / web page
 
 ## Text And Metadata Policy
 
-foodsafetykorea와 만개의레시피 parser는 extraction 생성 단계에서 이미 Naengo staging format으로 정리한다. `recipe_sources.extraction_version`이 다음 값이면 import 단계에서 text rewrite를 다시 하지 않는다.
+만개의레시피 parser는 extraction 생성 단계에서 이미 Naengo staging format으로 정리한다. `recipe_sources.extraction_version`이 다음 값이면 import 단계에서 text rewrite를 다시 하지 않는다.
 
-- `foodsafetykorea-extraction-v1`
 - `10000recipe-extraction-v1`
 
 인분과 시간은 source에 명시된 값을 우선 사용한다. 명시값이 부족하면 rule 기반 추정을 먼저 시도하고, 부족한 경우 AI가 근거 기반으로 추정한다. 그래도 근거가 약하면 null로 둔다. 단, 현재 extraction validation은 `servings`와 `cooking_time_minutes`를 요구한다. source extraction 단계에서는 준비 시간과 조리 시간을 나누지 않고 전체 조리 시간만 저장한다.

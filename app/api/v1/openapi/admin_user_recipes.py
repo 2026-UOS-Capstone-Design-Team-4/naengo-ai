@@ -50,8 +50,8 @@ GET_ADMIN_USER_RECIPE_SUMMARY = "[관리자] 제출 레시피 상세 조회"
 GET_ADMIN_USER_RECIPE_DESCRIPTION = r"""
 관리자가 사용자가 제출한 레시피 하나를 조회합니다.
 
-원문(`submission_text`), 검수 draft(`draft_payload`), AI 보정 후보(`ai_suggested_patch`),
-검증 오류(`validation_errors`), 검수 결과를 함께 반환합니다.
+원문(`submission_text`), 구조화된 검수 필드, 재료/조리단계/라벨/영양 정보,
+검수 결과를 함께 반환합니다.
 """
 
 PATCH_ADMIN_USER_RECIPE_SUMMARY = "[관리자] 제출 레시피 상태 수정"
@@ -62,19 +62,18 @@ PATCH_ADMIN_USER_RECIPE_DESCRIPTION = r"""
 - `status`가 변경되면 `reviewed_at`을 현재 시각으로 기록합니다.
 - `status`를 `APPROVED`로 바꾸면 제출 레시피가 서비스에 노출 가능한 상태가 됩니다.
 - 정식 레시피(`recipes`) import는 별도 작업으로 처리합니다.
-- AI 보정 제안은 `ai_suggested_patch`에 저장하고, 관리자가 확인한 값만 `draft_payload`에 반영합니다.
+- AI 보정 제안은 DB에 별도 JSON draft로 저장하지 않고, 관리자가 확인한 구조화 값만 반영합니다.
 
 **승인 필수 필드**
 
 - `title`
-- `draft_payload.description`
-- `draft_payload.ingredients`
-- `draft_payload.ingredients_raw`
-- `draft_payload.instructions`
-- `draft_payload.servings`
-- `draft_payload.cooking_time_minutes`
-- `draft_payload.difficulty`
-- `draft_payload.category`
+- `description`
+- `ingredients`
+- `steps`
+- `servings`
+- `cooking_time_minutes`
+- `difficulty`
+- `labels`
 """
 
 PATCH_ADMIN_USER_RECIPE_RESPONSES = {

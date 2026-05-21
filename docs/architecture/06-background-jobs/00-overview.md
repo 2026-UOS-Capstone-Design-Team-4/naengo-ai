@@ -6,8 +6,6 @@ Background job 문서는 오래 걸리거나 재시도가 필요한 작업을 �
 
 | Job | Current Runner | Trigger | State |
 | --- | --- | --- | --- |
-| foodsafetykorea source import | CLI | 수동 | `recipe_sources` row |
-| foodsafetykorea extraction | CLI | 수동 | `parse_status`, `validation_errors` |
 | 10000recipe scrape | CLI | 수동 | `recipe_sources` row |
 | 10000recipe extraction | CLI | 수동 | `parse_status`, `validation_errors` |
 | approve for import | CLI/Admin 예정 | 수동 | `review_status` |
@@ -22,14 +20,11 @@ Background job 문서는 오래 걸리거나 재시도가 필요한 작업을 �
 초기 운영은 CLI batch를 기준으로 한다.
 
 ```bash
-uv run python scripts/ingestion/import_foodsafetykorea_sources.py --input ../open-recipe/data/recipes.json
-uv run python scripts/ingestion/parse_foodsafetykorea_sources.py --limit 100 --refresh
-
 uv run python scripts/ingestion/scrape_10000recipe.py --limit 300 --delay-min 0.5 --delay-max 1.0
 uv run python scripts/ingestion/parse_10000recipe_sources.py --limit 300 --refresh
 
-uv run python scripts/ingestion/bulk_approve_sources.py --limit 300
-uv run python scripts/ingestion/import_approved_recipe_sources.py --limit 300
+uv run python scripts/ingestion/bulk_approve_10000recipe_sources.py --limit 300
+uv run python scripts/ingestion/import_approved_10000recipe_sources.py --limit 300
 uv run python scripts/backfill/backfill_recipe_classifications.py --limit 300
 ```
 
@@ -38,7 +33,7 @@ uv run python scripts/backfill/backfill_recipe_classifications.py --limit 300
 - 이미 존재하는 source는 skip한다.
 - `--refresh`가 있는 parser는 기존 extraction을 지우고 다시 만든다.
 - invalid source는 extraction row를 만들지 않고 `parse_status = INVALID`로 남긴다.
-- import는 `review_status = APPROVED`이고 `import_status = NOT_IMPORTED`인 source만 처리한다.
+- 만개의레시피 import는 `source_site = 10000recipe`, `review_status = APPROVED`, `import_status = NOT_IMPORTED`인 source만 처리한다.
 
 ## Phase 1 State Tracking
 
@@ -96,7 +91,6 @@ FastAPI `BackgroundTasks`는 가벼운 초기 구현에는 쓸 수 있지만, �
 
 | Job | Failure State | Retry |
 | --- | --- | --- |
-| foodsafetykorea import | 중복 record skip | 같은 명령 재실행 |
 | 10000recipe scrape | 상세 페이지 실패는 skip, 403/429는 중단 | delay 조정 후 재실행 |
 | extraction | `parse_status = INVALID` 또는 `REVIEW_REQUIRED` | source 수정 또는 `--refresh` |
 | production import | `import_status = FAILED` | 원인 수정 후 재실행 |

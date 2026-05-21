@@ -9,6 +9,7 @@ from app.models.recipe import (
 from app.models.recipe_source import (
     RecipeSource,
     RecipeSourceExtractedIngredient,
+    RecipeSourceExtractedNutrition,
     RecipeSourceExtractedStep,
     RecipeSourceExtraction,
     RecipeSourceQualityScore,
@@ -55,13 +56,17 @@ def test_import_helpers_write_rewritten_text_to_production_models():
         servings=2,
         cooking_time_minutes=20,
         difficulty="easy",
+        source_main_image_url="https://example.com/source-image.jpg",
+        kcal_per_serving=180,
+    )
+    extraction.nutrition = RecipeSourceExtractedNutrition(
         serving_weight_grams=250,
         carbohydrate_grams=12,
         protein_grams=8,
         fat_grams=4,
         sodium_milligrams=300,
-        nutrition_source="SOURCE",
-        nutrition_raw={"sodium": "300"},
+        source="SOURCE",
+        raw={"sodium": "300"},
     )
     extraction.ingredients = [
         RecipeSourceExtractedIngredient(
@@ -112,6 +117,8 @@ def test_import_helpers_write_rewritten_text_to_production_models():
     assert recipe.title == "Naengo식 제목"
     assert recipe.description == "Naengo식 설명"
     assert recipe.source_id == 1
+    assert recipe.source_url == "https://example.com/r/1"
+    assert recipe.source_main_image_url == "https://example.com/source-image.jpg"
     assert recipe.cooking_time_minutes == 20
     assert ingredient.raw_text == "김치 200g"
     assert step.instruction == "김치를 넣고 부드럽게 볶습니다."

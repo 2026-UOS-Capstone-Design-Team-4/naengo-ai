@@ -7,7 +7,7 @@
 - 원본은 삭제하지 않고 `recipe_sources.raw_payload`에 JSON으로 보관한다.
 - source별 파싱 결과는 production에 바로 넣지 않고 `recipe_source_extractions*` staging에 둔다.
 - 검수/승인된 extraction만 `recipes*` production 테이블로 import한다.
-- foodsafetykorea와 만개의레시피는 source 수집 방식만 다르고 같은 staging/import 흐름을 탄다.
+- source별 수집 방식은 달라도 같은 staging/import 흐름을 탄다.
 - 추천/검색용 분류는 `recipe_classifications`로 분리한다.
 - source 이미지 URL은 provenance로만 저장하고 production `recipe_media`로 자동 복사하지 않는다.
 - embedding은 `recipe_embeddings`로 분리해 재생성 가능하게 둔다.
@@ -21,7 +21,7 @@
 주요 컬럼:
 
 - `source_type`: `PUBLIC_DATA`, `WEB_SCRAPE`, `VIDEO` 등 source 종류
-- `source_site`: `foodsafetykorea`, `10000recipe` 같은 출처 namespace
+- `source_site`: `10000recipe` 같은 출처 namespace
 - `parser_type`: `DATASET`, `HTML`, `AI`, `API`, `MANUAL`
 - `source_recipe_id`: 웹 source의 레시피 ID
 - `source_url`: 원본 URL
@@ -49,13 +49,17 @@
 원본에서 추출한 레시피 본문 staging이다.
 
 - 제목/요약/설명: `title`, `summary`, `description`
-- 메타데이터: `servings`, `cooking_time_minutes`
-- 영양: `kcal_per_serving`, `serving_weight_grams`, `carbohydrate_grams`, `protein_grams`, `fat_grams`, `sodium_milligrams`, `nutrition_source`, `nutrition_raw`
+- 메타데이터: `servings`, `yield_quantity`, `yield_unit`, `cooking_time_minutes`
+- 대표 영양: `kcal_per_serving`
 - 난이도: `difficulty`
 - source media provenance: `source_main_image_url`, `source_thumbnail_url`, `source_video_url`
 - 중복/변경 감지: `content_hash`
 
-`nutrition_source`는 값의 출처를 나타낸다.
+### `recipe_source_extracted_nutrition`
+
+staging 상세 영양 정보 1:1 테이블이다. 탄수화물/단백질/지방/나트륨 같은 상세값과 원본 영양 payload를 둔다.
+
+`source`는 값의 출처를 나타낸다.
 
 - `SOURCE`: 원본에 구조화되어 있던 값
 - `RULE`: deterministic rule로 계산/정규화한 값
@@ -99,13 +103,17 @@ staging label 목록이다.
 
 서비스 노출용 정식 레시피 본문이다. `source_id`(FK)로 `recipe_sources`와 연결한다.
 
-source 원본 정보(URL, 작성자, 라이선스 등)는 `recipes`에 복사하지 않고 `recipe_sources`에서 JOIN으로 읽는다. `source_id` FK는 `ON DELETE RESTRICT`라 recipe가 있는 source는 삭제할 수 없다.
+원본 URL과 원본 대표 이미지 URL은 조회 편의를 위해 `recipes.source_url`,
+`recipes.source_main_image_url`에도 복사한다. 작성자, 라이선스 등 상세 출처
+정보는 `recipe_sources`에서 JOIN으로 읽는다. `source_id` FK는 `ON DELETE RESTRICT`라
+recipe가 있는 source는 삭제할 수 없다.
 
 ### `recipe_ingredients`, `recipe_steps`, `recipe_labels`
 
 정식 레시피의 반복 데이터다. extraction에서 검증된 순서와 구조를 유지해 import한다.
 
-`recipe_steps`도 현재는 단계별 소요 시간, 온도, 도구를 저장하지 않는다.
+`recipe_steps`는 원본 단계 이미지 URL을 `source_image_url`에 보존할 수 있다.
+단계별 소요 시간, 온도, 도구는 현재 저장하지 않는다.
 
 ### `recipe_nutrition`
 

@@ -15,6 +15,8 @@ ADMIN_RECIPE_LIST_ITEM_EXAMPLE = {
     "visibility": "PUBLIC",
     "author_type": "SOURCE",
     "source_id": 1,
+    "source_url": "https://www.10000recipe.com/recipe/7041234",
+    "source_main_image_url": "https://example.com/source-main.jpg",
     "source_site": "10000recipe",
     "source_recipe_id": "7041234",
     "source_record_id": None,
@@ -43,7 +45,6 @@ ADMIN_RECIPE_DETAIL_EXAMPLE = {
     "author_id": None,
     "source_author_name": "만개의레시피",
     "source_author_url": "https://www.10000recipe.com/profile/example",
-    "source_url": "https://www.10000recipe.com/recipe/7041234",
     "source_organization": None,
     "source_license": None,
     "source_license_url": None,
@@ -168,7 +169,7 @@ GET_ADMIN_RECIPES_DESCRIPTION = r"""
 **필터**
 
 - `is_active`: 서비스 노출 활성 여부입니다.
-- `source_site`: 원천 사이트입니다. 예: `10000recipe`, `foodsafetykorea`
+- `source_site`: 원천 사이트입니다. 예: `10000recipe`
 - `author_type`: 작성 주체입니다. `ADMIN`, `USER`, `SOURCE`
 - `visibility`: 공개 범위입니다. `PUBLIC`, `ADMIN_ONLY`
 - `difficulty`: 요리 난이도입니다. `easy`, `normal`, `hard`

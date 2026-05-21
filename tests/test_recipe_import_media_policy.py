@@ -39,6 +39,8 @@ def test_import_steps_do_not_create_media_from_source_image_urls():
 
     assert any(isinstance(item, RecipeStep) for item in db.added)
     assert not any(isinstance(item, RecipeMedia) for item in db.added)
+    step = next(item for item in db.added if isinstance(item, RecipeStep))
+    assert step.source_image_url == "https://source.example/step.jpg"
 
 
 def test_source_step_image_url_remains_available_in_staging_model():

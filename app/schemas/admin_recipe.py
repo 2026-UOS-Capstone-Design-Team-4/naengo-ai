@@ -30,6 +30,7 @@ class AdminRecipeStep(BaseModel):
     step_id: int
     step_no: int
     instruction: str
+    source_image_url: str | None = None
     tip: str | None = None
     sort_order: int = 0
 
@@ -107,12 +108,16 @@ class AdminRecipeListItem(BaseModel):
     title: str
     summary: str | None = None
     servings: float
+    yield_quantity: float | None = None
+    yield_unit: str | None = None
     cooking_time_minutes: int
     kcal_per_serving: int | None = None
     difficulty: str
     visibility: str
     author_type: str
     source_id: int | None = None
+    source_url: str | None = None
+    source_main_image_url: str | None = None
     source_site: str | None = None
     source_recipe_id: str | None = None
     source_record_id: str | None = None
@@ -135,12 +140,20 @@ class AdminRecipeListItem(BaseModel):
             title=recipe.title,
             summary=recipe.summary,
             servings=float(recipe.servings),
+            yield_quantity=(
+                float(recipe.yield_quantity)
+                if recipe.yield_quantity is not None
+                else None
+            ),
+            yield_unit=recipe.yield_unit,
             cooking_time_minutes=recipe.cooking_time_minutes,
             kcal_per_serving=recipe.kcal_per_serving,
             difficulty=recipe.difficulty,
             visibility=recipe.visibility,
             author_type=recipe.author_type,
             source_id=recipe.source_id,
+            source_url=recipe.source_url or (source.source_url if source else None),
+            source_main_image_url=recipe.source_main_image_url,
             source_site=source.source_site if source else None,
             source_recipe_id=source.source_recipe_id if source else None,
             source_record_id=source.source_record_id if source else None,
@@ -168,7 +181,6 @@ class AdminRecipeDetail(AdminRecipeListItem):
     author_id: int | None = None
     source_author_name: str | None = None
     source_author_url: str | None = None
-    source_url: str | None = None
     source_organization: str | None = None
     source_license: str | None = None
     source_license_url: str | None = None
@@ -185,13 +197,15 @@ class AdminRecipeDetail(AdminRecipeListItem):
     def from_model(cls, recipe) -> "AdminRecipeDetail":
         base = AdminRecipeListItem.from_model(recipe).model_dump()
         source = recipe.source
+        base["source_url"] = recipe.source_url or (
+            source.source_url if source else None
+        )
         return cls(
             **base,
             description=recipe.description,
             author_id=recipe.author_id,
             source_author_name=source.source_author_name if source else None,
             source_author_url=source.source_author_url if source else None,
-            source_url=source.source_url if source else None,
             source_organization=source.source_organization if source else None,
             source_license=source.source_license if source else None,
             source_license_url=source.source_license_url if source else None,

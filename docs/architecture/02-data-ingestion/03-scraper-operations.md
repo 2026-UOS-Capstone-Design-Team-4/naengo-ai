@@ -1,6 +1,6 @@
 # 03. Scraper Operations
 
-이 문서는 foodsafetykorea dataset import와 만개의레시피 scraper를 script-first 운영 흐름에서 다루는 기준을 정리한다.
+이 문서는 만개의레시피 scraper와 import를 script-first 운영 흐름에서 다루는 기준을 정리한다.
 
 ## Goals
 
@@ -13,18 +13,6 @@
 ## Job Types
 
 ```text
-foodsafetykorea-import
-  -> JSON dataset read
-  -> recipe_sources insert
-
-foodsafetykorea-extract
-  -> recipe_sources.raw_payload read
-  -> ingredient parser agent
-  -> metadata extractor
-  -> text rewrite
-  -> recipe_source_extractions* insert
-  -> recipe_source_quality_scores insert
-
 10000recipe-scrape
   -> list page fetch
   -> detail page fetch
@@ -51,14 +39,11 @@ post-import
 ## CLI Commands
 
 ```bash
-uv run python scripts/ingestion/import_foodsafetykorea_sources.py --input ../open-recipe/data/recipes.json
-uv run python scripts/ingestion/parse_foodsafetykorea_sources.py --limit 100 --refresh
-
 uv run python scripts/ingestion/scrape_10000recipe.py --limit 300 --delay-min 0.5 --delay-max 1.0
 uv run python scripts/ingestion/parse_10000recipe_sources.py --limit 300 --refresh
 
-uv run python scripts/ingestion/bulk_approve_sources.py --limit 300
-uv run python scripts/ingestion/import_approved_recipe_sources.py --limit 300
+uv run python scripts/ingestion/bulk_approve_10000recipe_sources.py --limit 300
+uv run python scripts/ingestion/import_approved_10000recipe_sources.py --limit 300
 uv run python scripts/backfill/backfill_recipe_classifications.py --limit 300
 ```
 
@@ -122,7 +107,6 @@ HTTP 403 또는 429가 반복되면 즉시 중단하고 delay를 늘리거나 �
 
 로컬 개발 DB에서 대량 테스트를 할 때의 기준 volume:
 
-- foodsafetykorea: 전체 JSON 기준 1146개 source
 - 10000recipe: 최소 1000개 source 확보
 
 이 숫자는 운영 요구사항이 아니라 현재 개발/검증용 seed 규모다. 재수집 과정에서 목표보다 조금 더 많이 저장될 수 있으며, 중복이 아니라면 삭제하지 않는다.

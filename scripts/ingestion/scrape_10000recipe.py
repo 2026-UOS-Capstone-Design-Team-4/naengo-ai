@@ -149,7 +149,11 @@ def _extract_ingredients(soup: BeautifulSoup) -> list[dict[str, str]]:
 
     for ul in container.select("ul"):
         group_el = ul.select_one("b.ready_ingre3_tt")
-        group_name = re.sub(r"^\[|\]$", "", group_el.get_text(strip=True)).strip() if group_el else None
+        group_name = (
+            re.sub(r"^\[|\]$", "", group_el.get_text(strip=True)).strip()
+            if group_el
+            else None
+        )
         for item in ul.select("li"):
             name_el = item.select_one("div.ingre_list_name a")
             if name_el is None:

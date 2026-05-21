@@ -59,6 +59,9 @@ class RecipeImportService:
                 joinedload(RecipeSource.extraction).joinedload(
                     RecipeSourceExtraction.quality_score
                 ),
+                joinedload(RecipeSource.extraction).joinedload(
+                    RecipeSourceExtraction.nutrition
+                ),
             )
             .filter(RecipeSource.source_id == source_id)
             .first()
@@ -117,10 +120,14 @@ class RecipeImportService:
         extraction = source.extraction
         return Recipe(
             source_id=source.source_id,
+            source_url=source.source_url,
+            source_main_image_url=extraction.source_main_image_url,
             title=draft.title,
             summary=draft.summary,
             description=draft.description,
             servings=float(extraction.servings or 1),
+            yield_quantity=extraction.yield_quantity,
+            yield_unit=extraction.yield_unit,
             cooking_time_minutes=int(extraction.cooking_time_minutes or 0),
             kcal_per_serving=extraction.kcal_per_serving,
             difficulty=extraction.difficulty or "normal",
@@ -153,6 +160,7 @@ class RecipeImportService:
                 recipe_id=recipe_id,
                 step_no=step.step_no,
                 instruction=step.instruction,
+                source_image_url=step.source_image_url,
                 tip=step.tip,
                 sort_order=step.sort_order,
             )
@@ -176,15 +184,16 @@ class RecipeImportService:
         recipe_id: int,
         extraction: RecipeSourceExtraction,
     ) -> None:
+        nutrition = extraction.nutrition
         has_nutrition = any(
             value is not None
             for value in [
-                extraction.serving_weight_grams,
+                nutrition.serving_weight_grams if nutrition else None,
                 extraction.kcal_per_serving,
-                extraction.carbohydrate_grams,
-                extraction.protein_grams,
-                extraction.fat_grams,
-                extraction.sodium_milligrams,
+                nutrition.carbohydrate_grams if nutrition else None,
+                nutrition.protein_grams if nutrition else None,
+                nutrition.fat_grams if nutrition else None,
+                nutrition.sodium_milligrams if nutrition else None,
             ]
         )
         if not has_nutrition:
@@ -193,14 +202,16 @@ class RecipeImportService:
         self.db.add(
             RecipeNutrition(
                 recipe_id=recipe_id,
-                serving_weight_grams=extraction.serving_weight_grams,
+                serving_weight_grams=(
+                    nutrition.serving_weight_grams if nutrition else None
+                ),
                 kcal_per_serving=extraction.kcal_per_serving,
-                carbohydrate_grams=extraction.carbohydrate_grams,
-                protein_grams=extraction.protein_grams,
-                fat_grams=extraction.fat_grams,
-                sodium_milligrams=extraction.sodium_milligrams,
-                source=extraction.nutrition_source or "SOURCE",
-                raw_payload=extraction.nutrition_raw or {},
+                carbohydrate_grams=nutrition.carbohydrate_grams if nutrition else None,
+                protein_grams=nutrition.protein_grams if nutrition else None,
+                fat_grams=nutrition.fat_grams if nutrition else None,
+                sodium_milligrams=nutrition.sodium_milligrams if nutrition else None,
+                source=nutrition.source if nutrition else "SOURCE",
+                raw_payload=nutrition.raw if nutrition else {},
             )
         )
 

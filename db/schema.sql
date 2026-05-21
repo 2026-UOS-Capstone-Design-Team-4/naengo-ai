@@ -108,16 +108,10 @@ CREATE TABLE recipe_source_extractions (
     summary TEXT,
     description TEXT,
     servings NUMERIC(4, 1),
+    yield_quantity NUMERIC(10, 2),
+    yield_unit VARCHAR(50),
     cooking_time_minutes INTEGER,
     kcal_per_serving INTEGER,
-    serving_weight_grams NUMERIC(10, 2),
-    carbohydrate_grams NUMERIC(10, 2),
-    protein_grams NUMERIC(10, 2),
-    fat_grams NUMERIC(10, 2),
-    sodium_milligrams NUMERIC(10, 2),
-    nutrition_source VARCHAR(30)
-        CHECK (nutrition_source IN ('SOURCE', 'RULE', 'AI', 'ADMIN')),
-    nutrition_raw JSONB NOT NULL DEFAULT '{}',
     difficulty VARCHAR(10)
         CHECK (difficulty IN ('easy', 'normal', 'hard')),
     source_main_image_url VARCHAR(1024),
@@ -144,6 +138,20 @@ CREATE TABLE recipe_source_quality_scores (
     quality_notes JSONB NOT NULL DEFAULT '{}',
     reviewed_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
     reviewed_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE recipe_source_extracted_nutrition (
+    extraction_id INTEGER PRIMARY KEY
+        REFERENCES recipe_source_extractions(extraction_id) ON DELETE CASCADE,
+    serving_weight_grams NUMERIC(10, 2),
+    carbohydrate_grams NUMERIC(10, 2),
+    protein_grams NUMERIC(10, 2),
+    fat_grams NUMERIC(10, 2),
+    sodium_milligrams NUMERIC(10, 2),
+    source VARCHAR(30) NOT NULL DEFAULT 'SOURCE'
+        CHECK (source IN ('SOURCE', 'RULE', 'AI', 'ADMIN')),
+    raw JSONB NOT NULL DEFAULT '{}',
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -192,10 +200,14 @@ CREATE TABLE recipe_source_extracted_labels (
 CREATE TABLE recipes (
     recipe_id SERIAL PRIMARY KEY,
     source_id INTEGER REFERENCES recipe_sources(source_id) ON DELETE RESTRICT,
+    source_url VARCHAR(1024),
+    source_main_image_url VARCHAR(1024),
     title VARCHAR(255) NOT NULL,
     summary TEXT,
     description TEXT NOT NULL,
     servings NUMERIC(4, 1) NOT NULL,
+    yield_quantity NUMERIC(10, 2),
+    yield_unit VARCHAR(50),
     cooking_time_minutes INTEGER NOT NULL,
     kcal_per_serving INTEGER,
     difficulty VARCHAR(10) NOT NULL
@@ -244,6 +256,7 @@ CREATE TABLE recipe_steps (
     recipe_id INTEGER NOT NULL REFERENCES recipes(recipe_id) ON DELETE CASCADE,
     step_no INTEGER NOT NULL,
     instruction TEXT NOT NULL,
+    source_image_url VARCHAR(1024),
     tip TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     UNIQUE (recipe_id, step_no)
@@ -407,49 +420,82 @@ CREATE TABLE user_recipes (
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     submission_text TEXT NOT NULL,
-    draft_payload JSONB NOT NULL DEFAULT '{
-        "description": null,
-        "ingredients": [],
-        "ingredients_raw": [],
-        "instructions": [],
-        "servings": null,
-        "cooking_time_minutes": null,
-        "kcal_per_serving": null,
-        "difficulty": null,
-        "category": [],
-        "tags": [],
-        "tips": [],
-        "video_url": null,
-        "image_url": null
-    }',
-    ai_suggested_patch JSONB NOT NULL DEFAULT '{
-        "description": null,
-        "ingredients": [],
-        "ingredients_raw": [],
-        "instructions": [],
-        "servings": null,
-        "cooking_time_minutes": null,
-        "kcal_per_serving": null,
-        "difficulty": null,
-        "category": [],
-        "tags": [],
-        "tips": [],
-        "video_url": null,
-        "image_url": null
-    }',
-    validation_errors JSONB NOT NULL DEFAULT '[]',
+    description TEXT,
+    servings NUMERIC(4, 1),
+    yield_quantity NUMERIC(10, 2),
+    yield_unit VARCHAR(50),
+    cooking_time_minutes INTEGER,
+    kcal_per_serving INTEGER,
+    difficulty VARCHAR(10)
+        CHECK (difficulty IN ('easy', 'normal', 'hard')),
+    video_url VARCHAR(1024),
+    source_main_image_url VARCHAR(1024),
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
         CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
     import_status VARCHAR(30) NOT NULL DEFAULT 'NOT_IMPORTED'
         CHECK (import_status IN ('NOT_IMPORTED', 'IMPORTED', 'FAILED')),
     is_active BOOLEAN NOT NULL DEFAULT true,
-    admin_note TEXT,
     rejection_reason TEXT,
     reviewed_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
     reviewed_at TIMESTAMP WITH TIME ZONE,
     imported_recipe_id INTEGER REFERENCES recipes(recipe_id) ON DELETE SET NULL,
     imported_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE user_recipe_ingredients (
+    user_recipe_ingredient_id SERIAL PRIMARY KEY,
+    user_recipe_id INTEGER NOT NULL
+        REFERENCES user_recipes(user_recipe_id) ON DELETE CASCADE,
+    group_name VARCHAR(100),
+    name VARCHAR(100) NOT NULL,
+    normalized_name VARCHAR(100),
+    amount_text VARCHAR(100),
+    quantity NUMERIC(10, 3),
+    unit VARCHAR(50),
+    note TEXT,
+    raw_text TEXT,
+    is_optional BOOLEAN NOT NULL DEFAULT false,
+    sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE user_recipe_steps (
+    user_recipe_step_id SERIAL PRIMARY KEY,
+    user_recipe_id INTEGER NOT NULL
+        REFERENCES user_recipes(user_recipe_id) ON DELETE CASCADE,
+    step_no INTEGER NOT NULL,
+    instruction TEXT NOT NULL,
+    source_image_url VARCHAR(1024),
+    tip TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (user_recipe_id, step_no)
+);
+
+CREATE TABLE user_recipe_labels (
+    user_recipe_label_id SERIAL PRIMARY KEY,
+    user_recipe_id INTEGER NOT NULL
+        REFERENCES user_recipes(user_recipe_id) ON DELETE CASCADE,
+    label_type VARCHAR(30) NOT NULL
+        CHECK (label_type IN ('TAG', 'TIP', 'CATEGORY', 'WARNING')),
+    label_value TEXT NOT NULL,
+    confidence_score NUMERIC(5, 2),
+    source VARCHAR(30) NOT NULL DEFAULT 'ADMIN'
+        CHECK (source IN ('USER', 'AI', 'ADMIN')),
+    sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE user_recipe_nutrition (
+    user_recipe_id INTEGER PRIMARY KEY
+        REFERENCES user_recipes(user_recipe_id) ON DELETE CASCADE,
+    serving_weight_grams NUMERIC(10, 2),
+    carbohydrate_grams NUMERIC(10, 2),
+    protein_grams NUMERIC(10, 2),
+    fat_grams NUMERIC(10, 2),
+    sodium_milligrams NUMERIC(10, 2),
+    source VARCHAR(30) NOT NULL DEFAULT 'ADMIN'
+        CHECK (source IN ('USER', 'AI', 'ADMIN')),
+    raw JSONB NOT NULL DEFAULT '{}',
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -516,6 +562,10 @@ CREATE TRIGGER touch_recipe_source_quality_scores_updated_at
 BEFORE UPDATE ON recipe_source_quality_scores
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
+CREATE TRIGGER touch_recipe_source_extracted_nutrition_updated_at
+BEFORE UPDATE ON recipe_source_extracted_nutrition
+FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
 CREATE TRIGGER touch_recipes_updated_at
 BEFORE UPDATE ON recipes
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
@@ -536,8 +586,12 @@ CREATE TRIGGER touch_recipe_quality_scores_updated_at
 BEFORE UPDATE ON recipe_quality_scores
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
-CREATE TRIGGER touch_pending_recipes_updated_at
-BEFORE UPDATE ON pending_recipes
+CREATE TRIGGER touch_user_recipes_updated_at
+BEFORE UPDATE ON user_recipes
+FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
+CREATE TRIGGER touch_user_recipe_nutrition_updated_at
+BEFORE UPDATE ON user_recipe_nutrition
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
 CREATE TRIGGER touch_chat_rooms_updated_at

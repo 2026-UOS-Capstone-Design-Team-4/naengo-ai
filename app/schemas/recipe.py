@@ -33,6 +33,7 @@ class RecipeStepResponse(BaseModel):
 
     step_no: int
     instruction: str
+    source_image_url: str | None = None
     tip: str | None = None
 
 
@@ -45,6 +46,8 @@ class RecipeBase(BaseModel):
     ingredients_raw: str
     steps: list[RecipeStepResponse] = []
     servings: float
+    yield_quantity: float | None = None
+    yield_unit: str | None = None
     cooking_time_minutes: int
     kcal_per_serving: int | None = None
     nutrition: RecipeNutritionResponse | None = None
@@ -54,6 +57,8 @@ class RecipeBase(BaseModel):
     tips: list[str] = []
     video_url: str | None = None
     image_url: str | None = None
+    source_url: str | None = None
+    source_main_image_url: str | None = None
 
 
 class RecipeSchema(RecipeBase):

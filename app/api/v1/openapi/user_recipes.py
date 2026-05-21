@@ -57,7 +57,7 @@ POST_USER_RECIPE_DESCRIPTION = r"""
 | `title` | string | ✓ | 제출 레시피 제목 |
 | `submission_text` | string | ✓ | 사용자가 처음 제출한 원문 설명 |
 
-검수용 `draft_payload`와 `ai_suggested_patch`는 빈 기본 구조로 초기화합니다.
+구조화된 검수 필드는 관리자 보정 단계에서 `user_recipes` 및 하위 테이블에 저장합니다.
 """
 
 POST_USER_RECIPE_RESPONSES = {

@@ -72,6 +72,18 @@ class RecipeSourceQualityScoreSchema(BaseModel):
     quality_notes: dict = {}
 
 
+class RecipeSourceExtractedNutritionSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    serving_weight_grams: float | None = None
+    carbohydrate_grams: float | None = None
+    protein_grams: float | None = None
+    fat_grams: float | None = None
+    sodium_milligrams: float | None = None
+    source: Literal["SOURCE", "RULE", "AI", "ADMIN"] = "SOURCE"
+    raw: dict = {}
+
+
 class RecipeSourceExtractionSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -80,15 +92,11 @@ class RecipeSourceExtractionSchema(BaseModel):
     summary: str | None = None
     description: str | None = None
     servings: float | None = None
+    yield_quantity: float | None = None
+    yield_unit: str | None = None
     cooking_time_minutes: int | None = None
     kcal_per_serving: int | None = None
-    serving_weight_grams: float | None = None
-    carbohydrate_grams: float | None = None
-    protein_grams: float | None = None
-    fat_grams: float | None = None
-    sodium_milligrams: float | None = None
-    nutrition_source: Literal["SOURCE", "RULE", "AI", "ADMIN"] | None = None
-    nutrition_raw: dict = {}
+    nutrition: RecipeSourceExtractedNutritionSchema | None = None
     difficulty: Difficulty | None = None
     source_main_image_url: str | None = None
     source_thumbnail_url: str | None = None

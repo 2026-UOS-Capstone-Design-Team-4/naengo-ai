@@ -153,7 +153,10 @@ def get_chat_image_storage() -> ChatImageStorage:
                 public_url=S3_PUBLIC_URL,
             )
         except Exception as exc:
-            logger.warning("S3 채팅 이미지 스토리지 초기화 실패, passthrough 사용: %s", exc)
+            logger.warning(
+                "S3 채팅 이미지 스토리지 초기화 실패, passthrough 사용: %s",
+                exc,
+            )
     return PassthroughChatImageStorage()
 
 
