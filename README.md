@@ -30,8 +30,8 @@ FastAPI 기반 AI 요리 어시스턴트 서버입니다.
 
 ## 배포 현황
 
-- `main` 브랜치에 push되면 GitHub Actions가 EC2에 SSH로 접속해 배포합니다.
-- 서버에서는 `~/naengo-ai`에서 최신 코드를 pull한 뒤 `docker-compose.prod.yml`로 컨테이너를 재빌드/재시작합니다.
+- `main` 브랜치에 push되면 GitHub Actions가 Docker 이미지를 빌드해 GHCR(`ghcr.io`)에 push한 뒤 EC2에 SSH로 접속해 배포합니다.
+- 서버에서는 `~/naengo-ai`를 `origin/main`으로 맞춘 뒤 `docker-compose.prod.yml`로 GHCR 이미지를 pull하고 컨테이너를 재시작합니다. 운영 서버에서 애플리케이션 이미지를 직접 빌드하지 않습니다.
 - 운영 컨테이너 이름은 `naengo-ai`, 포트는 `8000`입니다.
 - 개발 환경은 `docker-compose.dev.yml`을 사용하며, 코드가 볼륨 마운트되어 일반적인 코드 수정 후 재빌드 없이 반영됩니다.
 - API 문서는 서버 실행 후 `/docs`에서 확인합니다.
