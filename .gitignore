@@ -28,9 +28,7 @@ build/
 
 # Databases
 *.sql
-!db/schema.sql
-!db/seeds/*.sql
-!db/migrations/*.sql
+!db/**/*.sql
 *.csv
 *.sqlite3
 
