@@ -41,7 +41,29 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
 
-      - name: Deploy to EC2 via SSH
+      - name: Prepare EC2 deploy directory
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            mkdir -p ~/naengo-deploy
+
+      - name: Copy compose file to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: /home/ubuntu/naengo-deploy
+          strip_components: 0
+          overwrite: true
+
+      - name: Deploy image on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -51,8 +73,9 @@ jobs:
           script: |
             set -e
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
-            cd ~/naengo-ai
-            git pull --ff-only origin main
+            cd ~/naengo-deploy
+            test -f .env || (echo "Missing ~/naengo-deploy/.env" >&2; exit 1)
+            test -f global-bundle.pem || (echo "Missing ~/naengo-deploy/global-bundle.pem" >&2; exit 1)
             NAENGO_AI_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} docker-compose -f docker-compose.prod.yml pull
             NAENGO_AI_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} docker-compose -f docker-compose.prod.yml up -d --force-recreate
             docker image prune -f
