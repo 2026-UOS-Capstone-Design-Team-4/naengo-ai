@@ -55,6 +55,10 @@ app = FastAPI(
             "description": "채팅방 관리와 AI 레시피 추천 채팅 API입니다. 메시지 전송은 SSE 스트리밍 방식으로 응답합니다.",
         },
         {
+            "name": "guest-chat",
+            "description": "비로그인 사용자를 위한 AI 레시피 추천 채팅 API입니다. 대화 기록은 클라이언트가 관리하며 서버에 저장되지 않습니다.",
+        },
+        {
             "name": "recipes",
             "description": "레시피 목록/상세 조회, 좋아요, 스크랩 API입니다.",
         },
