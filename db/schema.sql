@@ -268,16 +268,7 @@ CREATE TABLE recipe_labels (
     label_id SERIAL PRIMARY KEY,
     recipe_id INTEGER NOT NULL REFERENCES recipes(recipe_id) ON DELETE CASCADE,
     label_type VARCHAR(30) NOT NULL
-        CHECK (
-            label_type IN (
-                'TAG',
-                'TIP',
-                'CATEGORY',
-                'WARNING',
-                'OCCASION',
-                'SEASON'
-            )
-        ),
+        CHECK (label_type IN ('TAG', 'TIP', 'CATEGORY', 'WARNING')),
     label_value TEXT NOT NULL,
     source VARCHAR(30) NOT NULL DEFAULT 'SCRAPE'
         CHECK (source IN ('SCRAPE', 'RULE', 'AI', 'ADMIN')),
