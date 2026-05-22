@@ -38,7 +38,6 @@
    - recipe_classifications
    - recipe_quality_scores
    - recipe_embeddings
-   - AI image generation candidates
 ```
 
 ## Source Compatibility
@@ -140,7 +139,6 @@ classification과 embedding은 import와 분리한다.
 import_approved_10000recipe_sources.py
   -> backfill_recipe_classifications.py
   -> embedding backfill job
-  -> optional image generation job
 ```
 
 이렇게 분리하면 recipe 본문 import가 AI 분류/embedding 실패 때문에 막히지 않는다.

@@ -9,7 +9,7 @@
 - 검수/승인된 extraction만 `recipes*` production 테이블로 import한다.
 - source별 수집 방식은 달라도 같은 staging/import 흐름을 탄다.
 - 추천/검색용 분류는 `recipe_classifications`로 분리한다.
-- source 이미지 URL은 provenance로만 저장하고 production `recipe_media`로 자동 복사하지 않는다.
+- source 이미지 URL은 staging에 보관하고 import 시 production 컬럼(`recipes.source_main_image_url`, `recipe_steps.image_url`)으로 복사한다.
 - embedding은 `recipe_embeddings`로 분리해 재생성 가능하게 둔다.
 
 ## Source Tables
@@ -122,14 +122,6 @@ recipe가 있는 source는 삭제할 수 없다.
 ### `recipe_classifications`
 
 추천, 검색 필터, rerank에 쓰는 분류 축이다. import 이후 `scripts/backfill/backfill_recipe_classifications.py`가 생성한다.
-
-### `recipe_media`
-
-서비스에서 실제 사용하는 이미지/영상 media다. `image_role`은 `MAIN`, `THUMBNAIL`, `STEP`, `GALLERY`, `GENERATED_CANDIDATE` 중 하나다.
-
-### `recipe_image_generations`
-
-AI 이미지 생성 요청과 결과 이력이다. status는 `REQUESTED`, `GENERATING`, `SUCCEEDED`, `FAILED`, `SELECTED`, `REJECTED`를 사용한다.
 
 ### `recipe_embeddings`
 

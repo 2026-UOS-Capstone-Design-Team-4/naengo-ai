@@ -33,7 +33,7 @@ import
   -> APPROVED source to production recipes*
 
 post-import
-  -> classifications, quality scores, embeddings, image generation candidates
+  -> classifications, quality scores, embeddings
 ```
 
 ## CLI Commands
