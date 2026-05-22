@@ -365,7 +365,7 @@ CREATE TABLE user_recipes (
     difficulty VARCHAR(10)
         CHECK (difficulty IN ('easy', 'normal', 'hard')),
     source_url VARCHAR(1024),
-    source_main_image_url VARCHAR(1024),
+    main_image_url VARCHAR(1024),
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
         CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
     import_status VARCHAR(30) NOT NULL DEFAULT 'NOT_IMPORTED'
