@@ -10,6 +10,7 @@ services:
     env_file:
       - .env
     environment:
+      DATABASE_URL: postgresql://postgres:postgres@naengo-db:5432/naengo_db
       STORAGE_BACKEND: s3
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY_ID: minio
@@ -21,7 +22,21 @@ services:
       - naengo-ai-venv:/app/.venv
       - ./global-bundle.pem:/app/global-bundle.pem:ro
     depends_on:
+      - naengo-db
       - minio
+
+  naengo-db:
+    image: ankane/pgvector:v0.5.1
+    container_name: naengo-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: naengo_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
 
   minio:
     image: minio/minio:latest
@@ -39,4 +54,6 @@ services:
 
 volumes:
   naengo-ai-venv:
+  postgres_data:
+    name: naengo-ai_postgres_data
   naengo-minio-data:
