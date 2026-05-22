@@ -18,6 +18,7 @@ from app.agents.intent.intent_agent_router import AgentRoute, intent_agent_route
 from app.agents.intent.intent_classifier import intent_classifier
 from app.agents.recipe.recipe_agent import cooking_agent, recipe_agent, smalltalk_agent
 from app.agents.recipe.search_planner import recipe_search_planner
+from app.api.errors import ApiError
 from app.core import config
 from app.models.user import UserProfile
 from app.services.chat_service import ChatService
@@ -126,6 +127,12 @@ class AgentService:
         chat_service: ChatService,
         db: Session,
     ) -> AsyncGenerator[str]:
+        if image and not chat_image_storage.is_available:
+            raise ApiError(
+                503,
+                "STORAGE_NOT_CONFIGURED",
+                "이미지 전송을 위한 스토리지가 설정되지 않았습니다.",
+            )
         return self._stream(prompt, image, room_id, history, user_id, chat_service, db)
 
     async def _stream(

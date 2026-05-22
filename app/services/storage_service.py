@@ -76,11 +76,15 @@ class ChatImageStorage(Protocol):
 
 
 class PassthroughChatImageStorage:
+    is_available = False
+
     def upload_bytes(self, data: bytes, key: str, content_type: str) -> str | None:
         return None
 
 
 class S3ChatImageStorage:
+    is_available = True
+
     def __init__(
         self,
         endpoint: str,
