@@ -77,12 +77,27 @@ CHAT_MESSAGE_MODEL_EXAMPLE = {
 
 USER_EXAMPLE = {
     "user_id": 1,
-    "email": "user@naengo.com",
+    "username": "naengo_user_123",
     "nickname": "냉장고요리왕",
     "role": "USER",
     "is_active": True,
     "is_blocked": False,
+    "user_identities": [
+        {
+            "id": 1,
+            "provider": "KAKAO",
+            "email": "user@example.com",
+            "created_at": "2026-04-01T09:00:00+09:00",
+        },
+        {
+            "id": 2,
+            "provider": "GOOGLE",
+            "email": "user@gmail.com",
+            "created_at": "2026-05-01T09:00:00+09:00",
+        },
+    ],
     "created_at": "2026-04-01T09:00:00+09:00",
+    "updated_at": "2026-05-22T10:30:00+09:00",
 }
 
 USER_PROFILE_EXAMPLE = {
