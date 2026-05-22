@@ -9,9 +9,10 @@ from app.api.errors import ApiError
 from app.api.v1.deps import get_current_user_id
 from app.api.v1.openapi.chat import (
     CHAT_NEW_ROOM_DESCRIPTION,
+    CHAT_NEW_ROOM_RESPONSES,
     CHAT_NEW_ROOM_SUMMARY,
-    CHAT_RESPONSES,
     CHAT_ROOM_DESCRIPTION,
+    CHAT_ROOM_RESPONSES,
     CHAT_ROOM_SUMMARY,
     DELETE_ROOM_DESCRIPTION,
     DELETE_ROOM_RESPONSES,
@@ -69,7 +70,7 @@ async def get_room_messages(
     summary=CHAT_NEW_ROOM_SUMMARY,
     description=CHAT_NEW_ROOM_DESCRIPTION,
     response_class=StreamingResponse,
-    responses=CHAT_RESPONSES,
+    responses=CHAT_NEW_ROOM_RESPONSES,
 )
 async def create_room_and_chat(
     request: ChatRequest,
@@ -107,7 +108,7 @@ async def create_room_and_chat(
     summary=CHAT_ROOM_SUMMARY,
     description=CHAT_ROOM_DESCRIPTION,
     response_class=StreamingResponse,
-    responses=CHAT_RESPONSES,
+    responses=CHAT_ROOM_RESPONSES,
 )
 async def chat_in_room(
     room_id: int,

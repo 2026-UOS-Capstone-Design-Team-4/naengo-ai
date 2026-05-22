@@ -1,8 +1,11 @@
+import json
+
 from app.api.v1.openapi.errors import INTERNAL_ERROR_RESPONSE, error_response
 from app.api.v1.openapi.examples import (
     CHAT_MESSAGE_MODEL_EXAMPLE,
     CHAT_MESSAGE_USER_EXAMPLE,
     CHAT_ROOM_EXAMPLE,
+    RECIPE_EXAMPLE,
 )
 
 CHAT_ROOM_NOT_FOUND_RESPONSE = error_response(
@@ -43,11 +46,11 @@ _RECIPE_RESPONSE_TABLE = r"""
 _COMMON_SSE_DESCRIPTION = (
     r"""
 - **응답 방식**: `text/event-stream` 형식으로 이벤트를 실시간 전송합니다.
-- **metadata 이벤트**: intent, live research 사용 여부, source count 등 실행 정보를 전송합니다.
-- **message 이벤트**: AI 텍스트 조각을 `{"content": "..."}` 형식으로 전송합니다.
-- **profile_update 이벤트**: agent가 사용자 프로필 후보를 저장/확인/무시한 결과를 전송합니다.
-- **recipes 이벤트**: 응답 완료 후 검색된 레시피 목록을 `RecipeResponse[]`로 전송합니다.
-- **done 이벤트**: 스트림 종료를 알립니다.
+- **metadata 이벤트**: intent 분류 결과, live research 사용 여부, source count를 전송합니다.
+- **message 이벤트**: AI 텍스트 조각을 `{"content": "..."}` 형식으로 여러 번 전송합니다.
+- **profile_update 이벤트**: `PROFILE_UPDATE` intent일 때만 전송합니다. `AUTO_SAVE` 또는 `REQUIRE_CONFIRMATION` 결과만 포함되며, `IGNORE`는 전송하지 않습니다.
+- **recipes 이벤트**: 레시피 추천 흐름에서 응답 완료 후 검색된 레시피 목록을 `RecipeResponse[]`로 전송합니다.
+- **done 이벤트**: 스트림 종료를 알립니다. `message_id`는 저장된 AI 메시지 ID입니다.
 - **error 이벤트**: 처리 중 오류가 발생하면 표준 에러 payload를 전송합니다.
 - **이미지**: `image`에 base64 data URL을 넣으면 멀티모달 입력으로 처리합니다.
 """
@@ -142,7 +145,22 @@ CHAT_ROOM_DESCRIPTION = (
     + _COMMON_SSE_DESCRIPTION
 )
 
-CHAT_RESPONSES = {
+_RECIPES_EVENT_DATA = json.dumps([RECIPE_EXAMPLE], ensure_ascii=False)
+
+_COMMON_SSE_STREAM = (
+    "event: metadata\n"
+    'data: {"intent_type":"RECIPE_RECOMMENDATION","model":"gpt-5.4-mini","used_live_research":false,"source_count":0}\n\n'
+    "event: message\n"
+    'data: {"content": "김치와 두부로 만들 수 있는 레시피를 찾아볼게요."}\n\n'
+    "event: message\n"
+    'data: {"content": " 김치두부찌개를 추천드려요!"}\n\n'
+    "event: recipes\n"
+    f"data: {_RECIPES_EVENT_DATA}\n\n"
+    "event: done\n"
+    'data: {"message_id": 42, "recipe_ids": [1]}\n\n'
+)
+
+CHAT_NEW_ROOM_RESPONSES = {
     200: {
         "description": "SSE 형식의 실시간 스트리밍 응답",
         "content": {
@@ -152,17 +170,22 @@ CHAT_RESPONSES = {
                     "example": (
                         "event: room\n"
                         'data: {"room_id": 1}\n\n'
-                        "event: metadata\n"
-                        'data: {"intent_type":"RECIPE_RECOMMENDATION","model":"gpt-5.4-mini","used_live_research":false,"source_count":0}\n\n'
-                        "event: message\n"
-                        'data: {"content": "김치와 두부로 만들 수 있는 레시피를 찾아볼게요."}\n\n'
-                        "event: profile_update\n"
-                        'data: {"action":"ignored","candidates":[]}\n\n'
-                        "event: recipes\n"
-                        'data: [{"id": 1, "title": "김치두부찌개"}]\n\n'
-                        "event: done\n"
-                        "data: {}\n\n"
-                    ),
+                    ) + _COMMON_SSE_STREAM,
+                }
+            }
+        },
+    },
+    500: INTERNAL_ERROR_RESPONSE,
+}
+
+CHAT_ROOM_RESPONSES = {
+    200: {
+        "description": "SSE 형식의 실시간 스트리밍 응답",
+        "content": {
+            "text/event-stream": {
+                "schema": {
+                    "type": "string",
+                    "example": _COMMON_SSE_STREAM,
                 }
             }
         },
