@@ -50,7 +50,7 @@ class UserRecipeStepCreate(BaseModel):
 class UserRecipeLabelCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    label_type: Literal["TAG", "TIP", "CATEGORY", "WARNING", "OCCASION", "SEASON"]
+    label_type: Literal["TAG", "TIP", "CATEGORY", "WARNING"]
     label_value: str = Field(min_length=1)
     sort_order: int = 0
 
