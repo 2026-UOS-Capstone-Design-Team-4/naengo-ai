@@ -9,49 +9,57 @@
     "is_optional": False,
 }
 
+_RECIPE_STEPS_EXAMPLE = [
+    {
+        "step_no": 1,
+        "instruction": "냄비에 기름을 두르고 돼지고기를 볶습니다.",
+        "image_url": None,
+        "tip": None,
+    },
+    {
+        "step_no": 2,
+        "instruction": "김치를 넣고 함께 볶습니다.",
+        "image_url": None,
+        "tip": None,
+    },
+    {
+        "step_no": 3,
+        "instruction": "물을 붓고 끓어오르면 두부를 넣습니다.",
+        "image_url": None,
+        "tip": None,
+    },
+    {
+        "step_no": 4,
+        "instruction": "간을 맞추고 5분 더 끓입니다.",
+        "image_url": None,
+        "tip": "기호에 따라 고추가루를 추가해도 좋습니다.",
+    },
+]
+
+# RecipeDetailResponse(= RecipeResponse) 필드 순서 기준
 RECIPE_EXAMPLE = {
-    "id": 1,
     "title": "김치두부찌개",
-    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
-    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
-    "ingredients": [INGREDIENT_EXAMPLE],
-    "steps": [
-        {
-            "step_no": 1,
-            "instruction": "냄비에 기름을 두르고 돼지고기를 볶습니다.",
-            "image_url": None,
-            "tip": None,
-        },
-        {
-            "step_no": 2,
-            "instruction": "김치를 넣고 함께 볶습니다.",
-            "image_url": None,
-            "tip": None,
-        },
-        {
-            "step_no": 3,
-            "instruction": "물을 붓고 끓어오르면 두부를 넣습니다.",
-            "image_url": None,
-            "tip": None,
-        },
-        {
-            "step_no": 4,
-            "instruction": "간을 맞추고 5분 더 끓입니다.",
-            "image_url": None,
-            "tip": "기호에 따라 고추가루를 추가해도 좋습니다.",
-        },
-    ],
     "servings": 2.0,
     "cooking_time_minutes": 20,
     "kcal_per_serving": 180,
     "difficulty": "easy",
     "category": ["한식", "찌개"],
     "tags": ["얼큰함", "국물요리"],
+    "main_image_url": "https://example.com/source-image.jpg",
+    "id": 1,
+    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
+    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
+    "ingredients": [INGREDIENT_EXAMPLE],
+    "steps": _RECIPE_STEPS_EXAMPLE,
     "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
     "warnings": [],
     "source_url": "https://www.10000recipe.com/recipe/123456",
-    "main_image_url": "https://example.com/source-image.jpg",
     "author_type": "ADMIN",
+    "created_at": "2026-04-01T09:00:00+09:00",
+    "likes_count": 42,
+    "scrap_count": 15,
+    "is_liked": False,
+    "is_scrapped": False,
 }
 
 CHAT_ROOM_EXAMPLE = {
@@ -121,6 +129,7 @@ USER_RECIPE_EXAMPLE = {
     "cooking_time_minutes": 25,
     "kcal_per_serving": 320,
     "difficulty": "easy",
+    "source_url": "https://youtube.com/watch?v=example",
     "main_image_url": "https://example.com/kimchi-jjigae.jpg",
     "category": ["찌개"],
     "tags": ["한식", "얼큰함"],
@@ -144,7 +153,6 @@ USER_RECIPE_EXAMPLE = {
             "sort_order": 1,
         }
     ],
-    "source_url": "https://youtube.com/watch?v=example",
     "labels": [{"label_type": "CATEGORY", "label_value": "찌개", "sort_order": 1}],
     "nutrition": None,
     "status": "PENDING",
@@ -203,20 +211,7 @@ RECIPE_DETAIL_RESPONSE_EXAMPLE = {
     "summary": "김치와 두부로 끓이는 칼칼한 찌개",
     "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
     "ingredients": [INGREDIENT_EXAMPLE],
-    "steps": [
-        {
-            "step_no": 1,
-            "instruction": "냄비에 기름을 두르고 돼지고기를 볶습니다.",
-            "image_url": None,
-            "tip": None,
-        },
-        {
-            "step_no": 2,
-            "instruction": "김치를 넣고 함께 볶습니다.",
-            "image_url": None,
-            "tip": None,
-        },
-    ],
+    "steps": _RECIPE_STEPS_EXAMPLE,
     "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
     "warnings": [],
     "source_url": "https://www.10000recipe.com/recipe/123456",
