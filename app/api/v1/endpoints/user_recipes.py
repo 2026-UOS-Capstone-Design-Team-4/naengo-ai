@@ -21,7 +21,11 @@ from app.api.v1.openapi.user_recipes import (
     POST_USER_RECIPE_SUMMARY,
 )
 from app.db.session import get_db
-from app.schemas.user_recipe import UserRecipeCreate, UserRecipeResponse
+from app.schemas.user_recipe import (
+    UserRecipeCreate,
+    UserRecipeListItemResponse,
+    UserRecipeResponse,
+)
 from app.services.user_recipe_service import (
     UserRecipeImageUpload,
     UserRecipeImageValidationError,
@@ -35,7 +39,7 @@ router = APIRouter()
     "",
     summary=GET_USER_RECIPES_SUMMARY,
     description=GET_USER_RECIPES_DESCRIPTION,
-    response_model=list[UserRecipeResponse],
+    response_model=list[UserRecipeListItemResponse],
     responses=GET_USER_RECIPES_RESPONSES,
 )
 def get_user_recipes(
