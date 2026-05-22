@@ -119,7 +119,10 @@ class UserRecipeResponse(BaseModel):
     kcal_per_serving: int | None = None
     difficulty: str | None = None
     source_url: str | None = None
-    source_main_image_url: str | None = None
+    main_image_url: str | None = None
+    category: list[str] = []
+    tags: list[str] = []
+    tips: list[str] = []
     ingredients: list[UserRecipeIngredientSchema] = []
     steps: list[UserRecipeStepSchema] = []
     labels: list[UserRecipeLabelSchema] = []
@@ -149,7 +152,7 @@ class UserRecipeListItemResponse(BaseModel):
     cooking_time_minutes: int | None = None
     kcal_per_serving: int | None = None
     difficulty: str | None = None
-    source_main_image_url: str | None = None
+    main_image_url: str | None = None
     category: list[str] = []
     tags: list[str] = []
     status: str
@@ -178,7 +181,7 @@ class UserRecipeAdminUpdate(BaseModel):
     kcal_per_serving: int | None = None
     difficulty: str | None = None
     source_url: str | None = None
-    source_main_image_url: str | None = None
+    main_image_url: str | None = None
     ingredients: list[UserRecipeIngredientSchema] | None = None
     steps: list[UserRecipeStepSchema] | None = None
     labels: list[UserRecipeLabelSchema] | None = None
