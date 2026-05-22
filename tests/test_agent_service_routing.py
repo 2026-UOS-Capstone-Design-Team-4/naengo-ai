@@ -105,7 +105,7 @@ class FakeRecipeRetrievalService:
         self.queries.append((query, limit, plan))
         return [FakeRecipe()]
 
-    def recipe_to_payload(self, recipe):
+    def recipe_to_payload(self, recipe, liked_ids=None, scrapped_ids=None):
         return {
             "id": 7,
             "title": recipe.title,
