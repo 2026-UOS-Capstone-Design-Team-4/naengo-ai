@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import StrEnum
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.user import User, UserProfile
 from app.schemas.user import (
@@ -29,7 +29,12 @@ class UserService:
         self.db = db
 
     def get_user(self, user_id: int) -> User | None:
-        return self.db.query(User).filter(User.user_id == user_id).first()
+        return (
+            self.db.query(User)
+            .options(selectinload(User.social_accounts))
+            .filter(User.user_id == user_id)
+            .first()
+        )
 
     def update_user(
         self,
