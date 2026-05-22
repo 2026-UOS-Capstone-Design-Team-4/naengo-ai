@@ -40,7 +40,5 @@ def test_cooking_tip_routes_to_cooking_agent():
 def test_smalltalk_uses_smalltalk_responder():
     decision = IntentAgentRouter().decide("SMALLTALK", confidence=0.95)
 
-    assert decision.route == AgentRoute.FIXED_RESPONSE
-    assert decision.message is None
-    assert decision.use_smalltalk_responder is True
+    assert decision.route == AgentRoute.SMALLTALK_AGENT
 
