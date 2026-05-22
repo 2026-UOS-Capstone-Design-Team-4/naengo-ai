@@ -193,8 +193,8 @@ class UserRecipeService:
             )
 
         recipe.ingredients = [
-            UserRecipeIngredient(**item.model_dump(exclude_unset=True))
-            for item in body.ingredients
+            UserRecipeIngredient(**item.model_dump(exclude_unset=True), sort_order=i)
+            for i, item in enumerate(body.ingredients)
         ]
         recipe.steps = [
             UserRecipeStep(
@@ -214,19 +214,11 @@ class UserRecipeService:
                     else None
                 ),
                 tip=step.tip,
-                sort_order=step.sort_order,
+                sort_order=i,
             )
-            for step in body.steps
+            for i, step in enumerate(body.steps)
         ]
-        recipe.labels = [
-            UserRecipeLabel(
-                label_type=item.label_type,
-                label_value=item.label_value,
-                source="ADMIN",
-                sort_order=item.sort_order,
-            )
-            for item in body.labels
-        ]
+        recipe.labels = _build_labels(body.category, body.tags, body.tips, body.warnings)
         self.db.commit()
         self.db.refresh(recipe)
         return recipe
@@ -397,6 +389,24 @@ def _image_extension(filename: str) -> str:
     if len(suffix) == 2 and suffix[1].lower() in {"jpg", "jpeg", "png", "webp"}:
         return f".{suffix[1].lower()}".replace(".jpeg", ".jpg")
     return ".bin"
+
+
+def _build_labels(
+    category: list[str],
+    tags: list[str],
+    tips: list[str],
+    warnings: list[str],
+) -> list[UserRecipeLabel]:
+    labels = []
+    for i, v in enumerate(category):
+        labels.append(UserRecipeLabel(label_type="CATEGORY", label_value=v, source="ADMIN", sort_order=i))
+    for i, v in enumerate(tags):
+        labels.append(UserRecipeLabel(label_type="TAG", label_value=v, source="ADMIN", sort_order=i))
+    for i, v in enumerate(tips):
+        labels.append(UserRecipeLabel(label_type="TIP", label_value=v, source="ADMIN", sort_order=i))
+    for i, v in enumerate(warnings):
+        labels.append(UserRecipeLabel(label_type="WARNING", label_value=v, source="ADMIN", sort_order=i))
+    return labels
 
 
 def _parse_admin_user_recipe_cursor(cursor: str) -> int:

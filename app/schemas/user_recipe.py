@@ -19,7 +19,10 @@ class UserRecipeCreate(BaseModel):
     source_url: str | None = None
     ingredients: list["UserRecipeIngredientCreate"] = Field(min_length=1)
     steps: list["UserRecipeStepCreate"] = Field(min_length=1)
-    labels: list["UserRecipeLabelCreate"] = Field(default_factory=list)
+    category: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    tips: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
 
 
 class UserRecipeIngredientCreate(BaseModel):
@@ -34,7 +37,6 @@ class UserRecipeIngredientCreate(BaseModel):
     note: str | None = None
     raw_text: str | None = None
     is_optional: bool = False
-    sort_order: int = 0
 
 
 class UserRecipeStepCreate(BaseModel):
@@ -44,15 +46,6 @@ class UserRecipeStepCreate(BaseModel):
     instruction: str = Field(min_length=1)
     client_image_key: str | None = None
     tip: str | None = None
-    sort_order: int = 0
-
-
-class UserRecipeLabelCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    label_type: Literal["TAG", "TIP", "CATEGORY", "WARNING"]
-    label_value: str = Field(min_length=1)
-    sort_order: int = 0
 
 
 class UserRecipeIngredientSchema(BaseModel):
