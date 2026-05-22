@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelMessage
+from pydantic_ai.messages import ImageUrl, ModelMessage
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
@@ -63,7 +63,7 @@ class IntentClassifier:
         )
 
     async def classify(
-        self, message: str, history: list[ModelMessage]
+        self, message: str, history: list[ModelMessage], image: str | None = None
     ) -> IntentResult:
         if _IDENTITY_PATTERN.search(message):
             return IntentResult(
@@ -73,7 +73,8 @@ class IntentClassifier:
                 reason="정체성 질문 패턴 감지",
             )
 
-        result = await self._agent.run(message, message_history=history)
+        prompt = [message, ImageUrl(url=image)] if image else message
+        result = await self._agent.run(prompt, message_history=history)
         return result.output  # type: ignore[return-value]
 
 

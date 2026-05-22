@@ -1,6 +1,6 @@
 ﻿from pydantic import BaseModel
 from pydantic_ai import Agent
-from pydantic_ai.messages import ModelMessage
+from pydantic_ai.messages import ImageUrl, ModelMessage
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
@@ -42,11 +42,13 @@ class RecipeSearchPlanner:
         message: str,
         history: list[ModelMessage],
         user_profile_context: str | None = None,
+        image: str | None = None,
     ) -> SearchPlan:
-        prompt = message
+        text = message
         if user_profile_context:
-            prompt = f"[사용자 프로필]\n{user_profile_context}\n\n[요청]\n{message}"
+            text = f"[사용자 프로필]\n{user_profile_context}\n\n[요청]\n{message}"
 
+        prompt = [text, ImageUrl(url=image)] if image else text
         result = await self._agent.run(prompt, message_history=history)
         return result.output
 

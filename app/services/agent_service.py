@@ -153,7 +153,7 @@ class AgentService:
 
         # 1. Intent 분류
         try:
-            intent = await intent_classifier.classify(prompt, history)
+            intent = await intent_classifier.classify(prompt, history, image=image_ref)
         except Exception as exc:
             logger.error("Intent 분류 실패: %s", exc)
             intent_type = "RECIPE_RECOMMENDATION"
@@ -231,7 +231,7 @@ class AgentService:
             )
             try:
                 plan = await recipe_search_planner.plan(
-                    prompt, history, user_profile_context=user_profile_context
+                    prompt, history, user_profile_context=user_profile_context, image=image_ref
                 )
                 deps.search_plan = plan
                 logger.info(
