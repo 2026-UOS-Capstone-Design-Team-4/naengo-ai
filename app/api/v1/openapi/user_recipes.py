@@ -82,6 +82,10 @@ POST_USER_RECIPE_DESCRIPTION = r"""
   "kcal_per_serving": null,
   "difficulty": "easy",
   "source_url": null,
+  "category": ["찌개"],
+  "tags": ["한식", "얼큰함"],
+  "tips": ["묵은지를 쓰면 깊은 맛이 납니다."],
+  "warnings": [],
   "ingredients": [
     {
       "group_name": "메인",
@@ -98,11 +102,7 @@ POST_USER_RECIPE_DESCRIPTION = r"""
       "instruction": "묵은지를 충분히 볶습니다.",
       "client_image_key": "step-1"
     }
-  ],
-  "category": ["찌개"],
-  "tags": ["한식", "얼큰함"],
-  "tips": ["묵은지를 쓰면 깊은 맛이 납니다."],
-  "warnings": []
+  ]
 }
 ```
 

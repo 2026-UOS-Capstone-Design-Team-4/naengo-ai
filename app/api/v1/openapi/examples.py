@@ -153,7 +153,6 @@ USER_RECIPE_EXAMPLE = {
             "sort_order": 1,
         }
     ],
-    "labels": [{"label_type": "CATEGORY", "label_value": "찌개", "sort_order": 1}],
     "nutrition": None,
     "status": "PENDING",
     "import_status": "NOT_IMPORTED",
