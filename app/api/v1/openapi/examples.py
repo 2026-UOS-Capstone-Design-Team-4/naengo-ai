@@ -191,19 +191,17 @@ USER_RECIPE_REVIEWED_EXAMPLE = {
 }
 
 RECIPE_DETAIL_RESPONSE_EXAMPLE = {
-    "id": 1,
     "title": "김치두부찌개",
-    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
-    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
     "servings": 2.0,
     "cooking_time_minutes": 20,
     "kcal_per_serving": 180,
     "difficulty": "easy",
-    "main_image_url": "https://example.com/source-image.jpg",
     "category": ["한식", "찌개"],
     "tags": ["얼큰함", "국물요리"],
-    "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
-    "warnings": [],
+    "main_image_url": "https://example.com/source-image.jpg",
+    "id": 1,
+    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
+    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
     "ingredients": [INGREDIENT_EXAMPLE],
     "steps": [
         {
@@ -219,6 +217,8 @@ RECIPE_DETAIL_RESPONSE_EXAMPLE = {
             "tip": None,
         },
     ],
+    "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
+    "warnings": [],
     "source_url": "https://www.10000recipe.com/recipe/123456",
     "author_type": "ADMIN",
     "created_at": "2026-04-01T09:00:00+09:00",

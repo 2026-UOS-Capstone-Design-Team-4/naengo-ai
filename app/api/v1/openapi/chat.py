@@ -16,22 +16,28 @@ _RECIPE_RESPONSE_TABLE = r"""
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| `id` | int | 레시피 ID |
 | `title` | string | 레시피 제목 |
-| `summary` | string \| null | 레시피 요약 |
-| `description` | string | 레시피 설명 |
-| `ingredients` | IngredientItem[] | 재료 목록 |
-| `steps` | RecipeStepResponse[] | 조리 단계 목록 |
 | `servings` | float | 인분 수 |
 | `cooking_time_minutes` | int | 조리 시간(분) |
 | `kcal_per_serving` | int \| null | 1인분당 kcal |
 | `difficulty` | string | 난이도(`easy` / `normal` / `hard`) |
 | `category` | string[] | 카테고리 |
 | `tags` | string[] | 태그 |
-| `tips` | string[] | 조리 팁 |
-| `source_url` | string \| null | 원본 레시피 URL |
 | `main_image_url` | string \| null | 대표 이미지 URL |
+| `id` | int | 레시피 ID |
+| `summary` | string \| null | 레시피 요약 |
+| `description` | string | 레시피 설명 |
+| `ingredients` | IngredientItem[] | 재료 목록 |
+| `steps` | RecipeStepResponse[] | 조리 단계 목록 |
+| `tips` | string[] | 조리 팁 |
+| `warnings` | string[] | 주의사항 |
+| `source_url` | string \| null | 원본 레시피 URL |
 | `author_type` | string | 작성자 유형(`ADMIN` / `USER` / `SOURCE`) |
+| `created_at` | string \| null | 생성 시각 |
+| `likes_count` | int | 좋아요 수 |
+| `scrap_count` | int | 스크랩 수 |
+| `is_liked` | bool | 좋아요 여부 |
+| `is_scrapped` | bool | 스크랩 여부 |
 """
 
 _COMMON_SSE_DESCRIPTION = (
