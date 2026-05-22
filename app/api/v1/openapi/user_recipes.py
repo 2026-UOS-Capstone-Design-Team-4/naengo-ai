@@ -111,7 +111,7 @@ POST_USER_RECIPE_DESCRIPTION = r"""
 }
 ```
 
-대표 이미지는 `user_recipes.source_main_image_url`에, 단계 이미지는
+대표 이미지는 `user_recipes.main_image_url`에, 단계 이미지는
 `user_recipe_steps.image_url`에 업로드 URL로 저장합니다.
 """
 
