@@ -71,6 +71,8 @@ class PassthroughStorageService:
 
 
 class ChatImageStorage(Protocol):
+    is_available: bool
+
     def upload_bytes(self, data: bytes, key: str, content_type: str) -> str | None:
         ...
 
