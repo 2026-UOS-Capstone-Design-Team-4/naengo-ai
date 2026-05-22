@@ -73,6 +73,7 @@ CHAT_MESSAGE_USER_EXAMPLE = {
     "message_id": 1,
     "role": "user",
     "content": "김치랑 두부 있는데 뭐 만들 수 있어?",
+    "image_url": None,
     "recipes": None,
     "created_at": "2026-04-29T12:00:00+09:00",
 }
@@ -81,6 +82,7 @@ CHAT_MESSAGE_MODEL_EXAMPLE = {
     "message_id": 2,
     "role": "model",
     "content": "김치와 두부로 만들 수 있는 김치두부찌개를 추천드려요.",
+    "image_url": None,
     "recipes": [RECIPE_EXAMPLE],
     "created_at": "2026-04-29T12:00:05+09:00",
 }
@@ -251,115 +253,6 @@ RECIPE_LIST_RESPONSE_EXAMPLE = {
     "has_next": True,
 }
 
-RECIPE_SOURCE_LIST_ITEM_EXAMPLE = {
-    "source_id": 10,
-    "source_site": "10000recipe",
-    "source_type": "WEB_SCRAPE",
-    "parser_type": "AI",
-    "source_url": "https://www.10000recipe.com/recipe/123456",
-    "title": "김치두부찌개",
-    "parse_status": "PARSED",
-    "review_status": "PENDING",
-    "import_status": "NOT_IMPORTED",
-    "collected_at": "2026-05-13T10:00:00+09:00",
-    "has_errors": False,
-}
-
-RECIPE_SOURCE_EXTRACTION_EXAMPLE = {
-    "title": "김치두부찌개",
-    "summary": "김치와 두부로 끓이는 간단한 찌개",
-    "description": "잘 익은 김치를 볶아 깊은 맛을 낸 찌개입니다.",
-    "servings": 2.0,
-    "cooking_time_minutes": 25,
-    "kcal_per_serving": 320,
-    "difficulty": "easy",
-    "source_main_image_url": "https://example.com/source-image.jpg",
-    "source_thumbnail_url": "https://example.com/source-thumb.jpg",
-    "source_video_url": None,
-    "content_hash": "sha256-example",
-    "nutrition": {
-        "serving_weight_grams": 250,
-        "carbohydrate_grams": 12,
-        "protein_grams": 8,
-        "fat_grams": 4,
-        "sodium_milligrams": 300,
-        "source": "SOURCE",
-        "raw": {"sodium": "300"},
-    },
-    "completeness_score": 0.92,
-    "confidence_score": 0.88,
-    "ingredients": [
-        {
-            "group_name": "메인",
-            "name": "김치",
-            "normalized_name": "김치",
-            "amount_text": "200g",
-            "quantity": 200,
-            "unit": "g",
-            "note": "잘 익은 것",
-            "raw_text": "김치 200g",
-            "is_optional": False,
-            "sort_order": 1,
-        }
-    ],
-    "steps": [
-        {
-            "step_no": 1,
-            "instruction": "냄비에 김치를 볶습니다.",
-            "source_image_url": None,
-            "tip": None,
-            "raw_text": "김치를 볶는다.",
-            "sort_order": 1,
-        }
-    ],
-    "labels": [
-        {
-            "label_type": "CATEGORY",
-            "label_value": "찌개",
-            "confidence_score": 0.9,
-            "source": "RULE",
-            "sort_order": 1,
-        }
-    ],
-}
-
-RECIPE_SOURCE_DETAIL_EXAMPLE = {
-    "source_id": 10,
-    "source_type": "WEB_SCRAPE",
-    "source_site": "10000recipe",
-    "parser_type": "AI",
-    "source_recipe_id": "123456",
-    "source_url": "https://www.10000recipe.com/recipe/123456",
-    "source_author_name": "만개의레시피",
-    "source_author_url": "https://example.com/author",
-    "source_published_at": "2026-05-01T09:00:00+09:00",
-    "raw_payload": {"title": "김치두부찌개"},
-    "raw_content_hash": "raw-sha256-example",
-    "parse_status": "PARSED",
-    "review_status": "PENDING",
-    "import_status": "NOT_IMPORTED",
-    "validation_errors": [],
-    "extraction_version": "ai-v1",
-    "collected_at": "2026-05-13T10:00:00+09:00",
-    "parsed_at": "2026-05-13T10:01:00+09:00",
-    "reviewed_at": None,
-    "imported_at": None,
-    "imported_recipe_id": None,
-    "extraction": RECIPE_SOURCE_EXTRACTION_EXAMPLE,
-    "created_at": "2026-05-13T10:00:00+09:00",
-    "updated_at": "2026-05-13T10:01:00+09:00",
-}
-
-RECIPE_SOURCE_LIST_RESPONSE_EXAMPLE = {
-    "items": [RECIPE_SOURCE_LIST_ITEM_EXAMPLE],
-    "next_cursor": "9",
-    "has_next": True,
-}
-
-RECIPE_SOURCE_IMPORT_ACCEPTED_EXAMPLE = {
-    "status": "accepted",
-    "source_id": 10,
-}
 
 RECIPE_RESPONSE_TABLE = r"""
 **RecipeResponse 구조**
