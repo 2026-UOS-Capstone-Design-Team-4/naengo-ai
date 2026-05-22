@@ -31,6 +31,7 @@ from app.services.user_recipe_service import (
     UserRecipeImageUpload,
     UserRecipeImageValidationError,
     UserRecipeService,
+    UserRecipeStorageError,
 )
 
 router = APIRouter()
@@ -121,6 +122,8 @@ def create_user_recipe(
                 for image in (step_images or [])
             ],
         )
+    except UserRecipeStorageError as exc:
+        raise ApiError(503, "STORAGE_ERROR", "이미지 스토리지를 사용할 수 없습니다.") from exc
     except UserRecipeImageValidationError as exc:
         raise ApiError(422, "INVALID_IMAGE", str(exc)) from exc
     if not recipe:
