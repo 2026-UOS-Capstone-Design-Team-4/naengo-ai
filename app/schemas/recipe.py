@@ -27,28 +27,25 @@ class RecipeStepResponse(BaseModel):
 
 
 class RecipeBase(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
+    id: int = Field(validation_alias="recipe_id")
     title: str
+    summary: str | None = None
     servings: float
     cooking_time_minutes: int
     kcal_per_serving: int | None = None
     difficulty: Literal["easy", "normal", "hard"]
+    main_image_url: str | None = None
     category: list[str] = []
     tags: list[str] = []
-    main_image_url: str | None = None
 
 
 class RecipeSchema(RecipeBase):
-    summary: str | None = None
     author_type: Literal["ADMIN", "USER", "SOURCE"] = "ADMIN"
 
 
 class RecipeListItemResponse(RecipeBase):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    id: int = Field(validation_alias="recipe_id")
-    summary: str | None = None
     created_at: datetime | None = None
     likes_count: int = 0
     scrap_count: int = 0
@@ -56,19 +53,27 @@ class RecipeListItemResponse(RecipeBase):
     is_scrapped: bool = False
 
 
-class RecipeDetailResponse(RecipeBase):
+class RecipeDetailResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int = Field(validation_alias="recipe_id")
+    title: str
     summary: str | None = None
     description: str
-    ingredients: list[IngredientItem] = []
-    steps: list[RecipeStepResponse] = []
+    servings: float
+    cooking_time_minutes: int
+    kcal_per_serving: int | None = None
+    difficulty: Literal["easy", "normal", "hard"]
+    author_type: Literal["ADMIN", "USER", "SOURCE"]
+    main_image_url: str | None = None
+    source_url: str | None = None
+    created_at: datetime | None = None
+    category: list[str] = []
+    tags: list[str] = []
     tips: list[str] = []
     warnings: list[str] = []
-    source_url: str | None = None
-    author_type: Literal["ADMIN", "USER", "SOURCE"]
-    created_at: datetime | None = None
+    ingredients: list[IngredientItem] = []
+    steps: list[RecipeStepResponse] = []
     likes_count: int = 0
     scrap_count: int = 0
     is_liked: bool = False
