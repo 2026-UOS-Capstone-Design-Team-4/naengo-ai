@@ -65,6 +65,7 @@ class RecipeDetailResponse(RecipeBase):
     ingredients: list[IngredientItem] = []
     steps: list[RecipeStepResponse] = []
     tips: list[str] = []
+    warnings: list[str] = []
     source_url: str | None = None
     author_type: Literal["ADMIN", "USER", "SOURCE"]
     created_at: datetime | None = None

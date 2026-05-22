@@ -199,6 +199,10 @@ class Recipe(Base):
         self._replace_labels("TIP", value or [])
 
     @property
+    def warnings(self) -> list[str]:
+        return [label.label_value for label in self.labels if label.label_type == "WARNING"]
+
+    @property
     def image_url(self) -> str | None:
         return self.ai_main_image_url or self.main_image_url
 
