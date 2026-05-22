@@ -150,7 +150,12 @@ class RecipeRetrievalService:
         _log_ranked_candidates(reranked, distances, plan=plan, limit=limit)
         return reranked
 
-    def recipe_to_payload(self, recipe: Recipe) -> dict:
+    def recipe_to_payload(
+        self,
+        recipe: Recipe,
+        liked_ids: set[int] | None = None,
+        scrapped_ids: set[int] | None = None,
+    ) -> dict:
         return {
             "id": recipe.recipe_id,
             "title": recipe.title,
@@ -177,6 +182,11 @@ class RecipeRetrievalService:
             "source_url": recipe.source_url,
             "main_image_url": recipe.main_image_url,
             "author_type": recipe.author_type,
+            "created_at": recipe.created_at.isoformat() if recipe.created_at else None,
+            "likes_count": recipe.likes_count,
+            "scrap_count": recipe.scrap_count,
+            "is_liked": recipe.recipe_id in (liked_ids or set()),
+            "is_scrapped": recipe.recipe_id in (scrapped_ids or set()),
         }
 
 

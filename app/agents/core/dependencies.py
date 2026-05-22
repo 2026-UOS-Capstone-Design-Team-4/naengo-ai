@@ -11,4 +11,6 @@ if TYPE_CHECKING:
 class RecipeDeps:
     last_found_recipes: list[dict] = field(default_factory=list)
     search_plan: SearchPlan | None = None
+    liked_ids: set[int] | None = None
+    scrapped_ids: set[int] | None = None
 

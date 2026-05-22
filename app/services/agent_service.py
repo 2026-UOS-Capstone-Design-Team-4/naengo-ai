@@ -20,6 +20,7 @@ from app.agents.recipe.recipe_agent import cooking_agent, recipe_agent, smalltal
 from app.agents.recipe.search_planner import recipe_search_planner
 from app.api.errors import ApiError
 from app.core import config
+from app.models.social import Like, Scrap
 from app.models.user import UserProfile
 from app.services.chat_service import ChatService
 from app.services.live_research_service import live_research_service
@@ -354,6 +355,18 @@ class AgentService:
 
         # 4. 요리 관련 라우트
         deps = RecipeDeps()
+        if db is not None:
+            try:
+                from sqlalchemy import select
+                deps.liked_ids = set(
+                    db.execute(select(Like.recipe_id).where(Like.user_id == user_id)).scalars()
+                )
+                deps.scrapped_ids = set(
+                    db.execute(select(Scrap.recipe_id).where(Scrap.user_id == user_id)).scalars()
+                )
+            except Exception as exc:
+                logger.warning("소셜 세트 조회 실패: %s", exc)
+
         effective_prompt = _append_live_research_context(
             prompt,
             live_result.answer_context if live_result else None,
@@ -394,7 +407,11 @@ class AgentService:
                     plan=deps.search_plan,
                 )
                 deps.last_found_recipes = [
-                    recipe_retrieval_service.recipe_to_payload(recipe)
+                    recipe_retrieval_service.recipe_to_payload(
+                        recipe,
+                        liked_ids=deps.liked_ids,
+                        scrapped_ids=deps.scrapped_ids,
+                    )
                     for recipe in recipes
                 ]
                 effective_prompt = _append_recipe_context(

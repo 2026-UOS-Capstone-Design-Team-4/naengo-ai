@@ -66,7 +66,11 @@ def search_recipes(ctx: RunContext[RecipeDeps], query: str) -> str:
 
         for recipe in recipes:
             ctx.deps.last_found_recipes.append(
-                recipe_retrieval_service.recipe_to_payload(recipe)
+                recipe_retrieval_service.recipe_to_payload(
+                    recipe,
+                    liked_ids=ctx.deps.liked_ids,
+                    scrapped_ids=ctx.deps.scrapped_ids,
+                )
             )
 
         titles = ", ".join(recipe.title for recipe in recipes)
