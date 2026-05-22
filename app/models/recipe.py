@@ -440,6 +440,18 @@ class UserRecipe(Base):
     )
     imported_recipe = relationship("Recipe", foreign_keys=[imported_recipe_id])
 
+    @property
+    def category(self) -> list[str]:
+        return [
+            label.label_value
+            for label in self.labels
+            if label.label_type == "CATEGORY"
+        ]
+
+    @property
+    def tags(self) -> list[str]:
+        return [label.label_value for label in self.labels if label.label_type == "TAG"]
+
 
 class UserRecipeIngredient(Base):
     __tablename__ = "user_recipe_ingredients"
