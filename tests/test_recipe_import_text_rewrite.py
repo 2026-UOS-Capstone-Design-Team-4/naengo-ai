@@ -118,7 +118,7 @@ def test_import_helpers_write_rewritten_text_to_production_models():
     assert recipe.description == "Naengo식 설명"
     assert recipe.source_id == 1
     assert recipe.source_url == "https://example.com/r/1"
-    assert recipe.source_main_image_url == "https://example.com/source-image.jpg"
+    assert recipe.main_image_url == "https://example.com/source-image.jpg"
     assert recipe.cooking_time_minutes == 20
     assert ingredient.raw_text == "김치 200g"
     assert step.instruction == "김치를 넣고 부드럽게 볶습니다."
