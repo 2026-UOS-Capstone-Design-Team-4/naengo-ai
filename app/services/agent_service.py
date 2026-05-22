@@ -117,6 +117,147 @@ def _append_recipe_context(prompt: str, recipes: list[dict]) -> str:
 
 
 class AgentService:
+    async def guest_stream(
+        self,
+        prompt: str,
+        image: str | None,
+        history: list[ModelMessage],
+    ) -> AsyncGenerator[str]:
+        return self._guest_stream(prompt, image, history)
+
+    async def _guest_stream(
+        self,
+        prompt: str,
+        image: str | None,
+        history: list[ModelMessage],
+    ) -> AsyncGenerator[str]:
+        # 1. Intent 분류 (이미지는 base64 그대로 LLM에 전달 — S3 업로드 없음)
+        image_ref = image
+        try:
+            intent = await intent_classifier.classify(prompt, history, image=image_ref)
+        except Exception as exc:
+            logger.error("Intent 분류 실패: %s", exc)
+            intent_type = "RECIPE_RECOMMENDATION"
+            confidence = 1.0
+        else:
+            intent_type = intent.intent_type
+            confidence = intent.confidence
+
+        live_result = None
+        if live_research_service.should_research(intent_type, prompt):
+            try:
+                query = live_research_service.build_query(prompt, intent_type)
+                live_result = live_research_service.research(query)
+            except Exception as exc:
+                logger.warning("Live research 실패: %s", exc)
+
+        yield stream_event_builder.metadata(
+            intent_type,
+            config.MODEL_NAME,
+            extra={
+                "used_live_research": bool(
+                    live_result and live_result.used_live_research
+                ),
+                "source_count": len(live_result.evidence) if live_result else 0,
+            },
+        )
+
+        # 2. 라우트 결정
+        route_decision = intent_agent_router.decide(intent_type, confidence)
+        if route_decision.route == AgentRoute.FIXED_RESPONSE:
+            message = route_decision.message or ""
+            yield stream_event_builder.message(message)
+            yield stream_event_builder.done(None, [])
+            return
+
+        # 3. 요리 관련 라우트 (PROFILE_UPDATE는 recipe_agent로 처리 — 프로필 없음)
+        deps = RecipeDeps()
+        effective_prompt = _append_live_research_context(
+            prompt,
+            live_result.answer_context if live_result else None,
+        )
+        user_prompt: Any = (
+            [effective_prompt, ImageUrl(url=image_ref)]
+            if image_ref
+            else effective_prompt
+        )
+
+        should_retrieve = (
+            route_decision.should_plan_retrieval
+            or route_decision.route == AgentRoute.PROFILE_UPDATE
+        )
+        if should_retrieve:
+            try:
+                plan = await recipe_search_planner.plan(
+                    prompt, history, user_profile_context=None, image=image_ref
+                )
+                deps.search_plan = plan
+            except Exception as exc:
+                logger.warning("검색 계획 생성 실패: %s", exc)
+
+            search_query = deps.search_plan.query_text if deps.search_plan else prompt
+            try:
+                recipes = recipe_retrieval_service.search_recipes(
+                    search_query, limit=3, plan=deps.search_plan
+                )
+                deps.last_found_recipes = [
+                    recipe_retrieval_service.recipe_to_payload(r) for r in recipes
+                ]
+                effective_prompt = _append_recipe_context(
+                    effective_prompt, deps.last_found_recipes
+                )
+                user_prompt = (
+                    [effective_prompt, ImageUrl(url=image_ref)]
+                    if image_ref
+                    else effective_prompt
+                )
+            except Exception as exc:
+                logger.warning("RAG 사전 검색 실패: %s", exc)
+
+        # 4. Agent 선택
+        if route_decision.route == AgentRoute.COOKING_AGENT:
+            agent = cooking_agent
+        elif route_decision.route == AgentRoute.SMALLTALK_AGENT:
+            agent = smalltalk_agent
+        else:
+            agent = recipe_agent
+
+        # 5. Agent 스트리밍
+        queue: asyncio.Queue = asyncio.Queue()
+        agent_task = asyncio.create_task(
+            _run_agent_to_queue(queue, agent, user_prompt, history, deps)
+        )
+
+        ai_full = ""
+        error_occurred = False
+        try:
+            while True:
+                event_type, data = await queue.get()
+                if event_type == "text":
+                    ai_full += data
+                    yield stream_event_builder.message(data)
+                elif event_type == "done":
+                    break
+                elif event_type == "error":
+                    logger.error("Agent 스트리밍 오류: %s", data)
+                    yield stream_event_builder.error("AGENT_ERROR", str(data))
+                    error_occurred = True
+                    break
+        finally:
+            if not agent_task.done():
+                agent_task.cancel()
+
+        if error_occurred:
+            return
+
+        # 6. 레시피 이벤트 + done (DB 저장 없음)
+        unique_recipes = list({r["id"]: r for r in deps.last_found_recipes}.values())
+        recipe_ids = [r["id"] for r in unique_recipes]
+        if unique_recipes:
+            yield stream_event_builder.recipes(unique_recipes)
+
+        yield stream_event_builder.done(None, recipe_ids)
+
     async def stream(
         self,
         prompt: str,
