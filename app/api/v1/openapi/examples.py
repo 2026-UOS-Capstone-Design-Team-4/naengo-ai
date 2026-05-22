@@ -153,6 +153,28 @@ USER_RECIPE_EXAMPLE = {
     "updated_at": "2026-05-04T12:00:00+09:00",
 }
 
+USER_RECIPE_LIST_ITEM_EXAMPLE = {
+    "user_recipe_id": 1,
+    "user_id": 7,
+    "title": "엄마한테 배운 김치찌개",
+    "description": "집에서 자주 해먹는 진한 김치찌개",
+    "servings": 2.0,
+    "yield_quantity": None,
+    "yield_unit": None,
+    "cooking_time_minutes": 25,
+    "kcal_per_serving": 320,
+    "difficulty": "easy",
+    "source_main_image_url": "https://example.com/kimchi-jjigae.jpg",
+    "category": ["찌개"],
+    "tags": ["한식", "얼큰함"],
+    "status": "PENDING",
+    "import_status": "NOT_IMPORTED",
+    "is_active": True,
+    "rejection_reason": None,
+    "created_at": "2026-05-04T12:00:00+09:00",
+    "updated_at": "2026-05-04T12:00:00+09:00",
+}
+
 USER_RECIPE_REVIEWED_EXAMPLE = {
     **USER_RECIPE_EXAMPLE,
     "status": "APPROVED",
