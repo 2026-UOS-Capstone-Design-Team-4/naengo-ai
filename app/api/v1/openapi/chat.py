@@ -6,6 +6,7 @@ from app.api.v1.openapi.examples import (
     CHAT_MESSAGE_USER_EXAMPLE,
     CHAT_ROOM_EXAMPLE,
     RECIPE_EXAMPLE,
+    RECIPE_RESPONSE_TABLE,
 )
 
 CHAT_ROOM_NOT_FOUND_RESPONSE = error_response(
@@ -13,35 +14,6 @@ CHAT_ROOM_NOT_FOUND_RESPONSE = error_response(
     "RESOURCE_NOT_FOUND",
     "채팅방을 찾을 수 없습니다.",
 )
-
-_RECIPE_RESPONSE_TABLE = r"""
-**RecipeResponse 구조**
-
-| 필드 | 타입 | 설명 |
-|------|------|------|
-| `title` | string | 레시피 제목 |
-| `servings` | float | 인분 수 |
-| `cooking_time_minutes` | int | 조리 시간(분) |
-| `kcal_per_serving` | int \| null | 1인분당 kcal |
-| `difficulty` | string | 난이도(`easy` / `normal` / `hard`) |
-| `category` | string[] | 카테고리 |
-| `tags` | string[] | 태그 |
-| `main_image_url` | string \| null | 대표 이미지 URL |
-| `id` | int | 레시피 ID |
-| `summary` | string \| null | 레시피 요약 |
-| `description` | string | 레시피 설명 |
-| `ingredients` | IngredientItem[] | 재료 목록 |
-| `steps` | RecipeStepResponse[] | 조리 단계 목록 |
-| `tips` | string[] | 조리 팁 |
-| `warnings` | string[] | 주의사항 |
-| `source_url` | string \| null | 원본 레시피 URL |
-| `author_type` | string | 작성자 유형(`ADMIN` / `USER` / `SOURCE`) |
-| `created_at` | string \| null | 생성 시각 |
-| `likes_count` | int | 좋아요 수 |
-| `scrap_count` | int | 스크랩 수 |
-| `is_liked` | bool | 좋아요 여부 |
-| `is_scrapped` | bool | 스크랩 여부 |
-"""
 
 _COMMON_SSE_DESCRIPTION = (
     r"""
@@ -54,7 +26,7 @@ _COMMON_SSE_DESCRIPTION = (
 - **error 이벤트**: 처리 중 오류가 발생하면 표준 에러 payload를 전송합니다.
 - **이미지**: `image`에 base64 data URL을 넣으면 멀티모달 입력으로 처리합니다.
 """
-    + _RECIPE_RESPONSE_TABLE
+    + RECIPE_RESPONSE_TABLE
 )
 
 GET_ROOMS_SUMMARY = "채팅방 목록 조회"
@@ -91,7 +63,7 @@ GET_ROOM_MESSAGES_DESCRIPTION = (
 `role = model` 메시지에 추천 레시피가 연결되어 있으면 `recipes` 필드에
 전체 레시피 데이터를 포함합니다.
 """
-    + _RECIPE_RESPONSE_TABLE
+    + RECIPE_RESPONSE_TABLE
 )
 
 GET_ROOM_MESSAGES_RESPONSES = {

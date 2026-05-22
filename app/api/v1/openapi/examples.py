@@ -38,24 +38,24 @@ _RECIPE_STEPS_EXAMPLE = [
 
 # RecipeDetailResponse(= RecipeResponse) 필드 순서 기준
 RECIPE_EXAMPLE = {
+    "id": 1,
     "title": "김치두부찌개",
+    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
+    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
     "servings": 2.0,
     "cooking_time_minutes": 20,
     "kcal_per_serving": 180,
     "difficulty": "easy",
+    "author_type": "ADMIN",
+    "main_image_url": "https://example.com/source-image.jpg",
+    "source_url": "https://www.10000recipe.com/recipe/123456",
+    "created_at": "2026-04-01T09:00:00+09:00",
     "category": ["한식", "찌개"],
     "tags": ["얼큰함", "국물요리"],
-    "main_image_url": "https://example.com/source-image.jpg",
-    "id": 1,
-    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
-    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
-    "ingredients": [INGREDIENT_EXAMPLE],
-    "steps": _RECIPE_STEPS_EXAMPLE,
     "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
     "warnings": [],
-    "source_url": "https://www.10000recipe.com/recipe/123456",
-    "author_type": "ADMIN",
-    "created_at": "2026-04-01T09:00:00+09:00",
+    "ingredients": [INGREDIENT_EXAMPLE],
+    "steps": _RECIPE_STEPS_EXAMPLE,
     "likes_count": 42,
     "scrap_count": 15,
     "is_liked": False,
@@ -199,24 +199,24 @@ USER_RECIPE_REVIEWED_EXAMPLE = {
 }
 
 RECIPE_DETAIL_RESPONSE_EXAMPLE = {
+    "id": 1,
     "title": "김치두부찌개",
+    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
+    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
     "servings": 2.0,
     "cooking_time_minutes": 20,
     "kcal_per_serving": 180,
     "difficulty": "easy",
+    "author_type": "ADMIN",
+    "main_image_url": "https://example.com/source-image.jpg",
+    "source_url": "https://www.10000recipe.com/recipe/123456",
+    "created_at": "2026-04-01T09:00:00+09:00",
     "category": ["한식", "찌개"],
     "tags": ["얼큰함", "국물요리"],
-    "main_image_url": "https://example.com/source-image.jpg",
-    "id": 1,
-    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
-    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
-    "ingredients": [INGREDIENT_EXAMPLE],
-    "steps": _RECIPE_STEPS_EXAMPLE,
     "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
     "warnings": [],
-    "source_url": "https://www.10000recipe.com/recipe/123456",
-    "author_type": "ADMIN",
-    "created_at": "2026-04-01T09:00:00+09:00",
+    "ingredients": [INGREDIENT_EXAMPLE],
+    "steps": _RECIPE_STEPS_EXAMPLE,
     "likes_count": 42,
     "scrap_count": 15,
     "is_liked": True,
@@ -361,3 +361,32 @@ RECIPE_SOURCE_IMPORT_ACCEPTED_EXAMPLE = {
     "status": "accepted",
     "source_id": 10,
 }
+
+RECIPE_RESPONSE_TABLE = r"""
+**RecipeResponse 구조**
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `id` | int | 레시피 ID |
+| `title` | string | 레시피 제목 |
+| `summary` | string \| null | 레시피 요약 |
+| `description` | string | 레시피 설명 |
+| `servings` | float | 인분 수 |
+| `cooking_time_minutes` | int | 조리 시간(분) |
+| `kcal_per_serving` | int \| null | 1인분당 kcal |
+| `difficulty` | string | 난이도(`easy` / `normal` / `hard`) |
+| `author_type` | string | 작성자 유형(`ADMIN` / `USER` / `SOURCE`) |
+| `main_image_url` | string \| null | 대표 이미지 URL |
+| `source_url` | string \| null | 원본 레시피 URL |
+| `created_at` | string \| null | 생성 시각 |
+| `category` | string[] | 카테고리 |
+| `tags` | string[] | 태그 |
+| `tips` | string[] | 조리 팁 |
+| `warnings` | string[] | 주의사항 |
+| `ingredients` | IngredientItem[] | 재료 목록 |
+| `steps` | RecipeStepResponse[] | 조리 단계 목록 |
+| `likes_count` | int | 좋아요 수 |
+| `scrap_count` | int | 스크랩 수 |
+| `is_liked` | bool | 좋아요 여부 |
+| `is_scrapped` | bool | 스크랩 여부 |
+"""
