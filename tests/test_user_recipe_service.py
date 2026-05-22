@@ -150,7 +150,7 @@ def test_create_user_recipe_uploads_main_and_step_images():
         ],
     )
 
-    assert result.source_main_image_url.startswith(
+    assert result.main_image_url.startswith(
         "https://storage.local/user-recipes/7/456/main/",
     )
     assert result.steps[0].image_url.startswith(
