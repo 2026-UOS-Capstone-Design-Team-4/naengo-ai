@@ -1,40 +1,43 @@
 ﻿INGREDIENT_EXAMPLE = {
+    "group_name": "메인",
     "name": "김치",
-    "amount": "200",
+    "amount_text": "200g",
+    "quantity": 200,
     "unit": "g",
-    "type": "메인",
     "note": "잘 익은 것",
+    "raw_text": "김치 200g",
+    "is_optional": False,
 }
 
 RECIPE_EXAMPLE = {
     "id": 1,
     "title": "김치두부찌개",
+    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
     "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
     "ingredients": [INGREDIENT_EXAMPLE],
-    "ingredients_raw": "김치 200g, 두부 1모, 돼지고기 100g",
     "steps": [
         {
             "step_no": 1,
             "instruction": "냄비에 기름을 두르고 돼지고기를 볶습니다.",
-            "source_image_url": None,
+            "image_url": None,
             "tip": None,
         },
         {
             "step_no": 2,
             "instruction": "김치를 넣고 함께 볶습니다.",
-            "source_image_url": None,
+            "image_url": None,
             "tip": None,
         },
         {
             "step_no": 3,
             "instruction": "물을 붓고 끓어오르면 두부를 넣습니다.",
-            "source_image_url": None,
+            "image_url": None,
             "tip": None,
         },
         {
             "step_no": 4,
             "instruction": "간을 맞추고 5분 더 끓입니다.",
-            "source_image_url": None,
+            "image_url": None,
             "tip": "기호에 따라 고추가루를 추가해도 좋습니다.",
         },
     ],
@@ -45,10 +48,8 @@ RECIPE_EXAMPLE = {
     "category": ["한식", "찌개"],
     "tags": ["얼큰함", "국물요리"],
     "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
-    "video_url": "https://youtube.com/watch?v=example",
-    "image_url": "https://example.com/image.jpg",
     "source_url": "https://www.10000recipe.com/recipe/123456",
-    "source_main_image_url": "https://example.com/source-image.jpg",
+    "main_image_url": "https://example.com/source-image.jpg",
     "author_type": "ADMIN",
 }
 
@@ -112,10 +113,6 @@ USER_RECIPE_EXAMPLE = {
     "user_recipe_id": 1,
     "user_id": 7,
     "title": "엄마한테 배운 김치찌개",
-    "submission_text": (
-        "묵은지를 쓰면 훨씬 맛있어요. 돼지고기는 앞다리살이 잘 어울리고 "
-        "김치는 충분히 볶아야 깊은 맛이 납니다."
-    ),
     "description": "집에서 자주 해먹는 진한 김치찌개",
     "servings": 2.0,
     "yield_quantity": None,
@@ -123,7 +120,7 @@ USER_RECIPE_EXAMPLE = {
     "cooking_time_minutes": 25,
     "kcal_per_serving": 320,
     "difficulty": "easy",
-    "video_url": "https://youtube.com/watch?v=example",
+    "source_url": "https://youtube.com/watch?v=example",
     "source_main_image_url": "https://example.com/kimchi-jjigae.jpg",
     "ingredients": [
         {
@@ -183,7 +180,16 @@ RECIPE_STATS_RESPONSE_EXAMPLE = {
 RECIPE_LIST_RESPONSE_EXAMPLE = {
     "items": [
         {
-            **RECIPE_EXAMPLE,
+            "id": 1,
+            "title": "김치두부찌개",
+            "summary": "김치와 두부로 끓이는 칼칼한 찌개",
+            "servings": 2.0,
+            "cooking_time_minutes": 20,
+            "kcal_per_serving": 180,
+            "difficulty": "easy",
+            "main_image_url": "https://example.com/source-image.jpg",
+            "category": ["한식", "찌개"],
+            "tags": ["얼큰함", "국물요리"],
             "created_at": "2026-04-01T09:00:00+09:00",
             "likes_count": 42,
             "scrap_count": 15,

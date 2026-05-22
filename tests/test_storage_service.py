@@ -26,3 +26,9 @@ def test_get_storage_service_rejects_unknown_backend(monkeypatch):
 
     with pytest.raises(ValueError):
         get_storage_service()
+
+
+def test_get_storage_service_keeps_remote_images_passthrough_for_s3(monkeypatch):
+    monkeypatch.setattr("app.services.storage_service.STORAGE_BACKEND", "s3")
+
+    assert isinstance(get_storage_service(), PassthroughStorageService)

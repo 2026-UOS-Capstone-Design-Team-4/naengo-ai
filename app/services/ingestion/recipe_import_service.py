@@ -121,7 +121,7 @@ class RecipeImportService:
         return Recipe(
             source_id=source.source_id,
             source_url=source.source_url,
-            source_main_image_url=extraction.source_main_image_url,
+            main_image_url=extraction.source_main_image_url,
             title=draft.title,
             summary=draft.summary,
             description=draft.description,
@@ -160,7 +160,7 @@ class RecipeImportService:
                 recipe_id=recipe_id,
                 step_no=step.step_no,
                 instruction=step.instruction,
-                source_image_url=step.source_image_url,
+                image_url=step.source_image_url,
                 tip=step.tip,
                 sort_order=step.sort_order,
             )
@@ -247,9 +247,7 @@ class RecipeImportService:
             description=draft.description,
             ingredients=[
                 RecipeSearchEmbeddingIngredient(
-                    name=item.name,
-                    normalized_name=item.normalized_name,
-                    amount_text=item.amount_text,
+                    raw_text=item.raw_text or item.name,
                 )
                 for item in draft.ingredients
             ],

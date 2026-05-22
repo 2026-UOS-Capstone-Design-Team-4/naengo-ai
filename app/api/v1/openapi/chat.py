@@ -18,9 +18,9 @@ _RECIPE_RESPONSE_TABLE = r"""
 |------|------|------|
 | `id` | int | 레시피 ID |
 | `title` | string | 레시피 제목 |
+| `summary` | string \| null | 레시피 요약 |
 | `description` | string | 레시피 설명 |
 | `ingredients` | IngredientItem[] | 재료 목록 |
-| `ingredients_raw` | string | 재료 원문 텍스트 |
 | `steps` | RecipeStepResponse[] | 조리 단계 목록 |
 | `servings` | float | 인분 수 |
 | `cooking_time_minutes` | int | 조리 시간(분) |
@@ -29,8 +29,8 @@ _RECIPE_RESPONSE_TABLE = r"""
 | `category` | string[] | 카테고리 |
 | `tags` | string[] | 태그 |
 | `tips` | string[] | 조리 팁 |
-| `video_url` | string \| null | 영상 URL |
-| `image_url` | string \| null | 이미지 URL |
+| `source_url` | string \| null | 원본 레시피 URL |
+| `main_image_url` | string \| null | 대표 이미지 URL |
 | `author_type` | string | 작성자 유형(`ADMIN` / `USER` / `SOURCE`) |
 """
 

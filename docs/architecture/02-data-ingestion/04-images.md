@@ -4,7 +4,7 @@
 
 ## Policy
 
-- 원본 이미지 URL은 `recipe_source_extractions`, `recipes.source_main_image_url`, `recipe_source_extracted_steps`, `recipe_steps.source_image_url`에 남길 수 있습니다.
+- 원본 이미지 URL은 `recipe_source_extractions`, `recipes.main_image_url`, `recipe_source_extracted_steps`, `recipe_steps.image_url`에 남길 수 있습니다.
 - production import는 원본 이미지 URL을 `recipe_media`로 복사하지 않습니다.
 - `recipes`에는 `image_url`, `thumbnail_url`, `image_urls` 같은 중복 컬럼을 두지 않습니다.
 - 서비스 노출용 이미지는 AI 생성 후보를 만든 뒤 선택된 결과만 `recipe_media`에 저장합니다.
@@ -25,7 +25,7 @@
 ```text
 source image url
   -> store in staging extraction fields
-  -> copy step image URL to recipe_steps.source_image_url
+  -> copy step image URL to recipe_steps.image_url
   -> do not create recipe_media during production import
 ```
 

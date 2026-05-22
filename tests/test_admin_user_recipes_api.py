@@ -19,7 +19,6 @@ def _user_recipe(**overrides) -> UserRecipe:
         "user_recipe_id": 11,
         "user_id": 7,
         "title": "Kimchi stew",
-        "submission_text": "I made kimchi stew.",
         "description": "A spicy stew.",
         "ingredients": [],
         "steps": [],
@@ -110,7 +109,6 @@ def test_admin_can_list_user_recipes(monkeypatch):
     assert body["has_next"] is True
     assert body["items"][0]["user_recipe_id"] == 11
     assert body["items"][0]["user_id"] == 7
-    assert body["items"][0]["submission_text"] == "I made kimchi stew."
     assert body["items"][0]["import_status"] == "NOT_IMPORTED"
     assert body["items"][0]["is_active"] is True
 

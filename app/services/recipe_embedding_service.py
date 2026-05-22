@@ -8,9 +8,7 @@ from app.services.embedding_service import EmbeddingService, embedding_service
 
 @dataclass(frozen=True)
 class RecipeSearchEmbeddingIngredient:
-    name: str
-    normalized_name: str | None = None
-    amount_text: str | None = None
+    raw_text: str
 
 
 @dataclass(frozen=True)
@@ -86,8 +84,7 @@ def _append_section(
 
 
 def _ingredient_text(item: RecipeSearchEmbeddingIngredient) -> str:
-    parts = [item.normalized_name or item.name, item.amount_text]
-    return " ".join(text for text in (_clean_text(part) for part in parts) if text)
+    return item.raw_text
 
 
 def _clean_text(value: object) -> str | None:

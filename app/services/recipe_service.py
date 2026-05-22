@@ -1,6 +1,7 @@
 import base64
 import binascii
 import json
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import and_, func, or_, select
@@ -9,9 +10,12 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.recipe import Recipe, RecipeStats
 from app.models.social import Like, Scrap
 from app.schemas.recipe import (
+    IngredientItem,
+    RecipeDetailResponse,
     RecipeListItemResponse,
     RecipeListResponse,
     RecipeStatsResponse,
+    RecipeStepResponse,
 )
 
 
@@ -43,17 +47,22 @@ class RecipeService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_recipe(self, recipe_id: int, user_id: int) -> RecipeListItemResponse:
+    def get_recipe(self, recipe_id: int, user_id: int) -> RecipeDetailResponse:
         stmt = (
             select(Recipe)
-            .options(joinedload(Recipe.stats), joinedload(Recipe.nutrition))
+            .options(
+                joinedload(Recipe.stats),
+                joinedload(Recipe.ingredients_list),
+                joinedload(Recipe.steps),
+                joinedload(Recipe.labels),
+            )
             .where(Recipe.recipe_id == recipe_id, Recipe.is_active.is_(True))
         )
         recipe = self.db.execute(stmt).scalars().unique().one_or_none()
         if recipe is None:
             raise RecipeNotFoundError(recipe_id)
         liked_ids, scrapped_ids = self._get_social_sets(user_id, [recipe_id])
-        return self._to_list_item(recipe, liked_ids, scrapped_ids)
+        return self._to_detail_item(recipe, liked_ids, scrapped_ids)
 
     def get_recipes_by_latest(
         self, user_id: int, cursor: str | None, limit: int
@@ -65,7 +74,7 @@ class RecipeService:
 
         stmt = (
             select(Recipe)
-            .options(joinedload(Recipe.stats), joinedload(Recipe.nutrition))
+            .options(joinedload(Recipe.stats), joinedload(Recipe.labels))
             .where(Recipe.is_active.is_(True))
         )
         if cursor_id is not None:
@@ -101,7 +110,7 @@ class RecipeService:
         stmt = (
             select(Recipe)
             .outerjoin(RecipeStats, Recipe.recipe_id == RecipeStats.recipe_id)
-            .options(joinedload(Recipe.stats), joinedload(Recipe.nutrition))
+            .options(joinedload(Recipe.stats), joinedload(Recipe.labels))
             .where(Recipe.is_active.is_(True))
         )
         if cursor_likes is not None and cursor_id is not None:
@@ -148,7 +157,7 @@ class RecipeService:
         stmt = (
             select(Recipe)
             .outerjoin(RecipeStats, Recipe.recipe_id == RecipeStats.recipe_id)
-            .options(joinedload(Recipe.stats), joinedload(Recipe.nutrition))
+            .options(joinedload(Recipe.stats), joinedload(Recipe.labels))
             .where(Recipe.is_active.is_(True))
         )
         if cursor_scraps is not None and cursor_id is not None:
@@ -189,20 +198,34 @@ class RecipeService:
     def get_scraps(
         self, user_id: int, cursor: str | None, limit: int
     ) -> RecipeListResponse:
-        cursor_id = int(cursor) if cursor else None
+        cursor_created_at, cursor_id = None, None
+        if cursor:
+            cursor_created_at, cursor_id = _parse_scrap_cursor(cursor)
 
         stmt = (
             select(Scrap)
             .join(Recipe, Scrap.recipe_id == Recipe.recipe_id)
             .options(
                 joinedload(Scrap.recipe).joinedload(Recipe.stats),
-                joinedload(Scrap.recipe).joinedload(Recipe.nutrition),
+                joinedload(Scrap.recipe).joinedload(Recipe.labels),
             )
             .where(Scrap.user_id == user_id, Recipe.is_active.is_(True))
         )
-        if cursor_id is not None:
+        if cursor_created_at is not None and cursor_id is not None:
+            stmt = stmt.where(
+                or_(
+                    Scrap.created_at < cursor_created_at,
+                    and_(
+                        Scrap.created_at == cursor_created_at,
+                        Scrap.scrap_id < cursor_id,
+                    ),
+                )
+            )
+        elif cursor_id is not None:
             stmt = stmt.where(Scrap.scrap_id < cursor_id)
-        stmt = stmt.order_by(Scrap.scrap_id.desc()).limit(limit + 1)
+        stmt = stmt.order_by(Scrap.created_at.desc(), Scrap.scrap_id.desc()).limit(
+            limit + 1
+        )
 
         scraps = list(self.db.execute(stmt).scalars().unique().all())
         has_next = len(scraps) > limit
@@ -217,7 +240,11 @@ class RecipeService:
             items=[
                 self._to_list_item(s.recipe, liked_ids, scrapped_ids) for s in items
             ],
-            next_cursor=str(items[-1].scrap_id) if has_next else None,
+            next_cursor=(
+                _encode_scrap_cursor(items[-1])
+                if has_next and items[-1].created_at is not None
+                else None
+            ),
             has_next=has_next,
         )
 
@@ -316,6 +343,24 @@ class RecipeService:
         item.is_scrapped = recipe.recipe_id in (scrapped_ids or set())
         return item
 
+    def _to_detail_item(
+        self,
+        recipe: Recipe,
+        liked_ids: set[int] | None = None,
+        scrapped_ids: set[int] | None = None,
+    ) -> RecipeDetailResponse:
+        item = RecipeDetailResponse.model_validate(recipe)
+        item.ingredients = [
+            IngredientItem.model_validate(ingredient)
+            for ingredient in recipe.ingredients_list
+        ]
+        item.steps = [RecipeStepResponse.model_validate(step) for step in recipe.steps]
+        item.likes_count = recipe.stats.likes_count if recipe.stats else 0
+        item.scrap_count = recipe.stats.scrap_count if recipe.stats else 0
+        item.is_liked = recipe.recipe_id in (liked_ids or set())
+        item.is_scrapped = recipe.recipe_id in (scrapped_ids or set())
+        return item
+
 
 def _encode_cursor(payload: dict[str, Any]) -> str:
     raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
@@ -348,4 +393,27 @@ def _parse_count_cursor(cursor: str, sort: str) -> tuple[int, int]:
     try:
         return int(payload["count"]), _cursor_recipe_id(payload)
     except (TypeError, ValueError) as exc:
+        raise RecipeInvalidCursorError("Invalid cursor.") from exc
+
+
+def _encode_scrap_cursor(scrap: Scrap) -> str:
+    return _encode_cursor(
+        {
+            "sort": "scraps",
+            "created_at": scrap.created_at.isoformat(),
+            "scrap_id": scrap.scrap_id,
+            "recipe_id": scrap.recipe_id,
+        }
+    )
+
+
+def _parse_scrap_cursor(cursor: str) -> tuple[datetime | None, int]:
+    if cursor.isdigit():
+        return None, int(cursor)
+    payload = _decode_cursor(cursor)
+    if payload.get("sort") != "scraps" or "created_at" not in payload:
+        raise RecipeInvalidCursorError("Invalid cursor.")
+    try:
+        return datetime.fromisoformat(payload["created_at"]), int(payload["scrap_id"])
+    except (KeyError, TypeError, ValueError) as exc:
         raise RecipeInvalidCursorError("Invalid cursor.") from exc

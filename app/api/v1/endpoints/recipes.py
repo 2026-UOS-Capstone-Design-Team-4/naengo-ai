@@ -18,6 +18,9 @@ from app.api.v1.openapi.recipes import (
     GET_RECIPES_DESCRIPTION,
     GET_RECIPES_RESPONSES,
     GET_RECIPES_SUMMARY,
+    GET_SCRAPPED_RECIPES_DESCRIPTION,
+    GET_SCRAPPED_RECIPES_RESPONSES,
+    GET_SCRAPPED_RECIPES_SUMMARY,
     POST_LIKE_DESCRIPTION,
     POST_LIKE_RESPONSES,
     POST_LIKE_SUMMARY,
@@ -27,7 +30,7 @@ from app.api.v1.openapi.recipes import (
 )
 from app.db.session import get_db
 from app.schemas.recipe import (
-    RecipeListItemResponse,
+    RecipeDetailResponse,
     RecipeListResponse,
     RecipeStatsResponse,
 )
@@ -83,10 +86,37 @@ def get_recipes(
 
 
 @router.get(
+    "/scraps",
+    summary=GET_SCRAPPED_RECIPES_SUMMARY,
+    description=GET_SCRAPPED_RECIPES_DESCRIPTION,
+    response_model=RecipeListResponse,
+    responses=GET_SCRAPPED_RECIPES_RESPONSES,
+)
+def get_scrapped_recipes(
+    cursor: str | None = Query(
+        default=None,
+        description="이전 응답의 next_cursor. base64url JSON cursor입니다.",
+    ),
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="한 번에 가져올 레시피 개수",
+    ),
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    try:
+        return RecipeService(db).get_scraps(current_user_id, cursor, limit)
+    except RecipeInvalidCursorError:
+        raise ApiError(400, "INVALID_CURSOR", "Cursor is invalid.") from None
+
+
+@router.get(
     "/{recipe_id}",
     summary=GET_RECIPE_SUMMARY,
     description=GET_RECIPE_DESCRIPTION,
-    response_model=RecipeListItemResponse,
+    response_model=RecipeDetailResponse,
     responses=GET_RECIPE_RESPONSES,
 )
 def get_recipe(

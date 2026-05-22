@@ -16,7 +16,7 @@ ADMIN_RECIPE_LIST_ITEM_EXAMPLE = {
     "author_type": "SOURCE",
     "source_id": 1,
     "source_url": "https://www.10000recipe.com/recipe/7041234",
-    "source_main_image_url": "https://example.com/source-main.jpg",
+    "main_image_url": "https://example.com/source-main.jpg",
     "source_site": "10000recipe",
     "source_recipe_id": "7041234",
     "source_record_id": None,

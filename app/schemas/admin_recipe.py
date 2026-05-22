@@ -30,7 +30,7 @@ class AdminRecipeStep(BaseModel):
     step_id: int
     step_no: int
     instruction: str
-    source_image_url: str | None = None
+    image_url: str | None = None
     tip: str | None = None
     sort_order: int = 0
 
@@ -82,27 +82,6 @@ class AdminRecipeClassification(BaseModel):
     updated_at: datetime | None = None
 
 
-class AdminRecipeMedia(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    media_id: int
-    step_id: int | None = None
-    media_type: str
-    image_role: str | None = None
-    source_url: str | None = None
-    storage_url: str
-    thumbnail_url: str | None = None
-    width: int | None = None
-    height: int | None = None
-    file_size_bytes: int | None = None
-    mime_type: str | None = None
-    storage_provider: str
-    generation_id: int | None = None
-    is_primary: bool = False
-    sort_order: int = 0
-    created_at: datetime | None = None
-
-
 class AdminRecipeListItem(BaseModel):
     recipe_id: int
     title: str
@@ -117,7 +96,7 @@ class AdminRecipeListItem(BaseModel):
     author_type: str
     source_id: int | None = None
     source_url: str | None = None
-    source_main_image_url: str | None = None
+    main_image_url: str | None = None
     source_site: str | None = None
     source_recipe_id: str | None = None
     source_record_id: str | None = None
@@ -153,7 +132,7 @@ class AdminRecipeListItem(BaseModel):
             author_type=recipe.author_type,
             source_id=recipe.source_id,
             source_url=recipe.source_url or (source.source_url if source else None),
-            source_main_image_url=recipe.source_main_image_url,
+            main_image_url=recipe.main_image_url,
             source_site=source.source_site if source else None,
             source_recipe_id=source.source_recipe_id if source else None,
             source_record_id=source.source_record_id if source else None,
@@ -191,7 +170,6 @@ class AdminRecipeDetail(AdminRecipeListItem):
     labels: list[AdminRecipeLabel] = []
     nutrition: AdminRecipeNutrition | None = None
     classification: AdminRecipeClassification | None = None
-    media: list[AdminRecipeMedia] = []
 
     @classmethod
     def from_model(cls, recipe) -> "AdminRecipeDetail":
@@ -230,5 +208,4 @@ class AdminRecipeDetail(AdminRecipeListItem):
                 if recipe.classifications
                 else None
             ),
-            media=[AdminRecipeMedia.model_validate(item) for item in recipe.media],
         )

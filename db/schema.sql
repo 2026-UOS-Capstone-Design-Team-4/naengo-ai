@@ -201,7 +201,8 @@ CREATE TABLE recipes (
     recipe_id SERIAL PRIMARY KEY,
     source_id INTEGER REFERENCES recipe_sources(source_id) ON DELETE RESTRICT,
     source_url VARCHAR(1024),
-    source_main_image_url VARCHAR(1024),
+    main_image_url VARCHAR(1024),
+    ai_main_image_url VARCHAR(1024),
     title VARCHAR(255) NOT NULL,
     summary TEXT,
     description TEXT NOT NULL,
@@ -256,7 +257,8 @@ CREATE TABLE recipe_steps (
     recipe_id INTEGER NOT NULL REFERENCES recipes(recipe_id) ON DELETE CASCADE,
     step_no INTEGER NOT NULL,
     instruction TEXT NOT NULL,
-    source_image_url VARCHAR(1024),
+    image_url VARCHAR(1024),
+    ai_image_url VARCHAR(1024),
     tip TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     UNIQUE (recipe_id, step_no)
@@ -319,71 +321,6 @@ CREATE TABLE recipe_classifications (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE recipe_media (
-    media_id SERIAL PRIMARY KEY,
-    recipe_id INTEGER NOT NULL REFERENCES recipes(recipe_id) ON DELETE CASCADE,
-    step_id INTEGER REFERENCES recipe_steps(step_id) ON DELETE CASCADE,
-    media_type VARCHAR(20) NOT NULL
-        CHECK (media_type IN ('IMAGE', 'VIDEO')),
-    image_role VARCHAR(30)
-        CHECK (
-            image_role IN (
-                'MAIN',
-                'THUMBNAIL',
-                'STEP',
-                'GALLERY',
-                'GENERATED_CANDIDATE'
-            )
-        ),
-    source_url VARCHAR(1024),
-    storage_url VARCHAR(1024) NOT NULL,
-    thumbnail_url VARCHAR(1024),
-    width INTEGER,
-    height INTEGER,
-    file_size_bytes INTEGER,
-    mime_type VARCHAR(100),
-    storage_provider VARCHAR(30) NOT NULL DEFAULT 'S3',
-    generation_id INTEGER,
-    is_primary BOOLEAN NOT NULL DEFAULT false,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE recipe_image_generations (
-    generation_id SERIAL PRIMARY KEY,
-    recipe_id INTEGER NOT NULL REFERENCES recipes(recipe_id) ON DELETE CASCADE,
-    requested_by_user_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-    source_id INTEGER REFERENCES recipe_sources(source_id) ON DELETE SET NULL,
-    provider VARCHAR(50) NOT NULL,
-    model VARCHAR(100) NOT NULL,
-    prompt TEXT NOT NULL,
-    negative_prompt TEXT,
-    status VARCHAR(30) NOT NULL DEFAULT 'REQUESTED'
-        CHECK (
-            status IN (
-                'REQUESTED',
-                'GENERATING',
-                'SUCCEEDED',
-                'FAILED',
-                'SELECTED',
-                'REJECTED'
-            )
-        ),
-    generated_media_id INTEGER REFERENCES recipe_media(media_id) ON DELETE SET NULL,
-    error_message TEXT,
-    metadata JSONB NOT NULL DEFAULT '{}',
-    requested_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP WITH TIME ZONE,
-    selected_at TIMESTAMP WITH TIME ZONE,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-ALTER TABLE recipe_media
-ADD CONSTRAINT fk_recipe_media_generation
-FOREIGN KEY (generation_id)
-REFERENCES recipe_image_generations(generation_id)
-ON DELETE SET NULL;
-
 CREATE TABLE recipe_embeddings (
     embedding_id SERIAL PRIMARY KEY,
     recipe_id INTEGER NOT NULL REFERENCES recipes(recipe_id) ON DELETE CASCADE,
@@ -419,7 +356,6 @@ CREATE TABLE user_recipes (
     user_recipe_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    submission_text TEXT NOT NULL,
     description TEXT,
     servings NUMERIC(4, 1),
     yield_quantity NUMERIC(10, 2),
@@ -428,7 +364,7 @@ CREATE TABLE user_recipes (
     kcal_per_serving INTEGER,
     difficulty VARCHAR(10)
         CHECK (difficulty IN ('easy', 'normal', 'hard')),
-    video_url VARCHAR(1024),
+    source_url VARCHAR(1024),
     source_main_image_url VARCHAR(1024),
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING'
         CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
@@ -466,7 +402,7 @@ CREATE TABLE user_recipe_steps (
         REFERENCES user_recipes(user_recipe_id) ON DELETE CASCADE,
     step_no INTEGER NOT NULL,
     instruction TEXT NOT NULL,
-    source_image_url VARCHAR(1024),
+    image_url VARCHAR(1024),
     tip TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     UNIQUE (user_recipe_id, step_no)
@@ -578,10 +514,6 @@ CREATE TRIGGER touch_recipe_nutrition_updated_at
 BEFORE UPDATE ON recipe_nutrition
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
-CREATE TRIGGER touch_recipe_image_generations_updated_at
-BEFORE UPDATE ON recipe_image_generations
-FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
-
 CREATE TRIGGER touch_recipe_quality_scores_updated_at
 BEFORE UPDATE ON recipe_quality_scores
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
@@ -663,10 +595,6 @@ CREATE TRIGGER trigger_scrap_count
 AFTER INSERT OR DELETE ON scraps
 FOR EACH ROW EXECUTE FUNCTION update_scrap_count();
 
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_nickname ON users(nickname);
-CREATE INDEX idx_social_accounts_user_id ON social_accounts(user_id);
-
 CREATE INDEX idx_recipe_sources_lifecycle
 ON recipe_sources(parse_status, review_status, import_status, source_id DESC);
 CREATE INDEX idx_recipe_sources_hash ON recipe_sources(raw_content_hash);
@@ -697,10 +625,6 @@ ON recipe_classifications USING GIN (taste_keywords);
 CREATE INDEX idx_recipe_classifications_categories_gin
 ON recipe_classifications USING GIN (category_labels);
 
-CREATE INDEX idx_recipe_media_recipe_role
-ON recipe_media(recipe_id, image_role, is_primary);
-CREATE INDEX idx_recipe_image_generations_recipe_status
-ON recipe_image_generations(recipe_id, status, requested_at DESC);
 CREATE INDEX idx_recipe_embeddings_recipe_type
 ON recipe_embeddings(recipe_id, embedding_type);
 

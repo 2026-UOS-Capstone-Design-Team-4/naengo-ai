@@ -10,14 +10,12 @@ PATCH  /api/v1/users/me
 GET    /api/v1/users/me/profile
 POST   /api/v1/users/me/profile
 DELETE /api/v1/users/me/profile
-GET    /api/v1/users/me/scraps
 ```
 
 역할:
 
 - 내 계정 정보 조회/수정
 - 추천 개인화를 위한 프로필 조회/수정
-- 내가 스크랩한 레시피 목록 조회
 
 현재 인증 연동 전까지는 임시 사용자 컨텍스트를 사용하지만, API contract는 인증된 사용자 기준으로 설계한다.
 
@@ -71,6 +69,7 @@ DELETE /api/v1/users/me/profile
 
 ```text
 GET    /api/v1/recipes
+GET    /api/v1/recipes/scraps
 GET    /api/v1/recipes/{recipe_id}
 POST   /api/v1/recipes/{recipe_id}/likes
 DELETE /api/v1/recipes/{recipe_id}/likes
@@ -84,18 +83,21 @@ List query:
 - `limit`
 - `sort=latest|likes|scraps`
 
+`GET /api/v1/recipes/scraps`는 현재 사용자가 스크랩한 레시피만 반환한다.
+정렬은 스크랩한 최신순이며 커서는 `created_at DESC, scrap_id DESC` 순서를 기준으로 한다.
+
 Detail response는 화면에 필요한 값을 한 번에 제공한다.
 
 - 기본 레시피 정보 (`title`, `description`, `summary`, `servings`, `cooking_time_minutes`, `kcal_per_serving`, `difficulty`)
-- 재료 (`ingredients`: IngredientItem 목록)
-- 조리 단계 (`steps`: RecipeStepResponse 목록 — `step_no`, `instruction`, `source_image_url`, `tip` 포함)
+- 재료 (`ingredients`: `group_name`, `name`, `amount_text`, `quantity`, `unit`, `note`, `raw_text`, `is_optional`)
+- 조리 단계 (`steps`: RecipeStepResponse 목록 — `step_no`, `instruction`, `image_url`, `tip` 포함)
 - 카테고리/태그/팁 (`category`, `tags`, `tips`)
-- 미디어 (`video_url`, `image_url`, `source_main_image_url`)
+- 원본 대표 이미지 (`main_image_url`)
 - 좋아요/스크랩 상태
 - 통계
 - 출처 표시 정보 (`source_url`, SOURCE 타입 레시피의 상세 provenance는 `source_id`로 `recipe_sources` JOIN)
 
-이미지는 `recipes` 본문 컬럼이 아니라 `recipe_media`에서 `MAIN`, `THUMBNAIL` 역할을 조회해 응답한다.
+목록 응답은 카드 렌더링용으로 `description`, `ingredients`, `steps`, `tips`, `source_url`을 제외하고 `category`, `tags`, `main_image_url`을 포함한다.
 
 ## Chat
 
@@ -127,7 +129,81 @@ POST   /api/v1/user-recipes
 DELETE /api/v1/user-recipes/{user_recipe_id}
 ```
 
-사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `user_recipes`에 저장한다. 요청 본문은 `title`(필수)과 `submission_text`(필수)를 받는다. 관리자 검수 단계에서 구조화된 본문, 재료, 조리 단계, 라벨, 영양 정보를 `user_recipe_*` 테이블에 저장한다. 사용자가 삭제하면 실제 삭제 대신 `is_active = false`로 바꾸어 관리자 검수 상태(`PENDING`, `APPROVED`, `REJECTED`)와 분리한다.
+사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `user_recipes`와 `user_recipe_*` 하위 테이블에 검수 가능한 구조화 초안으로 저장한다. 생성 요청은 이미지 업로드를 함께 받을 수 있도록 `multipart/form-data`를 사용한다. 사용자가 삭제하면 실제 삭제 대신 `is_active = false`로 바꾸어 관리자 검수 상태(`PENDING`, `APPROVED`, `REJECTED`)와 분리한다.
+
+```http
+POST /api/v1/user-recipes
+Content-Type: multipart/form-data
+```
+
+| 필드 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| `payload` | stringified JSON | 필수 | 구조화된 레시피 초안 |
+| `main_image` | file | 선택 | 대표 이미지 |
+| `step_images` | file[] | 선택 | 단계 이미지. 파일명 stem이 `payload.steps[].client_image_key`와 일치해야 한다. |
+
+`payload` 필수값:
+
+- `title`
+- `description`
+- `servings`
+- `cooking_time_minutes`
+- `difficulty`
+- `ingredients`
+- `steps`
+
+`payload` 예시:
+
+```json
+{
+  "title": "엄마표 김치찌개",
+  "description": "묵은지를 충분히 볶아서 깊은 맛을 내는 김치찌개입니다.",
+  "servings": 2,
+  "cooking_time_minutes": 30,
+  "kcal_per_serving": null,
+  "difficulty": "easy",
+  "source_url": null,
+  "ingredients": [
+    {
+      "group_name": "메인",
+      "name": "묵은지",
+      "amount_text": "300g",
+      "quantity": 300,
+      "unit": "g",
+      "note": "충분히 익은 것",
+      "raw_text": "묵은지 300g",
+      "is_optional": false,
+      "sort_order": 1
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "instruction": "돼지고기를 볶습니다.",
+      "tip": null,
+      "client_image_key": "step-1",
+      "sort_order": 1
+    }
+  ],
+  "labels": [
+    {
+      "label_type": "CATEGORY",
+      "label_value": "찌개",
+      "sort_order": 1
+    }
+  ]
+}
+```
+
+이미지 검증:
+
+- 허용 타입은 `image/jpeg`, `image/png`, `image/webp`다.
+- 파일당 최대 크기는 10MB다.
+- `client_image_key`가 있으면 같은 stem의 `step_images` 파일이 반드시 있어야 한다.
+- 어떤 step에도 매칭되지 않는 `step_images` 파일은 422로 거절한다.
+- 사용자 생성 API에서는 이미지 URL을 직접 받지 않는다. 서버가 S3에 업로드한 URL을 `user_recipes.source_main_image_url`, `user_recipe_steps.image_url`에 저장한다.
+
+개발 환경은 `docker-compose.dev.yml`의 MinIO를 로컬 S3로 사용한다. 기본 URL은 `http://localhost:9000`, 콘솔은 `http://localhost:9001`이다.
 
 ## Excluded From User API
 

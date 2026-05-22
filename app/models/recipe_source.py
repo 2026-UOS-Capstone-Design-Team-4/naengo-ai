@@ -62,7 +62,6 @@ class RecipeSource(Base):
         "Recipe",
         foreign_keys=[imported_recipe_id],
     )
-    image_generations = relationship("RecipeImageGeneration", back_populates="source")
 
     @property
     def status(self) -> str:
@@ -268,43 +267,3 @@ class RecipeSourceExtractedNutrition(Base):
     extraction = relationship("RecipeSourceExtraction", back_populates="nutrition")
 
 
-class RecipeImageGeneration(Base):
-    __tablename__ = "recipe_image_generations"
-
-    generation_id = Column(Integer, primary_key=True, index=True)
-    recipe_id = Column(
-        Integer,
-        ForeignKey("recipes.recipe_id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    requested_by_user_id = Column(
-        Integer,
-        ForeignKey("users.user_id", ondelete="SET NULL"),
-    )
-    source_id = Column(
-        Integer,
-        ForeignKey("recipe_sources.source_id", ondelete="SET NULL"),
-    )
-    provider = Column(String(50), nullable=False)
-    model = Column(String(100), nullable=False)
-    prompt = Column(Text, nullable=False)
-    negative_prompt = Column(Text)
-    status = Column(String(30), nullable=False, default="REQUESTED")
-    generated_media_id = Column(
-        Integer,
-        ForeignKey("recipe_media.media_id", ondelete="SET NULL"),
-    )
-    error_message = Column(Text)
-    generation_metadata = Column("metadata", JSONB, nullable=False, default=dict)
-    requested_at = Column(DateTime(timezone=True), server_default=func.now())
-    completed_at = Column(DateTime(timezone=True))
-    selected_at = Column(DateTime(timezone=True))
-    updated_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    recipe = relationship("Recipe", back_populates="image_generations")
-    source = relationship("RecipeSource", back_populates="image_generations")
-    media = relationship(
-        "RecipeMedia",
-        foreign_keys="RecipeMedia.generation_id",
-        back_populates="generation",
-    )

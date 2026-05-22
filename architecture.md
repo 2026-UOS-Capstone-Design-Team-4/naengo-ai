@@ -126,6 +126,7 @@ POST   /api/v1/chat/rooms
 POST   /api/v1/chat/rooms/{room_id}
 
 GET    /api/v1/recipes?sort=latest|likes&cursor=...&limit=20
+GET    /api/v1/recipes/scraps?cursor=...&limit=20
 GET    /api/v1/recipes/{recipe_id}
 POST   /api/v1/recipes/{recipe_id}/likes
 DELETE /api/v1/recipes/{recipe_id}/likes
@@ -137,7 +138,6 @@ PATCH  /api/v1/users/me
 GET    /api/v1/users/me/profile
 POST   /api/v1/users/me/profile
 DELETE /api/v1/users/me/profile
-GET    /api/v1/users/me/scraps?cursor=...&limit=20
 
 GET    /api/v1/user-recipes
 GET    /api/v1/user-recipes/{user_recipe_id}

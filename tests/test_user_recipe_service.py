@@ -7,6 +7,8 @@ from app.models.user import User, UserProfile  # noqa: F401
 from app.schemas.user_recipe import UserRecipeAdminUpdate, UserRecipeCreate
 from app.services.user_recipe_service import (
     UserRecipeActiveDeleteError,
+    UserRecipeImageUpload,
+    UserRecipeImageValidationError,
     UserRecipeService,
 )
 
@@ -29,6 +31,8 @@ class FakeDb:
         for item in self.added:
             if isinstance(item, Recipe):
                 item.recipe_id = 123
+            if isinstance(item, UserRecipe):
+                item.user_recipe_id = 456
 
     def refresh(self, item):
         self.refreshed = item
@@ -57,12 +61,20 @@ class FakeCreateDb(FakeDb):
         return FakeUserQuery(self.user)
 
 
+class FakeImageStorage:
+    def __init__(self):
+        self.uploads = []
+
+    def upload_bytes(self, data: bytes, key: str, content_type: str) -> str:
+        self.uploads.append((data, key, content_type))
+        return f"https://storage.local/{key}"
+
+
 def make_user_recipe(**overrides) -> UserRecipe:
     values = {
         "user_recipe_id": 1,
         "user_id": 7,
         "title": "Kimchi tofu stew",
-        "submission_text": "I cooked kimchi with tofu.",
         "description": "Spicy kimchi tofu stew.",
         "servings": 2,
         "cooking_time_minutes": 20,
@@ -75,44 +87,167 @@ def make_user_recipe(**overrides) -> UserRecipe:
     return UserRecipe(**values)
 
 
-def test_create_user_recipe_stores_title_and_submission_text():
+def test_create_user_recipe_stores_structured_payload():
     db = FakeCreateDb(User(user_id=7, username="u@example.com", nickname="user"))
     service = UserRecipeService(db)
 
     result = service.create_user_recipe(
         UserRecipeCreate(
             title="엄마 김치찌개",
-            submission_text="묵은지로 끓인 진한 김치찌개입니다.",
+            description="묵은지로 끓인 진한 김치찌개입니다.",
+            servings=2,
+            cooking_time_minutes=25,
+            difficulty="easy",
+            ingredients=[{"name": "묵은지", "amount_text": "300g"}],
+            steps=[{"step_no": 1, "instruction": "묵은지를 볶습니다."}],
         ),
         user_id=7,
     )
 
     assert result is db.added[0]
     assert result.title == "엄마 김치찌개"
-    assert result.submission_text == "묵은지로 끓인 진한 김치찌개입니다."
-    assert result.ingredients == []
-    assert result.steps == []
+    assert result.description == "묵은지로 끓인 진한 김치찌개입니다."
+    assert result.ingredients[0].name == "묵은지"
+    assert result.steps[0].instruction == "묵은지를 볶습니다."
+    assert db.flushed is True
     assert db.committed is True
     assert db.refreshed is result
+
+
+def test_create_user_recipe_uploads_main_and_step_images():
+    db = FakeCreateDb(User(user_id=7, username="u@example.com", nickname="user"))
+    storage = FakeImageStorage()
+    service = UserRecipeService(db, image_storage=storage)
+
+    result = service.create_user_recipe(
+        UserRecipeCreate(
+            title="엄마 김치찌개",
+            description="묵은지 김치찌개",
+            servings=2,
+            cooking_time_minutes=25,
+            difficulty="easy",
+            ingredients=[{"name": "묵은지"}],
+            steps=[
+                {
+                    "step_no": 1,
+                    "instruction": "묵은지를 볶습니다.",
+                    "client_image_key": "step-1",
+                }
+            ],
+        ),
+        user_id=7,
+        main_image=UserRecipeImageUpload(
+            filename="main.jpg",
+            content_type="image/jpeg",
+            data=b"main",
+        ),
+        step_images=[
+            UserRecipeImageUpload(
+                filename="step-1.png",
+                content_type="image/png",
+                data=b"step",
+            )
+        ],
+    )
+
+    assert result.source_main_image_url.startswith(
+        "https://storage.local/user-recipes/7/456/main/",
+    )
+    assert result.steps[0].image_url.startswith(
+        "https://storage.local/user-recipes/7/456/steps/1/",
+    )
+    assert len(storage.uploads) == 2
+
+
+def test_create_user_recipe_rejects_unmatched_step_image():
+    db = FakeCreateDb(User(user_id=7, username="u@example.com", nickname="user"))
+    service = UserRecipeService(db, image_storage=FakeImageStorage())
+
+    try:
+        service.create_user_recipe(
+            UserRecipeCreate(
+                title="엄마 김치찌개",
+                description="묵은지 김치찌개",
+                servings=2,
+                cooking_time_minutes=25,
+                difficulty="easy",
+                ingredients=[{"name": "묵은지"}],
+                steps=[{"step_no": 1, "instruction": "묵은지를 볶습니다."}],
+            ),
+            user_id=7,
+            step_images=[
+                UserRecipeImageUpload(
+                    filename="step-1.png",
+                    content_type="image/png",
+                    data=b"step",
+                )
+            ],
+        )
+    except UserRecipeImageValidationError as exc:
+        assert "Unmatched step images: step-1" in str(exc)
+    else:
+        raise AssertionError("Expected unmatched step image to be rejected.")
+
+
+def test_create_user_recipe_rejects_missing_step_image():
+    db = FakeCreateDb(User(user_id=7, username="u@example.com", nickname="user"))
+    service = UserRecipeService(db, image_storage=FakeImageStorage())
+
+    try:
+        service.create_user_recipe(
+            UserRecipeCreate(
+                title="엄마 김치찌개",
+                description="묵은지 김치찌개",
+                servings=2,
+                cooking_time_minutes=25,
+                difficulty="easy",
+                ingredients=[{"name": "묵은지"}],
+                steps=[
+                    {
+                        "step_no": 1,
+                        "instruction": "묵은지를 볶습니다.",
+                        "client_image_key": "step-1",
+                    }
+                ],
+            ),
+            user_id=7,
+        )
+    except UserRecipeImageValidationError as exc:
+        assert "Missing step images: step-1" in str(exc)
+    else:
+        raise AssertionError("Expected missing step image to be rejected.")
 
 
 def test_user_recipe_create_rejects_server_managed_fields():
     try:
         UserRecipeCreate(
-            submission_text="김치찌개를 만들었어요.",
+            title="김치찌개",
+            description="김치찌개를 만들었어요.",
+            servings=2,
+            cooking_time_minutes=20,
+            difficulty="easy",
             ingredients=[{"name": "김치"}],
+            steps=[{"step_no": 1, "instruction": "끓입니다."}],
+            status="APPROVED",
         )
     except ValidationError as exc:
         error_locations = {tuple(error["loc"]) for error in exc.errors()}
     else:
         raise AssertionError("Expected server-managed fields to be rejected.")
 
-    assert ("ingredients",) in error_locations
+    assert ("status",) in error_locations
 
 
 def test_user_recipe_create_requires_title():
     try:
-        UserRecipeCreate(submission_text="묵은지로 끓인 찌개입니다.")
+        UserRecipeCreate(
+            description="묵은지로 끓인 찌개입니다.",
+            servings=2,
+            cooking_time_minutes=20,
+            difficulty="easy",
+            ingredients=[{"name": "김치"}],
+            steps=[{"step_no": 1, "instruction": "끓입니다."}],
+        )
     except ValidationError as exc:
         error_locations = {tuple(e["loc"]) for e in exc.errors()}
     else:

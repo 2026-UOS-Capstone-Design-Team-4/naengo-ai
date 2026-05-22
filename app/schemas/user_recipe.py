@@ -11,7 +11,48 @@ class UserRecipeCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str = Field(min_length=1, max_length=255)
-    submission_text: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    servings: float = Field(gt=0)
+    cooking_time_minutes: int = Field(gt=0)
+    kcal_per_serving: int | None = Field(default=None, ge=0)
+    difficulty: Literal["easy", "normal", "hard"]
+    source_url: str | None = None
+    ingredients: list["UserRecipeIngredientCreate"] = Field(min_length=1)
+    steps: list["UserRecipeStepCreate"] = Field(min_length=1)
+    labels: list["UserRecipeLabelCreate"] = Field(default_factory=list)
+
+
+class UserRecipeIngredientCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    group_name: str | None = None
+    name: str = Field(min_length=1, max_length=100)
+    normalized_name: str | None = None
+    amount_text: str | None = None
+    quantity: float | None = None
+    unit: str | None = None
+    note: str | None = None
+    raw_text: str | None = None
+    is_optional: bool = False
+    sort_order: int = 0
+
+
+class UserRecipeStepCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    step_no: int = Field(gt=0)
+    instruction: str = Field(min_length=1)
+    client_image_key: str | None = None
+    tip: str | None = None
+    sort_order: int = 0
+
+
+class UserRecipeLabelCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label_type: Literal["TAG", "TIP", "CATEGORY", "WARNING", "OCCASION", "SEASON"]
+    label_value: str = Field(min_length=1)
+    sort_order: int = 0
 
 
 class UserRecipeIngredientSchema(BaseModel):
@@ -36,7 +77,7 @@ class UserRecipeStepSchema(BaseModel):
     user_recipe_step_id: int | None = None
     step_no: int
     instruction: str
-    source_image_url: str | None = None
+    image_url: str | None = None
     tip: str | None = None
     sort_order: int = 0
 
@@ -70,7 +111,6 @@ class UserRecipeResponse(BaseModel):
     user_recipe_id: int
     user_id: int
     title: str
-    submission_text: str
     description: str | None = None
     servings: float | None = None
     yield_quantity: float | None = None
@@ -78,7 +118,7 @@ class UserRecipeResponse(BaseModel):
     cooking_time_minutes: int | None = None
     kcal_per_serving: int | None = None
     difficulty: str | None = None
-    video_url: str | None = None
+    source_url: str | None = None
     source_main_image_url: str | None = None
     ingredients: list[UserRecipeIngredientSchema] = []
     steps: list[UserRecipeStepSchema] = []
@@ -106,7 +146,6 @@ class UserRecipeAdminUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str | None = None
-    submission_text: str | None = None
     description: str | None = None
     servings: float | None = None
     yield_quantity: float | None = None
@@ -114,7 +153,7 @@ class UserRecipeAdminUpdate(BaseModel):
     cooking_time_minutes: int | None = None
     kcal_per_serving: int | None = None
     difficulty: str | None = None
-    video_url: str | None = None
+    source_url: str | None = None
     source_main_image_url: str | None = None
     ingredients: list[UserRecipeIngredientSchema] | None = None
     steps: list[UserRecipeStepSchema] | None = None

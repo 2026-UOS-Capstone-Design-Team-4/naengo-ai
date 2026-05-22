@@ -1,6 +1,9 @@
 import base64
 import binascii
 import json
+import mimetypes
+import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -18,6 +21,10 @@ from app.schemas.user_recipe import (
     UserRecipeAdminUpdate,
     UserRecipeCreate,
 )
+from app.services.storage_service import ChatImageStorage, user_recipe_image_storage
+
+ALLOWED_USER_RECIPE_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MAX_USER_RECIPE_IMAGE_BYTES = 10 * 1024 * 1024
 
 
 class UserRecipeInvalidCursorError(ValueError):
@@ -28,9 +35,25 @@ class UserRecipeActiveDeleteError(ValueError):
     pass
 
 
+class UserRecipeImageValidationError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class UserRecipeImageUpload:
+    filename: str
+    content_type: str
+    data: bytes
+
+
 class UserRecipeService:
-    def __init__(self, db: Session):
+    def __init__(
+        self,
+        db: Session,
+        image_storage: ChatImageStorage = user_recipe_image_storage,
+    ):
         self.db = db
+        self.image_storage = image_storage
 
     def get_user_recipes(self, user_id: int) -> list[UserRecipe]:
         return (
@@ -78,10 +101,7 @@ class UserRecipeService:
             query = query.filter(UserRecipe.user_id == user_id)
         if q:
             like_q = f"%{q}%"
-            query = query.filter(
-                UserRecipe.title.ilike(like_q)
-                | UserRecipe.submission_text.ilike(like_q)
-            )
+            query = query.filter(UserRecipe.title.ilike(like_q))
         if cursor_id is not None:
             query = query.filter(UserRecipe.user_recipe_id < cursor_id)
 
@@ -124,20 +144,98 @@ class UserRecipeService:
         self,
         body: UserRecipeCreate,
         user_id: int,
+        *,
+        main_image: UserRecipeImageUpload | None = None,
+        step_images: list[UserRecipeImageUpload] | None = None,
     ) -> UserRecipe | None:
         user = self.db.query(User).filter(User.user_id == user_id).first()
         if not user:
             return None
 
+        step_image_map = _build_step_image_map(step_images or [])
+        expected_step_image_keys = {
+            step.client_image_key for step in body.steps if step.client_image_key
+        }
+        extra_image_keys = set(step_image_map) - expected_step_image_keys
+        missing_image_keys = expected_step_image_keys - set(step_image_map)
+        if extra_image_keys:
+            raise UserRecipeImageValidationError(
+                f"Unmatched step images: {', '.join(sorted(extra_image_keys))}",
+            )
+        if missing_image_keys:
+            raise UserRecipeImageValidationError(
+                f"Missing step images: {', '.join(sorted(missing_image_keys))}",
+            )
+
         recipe = UserRecipe(
             user_id=user_id,
             title=body.title,
-            submission_text=body.submission_text,
+            description=body.description,
+            servings=body.servings,
+            cooking_time_minutes=body.cooking_time_minutes,
+            kcal_per_serving=body.kcal_per_serving,
+            difficulty=body.difficulty,
+            source_url=body.source_url,
         )
         self.db.add(recipe)
+        self.db.flush()
+
+        if main_image is not None:
+            recipe.source_main_image_url = self._upload_image(
+                main_image,
+                _image_key(
+                    user_id,
+                    recipe.user_recipe_id,
+                    "main",
+                    main_image.filename,
+                ),
+            )
+
+        recipe.ingredients = [
+            UserRecipeIngredient(**item.model_dump(exclude_unset=True))
+            for item in body.ingredients
+        ]
+        recipe.steps = [
+            UserRecipeStep(
+                step_no=step.step_no,
+                instruction=step.instruction,
+                image_url=(
+                    self._upload_image(
+                        step_image_map[step.client_image_key],
+                        _image_key(
+                            user_id,
+                            recipe.user_recipe_id,
+                            f"steps/{step.step_no}",
+                            step_image_map[step.client_image_key].filename,
+                        ),
+                    )
+                    if step.client_image_key
+                    else None
+                ),
+                tip=step.tip,
+                sort_order=step.sort_order,
+            )
+            for step in body.steps
+        ]
+        recipe.labels = [
+            UserRecipeLabel(
+                label_type=item.label_type,
+                label_value=item.label_value,
+                source="ADMIN",
+                sort_order=item.sort_order,
+            )
+            for item in body.labels
+        ]
         self.db.commit()
         self.db.refresh(recipe)
         return recipe
+
+    def _upload_image(self, image: UserRecipeImageUpload, key: str) -> str:
+        _validate_image(image)
+        url = self.image_storage.upload_bytes(image.data, key, image.content_type)
+        if url is None:
+            raise UserRecipeImageValidationError("Image storage is not configured.")
+        return url
 
     def delete_user_recipe(
         self,
@@ -173,7 +271,7 @@ class UserRecipeService:
         if not recipe:
             return None
 
-        direct_fields = ["title", "submission_text"]
+        direct_fields = ["title"]
         for field in direct_fields:
             value = getattr(body, field)
             if value is not None:
@@ -187,7 +285,7 @@ class UserRecipeService:
             "cooking_time_minutes",
             "kcal_per_serving",
             "difficulty",
-            "video_url",
+            "source_url",
             "source_main_image_url",
             "rejection_reason",
         ]
@@ -252,12 +350,49 @@ def _build_admin_user_recipe_cursor(user_recipe_id: int) -> str:
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
 
-def _build_user_recipe_title(submission_text: str) -> str:
-    for line in submission_text.splitlines():
-        title = line.strip()
-        if title:
-            return title[:255]
-    return "사용자 제출 레시피"
+def _validate_image(image: UserRecipeImageUpload) -> None:
+    if image.content_type not in ALLOWED_USER_RECIPE_IMAGE_TYPES:
+        raise UserRecipeImageValidationError("Unsupported image content type.")
+    if len(image.data) > MAX_USER_RECIPE_IMAGE_BYTES:
+        raise UserRecipeImageValidationError("Image file is too large.")
+    if not image.data:
+        raise UserRecipeImageValidationError("Image file is empty.")
+
+
+def _build_step_image_map(
+    images: list[UserRecipeImageUpload],
+) -> dict[str, UserRecipeImageUpload]:
+    result: dict[str, UserRecipeImageUpload] = {}
+    for image in images:
+        key = _client_image_key_from_filename(image.filename)
+        if key in result:
+            raise UserRecipeImageValidationError(f"Duplicate step image key: {key}")
+        result[key] = image
+    return result
+
+
+def _client_image_key_from_filename(filename: str) -> str:
+    stem = filename.rsplit("/", maxsplit=1)[-1].rsplit("\\", maxsplit=1)[-1]
+    return stem.rsplit(".", maxsplit=1)[0]
+
+
+def _image_key(user_id: int, user_recipe_id: int, scope: str, filename: str) -> str:
+    extension = _image_extension(filename)
+    return (
+        f"user-recipes/{user_id}/{user_recipe_id}/{scope}/"
+        f"{uuid.uuid4().hex}{extension}"
+    )
+
+
+def _image_extension(filename: str) -> str:
+    content_type, _ = mimetypes.guess_type(filename)
+    guess = mimetypes.guess_extension(content_type or "")
+    if guess in {".jpg", ".jpeg", ".png", ".webp"}:
+        return ".jpg" if guess == ".jpeg" else guess
+    suffix = filename.rsplit(".", maxsplit=1)
+    if len(suffix) == 2 and suffix[1].lower() in {"jpg", "jpeg", "png", "webp"}:
+        return f".{suffix[1].lower()}".replace(".jpeg", ".jpg")
+    return ".bin"
 
 
 def _parse_admin_user_recipe_cursor(cursor: str) -> int:

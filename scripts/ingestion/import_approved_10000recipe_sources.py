@@ -52,8 +52,8 @@ def main() -> None:
     parser.add_argument(
         "--workers",
         type=int,
-        default=1,
-        help="동시에 import할 source 수입니다. 기본값 1은 기존처럼 순차 실행합니다.",
+        default=10,
+        help="동시에 import할 source 수입니다.",
     )
     args = parser.parse_args()
     workers = max(1, args.workers)

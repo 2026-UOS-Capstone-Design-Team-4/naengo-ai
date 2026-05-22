@@ -30,7 +30,7 @@ GET_ADMIN_USER_RECIPES_DESCRIPTION = r"""
 - `status`: 제출 레시피 검수 상태입니다. `PENDING`, `APPROVED`, `REJECTED`
 - `is_active`: 사용자 삭제 여부를 포함한 활성 상태입니다.
 - `user_id`: 특정 사용자가 제출한 레시피만 조회합니다.
-- `q`: 제목과 원문(`submission_text`)에서 부분 검색합니다.
+- `q`: 제목에서 부분 검색합니다.
 
 **페이지네이션**
 
@@ -50,8 +50,7 @@ GET_ADMIN_USER_RECIPE_SUMMARY = "[관리자] 제출 레시피 상세 조회"
 GET_ADMIN_USER_RECIPE_DESCRIPTION = r"""
 관리자가 사용자가 제출한 레시피 하나를 조회합니다.
 
-원문(`submission_text`), 구조화된 검수 필드, 재료/조리단계/라벨/영양 정보,
-검수 결과를 함께 반환합니다.
+구조화된 검수 필드, 재료/조리단계/라벨/영양 정보, 검수 결과를 함께 반환합니다.
 """
 
 PATCH_ADMIN_USER_RECIPE_SUMMARY = "[관리자] 제출 레시피 상태 수정"

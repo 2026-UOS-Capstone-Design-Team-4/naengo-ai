@@ -1,31 +1,20 @@
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
-
-
-def _to_str(v: object) -> str:
-    return str(v) if not isinstance(v, str) else v
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class IngredientItem(BaseModel):
-    name: str
-    amount: Annotated[str, BeforeValidator(_to_str)]
-    unit: str
-    type: str
-    note: str | None = ""
-
-
-class RecipeNutritionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    serving_weight_grams: float | None = None
-    kcal_per_serving: int | None = None
-    carbohydrate_grams: float | None = None
-    protein_grams: float | None = None
-    fat_grams: float | None = None
-    sodium_milligrams: float | None = None
-    source: Literal["SOURCE", "RULE", "AI", "ADMIN"] = "SOURCE"
+    group_name: str | None = None
+    name: str
+    amount_text: str | None = None
+    quantity: float | None = None
+    unit: str | None = None
+    note: str | None = None
+    raw_text: str | None = None
+    is_optional: bool = False
 
 
 class RecipeStepResponse(BaseModel):
@@ -33,7 +22,7 @@ class RecipeStepResponse(BaseModel):
 
     step_no: int
     instruction: str
-    source_image_url: str | None = None
+    image_url: str | None = None
     tip: str | None = None
 
 
@@ -41,24 +30,13 @@ class RecipeBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     title: str
-    description: str
-    ingredients: list[IngredientItem] = []
-    ingredients_raw: str
-    steps: list[RecipeStepResponse] = []
     servings: float
-    yield_quantity: float | None = None
-    yield_unit: str | None = None
     cooking_time_minutes: int
     kcal_per_serving: int | None = None
-    nutrition: RecipeNutritionResponse | None = None
     difficulty: Literal["easy", "normal", "hard"]
     category: list[str] = []
     tags: list[str] = []
-    tips: list[str] = []
-    video_url: str | None = None
-    image_url: str | None = None
-    source_url: str | None = None
-    source_main_image_url: str | None = None
+    main_image_url: str | None = None
 
 
 class RecipeSchema(RecipeBase):
@@ -66,23 +44,37 @@ class RecipeSchema(RecipeBase):
     author_type: Literal["ADMIN", "USER", "SOURCE"] = "ADMIN"
 
 
-class RecipeResponse(RecipeBase):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-    id: int = Field(validation_alias="recipe_id")
-    author_type: Literal["ADMIN", "USER", "SOURCE"]
-
-
 class RecipeListItemResponse(RecipeBase):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: int = Field(validation_alias="recipe_id")
+    summary: str | None = None
+    created_at: datetime | None = None
+    likes_count: int = 0
+    scrap_count: int = 0
+    is_liked: bool = False
+    is_scrapped: bool = False
+
+
+class RecipeDetailResponse(RecipeBase):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: int = Field(validation_alias="recipe_id")
+    summary: str | None = None
+    description: str
+    ingredients: list[IngredientItem] = []
+    steps: list[RecipeStepResponse] = []
+    tips: list[str] = []
+    source_url: str | None = None
     author_type: Literal["ADMIN", "USER", "SOURCE"]
     created_at: datetime | None = None
     likes_count: int = 0
     scrap_count: int = 0
     is_liked: bool = False
     is_scrapped: bool = False
+
+
+RecipeResponse = RecipeDetailResponse
 
 
 class RecipeListResponse(BaseModel):

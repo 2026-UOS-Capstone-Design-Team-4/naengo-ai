@@ -1,6 +1,5 @@
 from app.api.v1.openapi.errors import VALIDATION_ERROR_RESPONSE, error_response
 from app.api.v1.openapi.examples import (
-    RECIPE_LIST_RESPONSE_EXAMPLE,
     USER_EXAMPLE,
     USER_PROFILE_EXAMPLE,
 )
@@ -117,20 +116,5 @@ DELETE_MY_PROFILE_USER_INPUT_RESPONSES = {
         "content": {"application/json": {"example": USER_PROFILE_EXAMPLE}},
     },
     404: PROFILE_NOT_FOUND_RESPONSE,
-    422: VALIDATION_ERROR_RESPONSE,
-}
-
-GET_MY_SCRAPS_SUMMARY = "내 스크랩 레시피 조회"
-GET_MY_SCRAPS_DESCRIPTION = r"""
-내가 스크랩한 레시피 목록을 커서 기반 페이지네이션으로 반환합니다.
-
-응답의 각 레시피에는 `is_scrapped = true`가 포함됩니다.
-"""
-
-GET_MY_SCRAPS_RESPONSES = {
-    200: {
-        "description": "스크랩한 레시피 목록",
-        "content": {"application/json": {"example": RECIPE_LIST_RESPONSE_EXAMPLE}},
-    },
     422: VALIDATION_ERROR_RESPONSE,
 }

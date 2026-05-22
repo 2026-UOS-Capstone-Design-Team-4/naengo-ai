@@ -29,7 +29,8 @@ class Recipe(Base):
         ForeignKey("recipe_sources.source_id", ondelete="SET NULL"),
     )
     source_url = Column(String(1024))
-    source_main_image_url = Column(String(1024))
+    main_image_url = Column(String(1024))
+    ai_main_image_url = Column(String(1024))
     title = Column(String(255), nullable=False)
     summary = Column(Text)
     description = Column(Text, nullable=False)
@@ -91,14 +92,6 @@ class Recipe(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
-    media = relationship(
-        "RecipeMedia",
-        back_populates="recipe",
-        order_by="RecipeMedia.sort_order",
-        cascade="all, delete-orphan",
-        foreign_keys="RecipeMedia.recipe_id",
-    )
-    image_generations = relationship("RecipeImageGeneration", back_populates="recipe")
     embeddings = relationship(
         "RecipeEmbedding",
         back_populates="recipe",
@@ -118,11 +111,14 @@ class Recipe(Base):
     def ingredients(self) -> list[dict]:
         return [
             {
+                "group_name": item.group_name,
                 "name": item.name,
-                "amount": item.amount_text,
-                "unit": item.unit or "",
-                "type": item.group_name or "",
+                "amount_text": item.amount_text,
+                "quantity": item.quantity,
+                "unit": item.unit,
                 "note": item.note,
+                "raw_text": item.raw_text,
+                "is_optional": item.is_optional,
             }
             for item in self.ingredients_list
         ]
@@ -203,52 +199,8 @@ class Recipe(Base):
         self._replace_labels("TIP", value or [])
 
     @property
-    def video_url(self) -> str | None:
-        media = next((item for item in self.media if item.media_type == "VIDEO"), None)
-        return media.storage_url if media else None
-
-    @video_url.setter
-    def video_url(self, value: str | None) -> None:
-        if value:
-            self.media.append(
-                RecipeMedia(media_type="VIDEO", source_url=value, storage_url=value)
-            )
-
-    @property
     def image_url(self) -> str | None:
-        media = next(
-            (
-                item
-                for item in self.media
-                if item.media_type == "IMAGE"
-                and item.image_role == "MAIN"
-                and item.is_primary
-            ),
-            None,
-        )
-        if media is None:
-            media = next(
-                (
-                    item
-                    for item in self.media
-                    if item.media_type == "IMAGE" and item.image_role == "MAIN"
-                ),
-                None,
-            )
-        return media.storage_url if media else None
-
-    @image_url.setter
-    def image_url(self, value: str | None) -> None:
-        if value:
-            self.media.append(
-                RecipeMedia(
-                    media_type="IMAGE",
-                    image_role="MAIN",
-                    source_url=value,
-                    storage_url=value,
-                    is_primary=True,
-                )
-            )
+        return self.ai_main_image_url or self.main_image_url
 
     @property
     def embedding(self) -> list[float] | None:
@@ -330,12 +282,12 @@ class RecipeStep(Base):
     )
     step_no = Column(Integer, nullable=False)
     instruction = Column(Text, nullable=False)
-    source_image_url = Column(String(1024))
+    image_url = Column(String(1024))
+    ai_image_url = Column(String(1024))
     tip = Column(Text)
     sort_order = Column(Integer, nullable=False, default=0)
 
     recipe = relationship("Recipe", back_populates="steps")
-    media = relationship("RecipeMedia", back_populates="step")
 
 
 class RecipeLabel(Base):
@@ -406,47 +358,6 @@ class RecipeClassification(Base):
     recipe = relationship("Recipe", back_populates="classifications")
 
 
-class RecipeMedia(Base):
-    __tablename__ = "recipe_media"
-
-    media_id = Column(Integer, primary_key=True)
-    recipe_id = Column(
-        Integer,
-        ForeignKey("recipes.recipe_id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    step_id = Column(Integer, ForeignKey("recipe_steps.step_id", ondelete="CASCADE"))
-    media_type = Column(String(20), nullable=False)
-    image_role = Column(String(30))
-    source_url = Column(String(1024))
-    storage_url = Column(String(1024), nullable=False)
-    thumbnail_url = Column(String(1024))
-    width = Column(Integer)
-    height = Column(Integer)
-    file_size_bytes = Column(Integer)
-    mime_type = Column(String(100))
-    storage_provider = Column(String(30), nullable=False, default="S3")
-    generation_id = Column(
-        Integer,
-        ForeignKey("recipe_image_generations.generation_id", ondelete="SET NULL"),
-    )
-    is_primary = Column(BOOLEAN, nullable=False, default=False)
-    sort_order = Column(Integer, nullable=False, default=0)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    recipe = relationship(
-        "Recipe",
-        back_populates="media",
-        foreign_keys=[recipe_id],
-    )
-    step = relationship("RecipeStep", back_populates="media")
-    generation = relationship(
-        "RecipeImageGeneration",
-        foreign_keys=[generation_id],
-        back_populates="media",
-    )
-
-
 class RecipeEmbedding(Base):
     __tablename__ = "recipe_embeddings"
 
@@ -475,7 +386,6 @@ class UserRecipe(Base):
         nullable=False,
     )
     title = Column(String(255), nullable=False)
-    submission_text = Column(Text, nullable=False)
     description = Column(Text)
     servings = Column(Numeric(4, 1))
     yield_quantity = Column(Numeric(10, 2))
@@ -483,7 +393,7 @@ class UserRecipe(Base):
     cooking_time_minutes = Column(Integer)
     kcal_per_serving = Column(Integer)
     difficulty = Column(String(10))
-    video_url = Column(String(1024))
+    source_url = Column(String(1024))
     source_main_image_url = Column(String(1024))
     status = Column(String(20), nullable=False, default="PENDING")
     import_status = Column(String(30), nullable=False, default="NOT_IMPORTED")
@@ -565,7 +475,7 @@ class UserRecipeStep(Base):
     )
     step_no = Column(Integer, nullable=False)
     instruction = Column(Text, nullable=False)
-    source_image_url = Column(String(1024))
+    image_url = Column(String(1024))
     tip = Column(Text)
     sort_order = Column(Integer, nullable=False, default=0)
 

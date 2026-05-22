@@ -50,14 +50,65 @@ POST_USER_RECIPE_DESCRIPTION = r"""
 
 제출 레시피는 `PENDING` 상태로 저장되고 관리자가 검수 후 승인하거나 거절합니다.
 
-**필드**:
+요청은 `multipart/form-data`입니다.
 
 | 필드 | 타입 | 필수 | 설명 |
 |------|------|------|------|
-| `title` | string | ✓ | 제출 레시피 제목 |
-| `submission_text` | string | ✓ | 사용자가 처음 제출한 원문 설명 |
+| `payload` | stringified JSON | ✓ | 구조화된 레시피 본문 |
+| `main_image` | file (`UploadFile`) |  | 대표 이미지 바이너리 |
+| `step_images` | file[] (`UploadFile[]`) |  | 단계별 이미지 바이너리. 파일명 stem이 `payload.steps[].client_image_key`와 같아야 합니다. |
 
-구조화된 검수 필드는 관리자 보정 단계에서 `user_recipes` 및 하위 테이블에 저장합니다.
+이미지 파일 규칙:
+
+- 클라이언트는 이미지를 URL이 아니라 `multipart/form-data`의 파일 파트로 전송합니다.
+- 서버는 FastAPI `UploadFile`로 파일을 받습니다.
+- 허용 MIME 타입은 `image/jpeg`, `image/png`, `image/webp`입니다.
+- 파일당 최대 크기는 10MB입니다.
+- 예: `step_images`에 `step-1.png`를 보내면 `payload.steps[].client_image_key`는 `"step-1"`이어야 합니다.
+- `client_image_key`가 있는데 매칭 파일이 없거나, 파일은 있는데 매칭 step이 없으면 422를 반환합니다.
+
+`payload` 예시:
+
+```json
+{
+  "title": "엄마 김치찌개",
+  "description": "묵은지를 볶아 깊은 맛을 낸 김치찌개입니다.",
+  "servings": 2,
+  "cooking_time_minutes": 25,
+  "kcal_per_serving": null,
+  "difficulty": "easy",
+  "source_url": null,
+  "ingredients": [
+    {
+      "group_name": "메인",
+      "name": "묵은지",
+      "amount_text": "300g",
+      "quantity": 300,
+      "unit": "g",
+      "raw_text": "묵은지 300g",
+      "sort_order": 1
+    }
+  ],
+  "steps": [
+    {
+      "step_no": 1,
+      "instruction": "묵은지를 충분히 볶습니다.",
+      "client_image_key": "step-1",
+      "sort_order": 1
+    }
+  ],
+  "labels": [
+    {
+      "label_type": "CATEGORY",
+      "label_value": "찌개",
+      "sort_order": 1
+    }
+  ]
+}
+```
+
+대표 이미지는 `user_recipes.source_main_image_url`에, 단계 이미지는
+`user_recipe_steps.image_url`에 업로드 URL로 저장합니다.
 """
 
 POST_USER_RECIPE_RESPONSES = {

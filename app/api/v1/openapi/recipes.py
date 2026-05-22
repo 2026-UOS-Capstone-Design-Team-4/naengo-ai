@@ -76,6 +76,7 @@ GET_RECIPES_DESCRIPTION = r"""
 `400 INVALID_CURSOR`를 반환합니다.
 
 응답의 각 레시피에는 현재 사용자 기준 `is_liked`, `is_scrapped`가 포함됩니다.
+목록 응답은 카드 렌더링에 필요한 요약 필드만 포함하며, 재료/조리 단계/출처 URL은 상세 응답에서 반환합니다.
 """
 
 GET_RECIPES_RESPONSES = {
@@ -87,11 +88,40 @@ GET_RECIPES_RESPONSES = {
     422: VALIDATION_ERROR_RESPONSE,
 }
 
+GET_SCRAPPED_RECIPES_SUMMARY = "내 스크랩 레시피 조회"
+GET_SCRAPPED_RECIPES_DESCRIPTION = r"""
+현재 사용자가 스크랩한 레시피 목록을 커서 기반 페이지네이션으로 반환합니다.
+
+정렬은 스크랩한 최신순입니다. 같은 시각에 생성된 스크랩은 `scrap_id`가 큰 항목이
+먼저 옵니다.
+
+응답의 각 레시피에는 `is_scrapped = true`가 포함됩니다.
+
+**커서 형식**
+
+`next_cursor`는 클라이언트가 해석하지 않고 다음 요청의 `cursor`에 그대로 전달하는 값입니다.
+내부 payload는 다음 JSON을 base64url로 인코딩합니다.
+
+```json
+{"sort":"scraps","created_at":"2026-05-22T12:00:00+00:00","scrap_id":42,"recipe_id":7}
+```
+"""
+
+GET_SCRAPPED_RECIPES_RESPONSES = {
+    200: {
+        "description": "스크랩한 레시피 목록",
+        "content": {"application/json": {"example": RECIPE_LIST_RESPONSE_EXAMPLE}},
+    },
+    400: INVALID_CURSOR_RESPONSE,
+    422: VALIDATION_ERROR_RESPONSE,
+}
+
 GET_RECIPE_SUMMARY = "레시피 상세 조회"
 GET_RECIPE_DESCRIPTION = r"""
 레시피 ID로 상세 정보를 조회합니다.
 
 - 삭제되었거나 비활성화된 레시피는 조회할 수 없습니다.
+- 재료, 조리 단계, 팁, 출처 URL을 포함합니다.
 - 현재 사용자 기준 좋아요 여부(`is_liked`)와 스크랩 여부(`is_scrapped`)를 함께 반환합니다.
 """
 

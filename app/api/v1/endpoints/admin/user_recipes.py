@@ -55,7 +55,7 @@ def list_admin_user_recipes(
     ),
     q: str | None = Query(
         default=None,
-        description="제목과 제출 원문에서 검색할 문자열입니다.",
+        description="제목에서 검색할 문자열입니다.",
     ),
     cursor: str | None = Query(
         default=None,

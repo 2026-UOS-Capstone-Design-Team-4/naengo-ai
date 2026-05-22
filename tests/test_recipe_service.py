@@ -21,10 +21,11 @@ def make_recipe(**overrides):
     values = {
         "recipe_id": 1,
         "title": "김치두부찌개",
+        "summary": "김치와 두부로 끓이는 찌개",
         "description": "칼칼한 찌개",
-        "ingredients": [{"name": "김치", "amount": "200", "unit": "g", "type": "메인"}],
-        "ingredients_raw": "김치 200g, 두부 1모",
+        "ingredients_list": [],
         "instructions": ["김치를 볶는다.", "두부를 넣고 끓인다."],
+        "steps": [],
         "servings": 2.0,
         "cooking_time_minutes": 20,
         "kcal_per_serving": 180,
@@ -32,8 +33,8 @@ def make_recipe(**overrides):
         "category": ["한식"],
         "tags": ["얼큰한"],
         "tips": [],
-        "video_url": None,
-        "image_url": None,
+        "main_image_url": "https://example.com/source.jpg",
+        "source_url": "https://example.com/recipe",
         "author_type": "ADMIN",
         "created_at": None,
         "is_active": True,
@@ -86,6 +87,56 @@ def test_to_list_item_marks_liked_and_scrapped():
 
     assert item.is_liked is True
     assert item.is_scrapped is True
+
+
+def test_to_list_item_excludes_detail_fields():
+    service = RecipeService(None)
+    recipe = make_recipe()
+
+    item = service._to_list_item(recipe)
+    payload = item.model_dump()
+
+    assert "ingredients" not in payload
+    assert "steps" not in payload
+    assert "description" not in payload
+    assert "source_url" not in payload
+    assert "ingredients_raw" not in payload
+    assert payload["category"] == ["한식"]
+    assert payload["tags"] == ["얼큰한"]
+
+
+def test_to_detail_item_includes_structured_ingredients_with_raw_text():
+    service = RecipeService(None)
+    recipe = make_recipe(
+        ingredients_list=[
+            SimpleNamespace(
+                group_name="메인",
+                name="김치",
+                amount_text="200g",
+                quantity=200,
+                unit="g",
+                note="잘 익은 것",
+                raw_text="김치 200g",
+                is_optional=False,
+            )
+        ],
+        steps=[
+            SimpleNamespace(
+                step_no=1,
+                instruction="김치를 볶는다.",
+                image_url="https://example.com/step.jpg",
+                tip=None,
+            )
+        ],
+    )
+
+    item = service._to_detail_item(recipe)
+
+    assert item.ingredients[0].raw_text == "김치 200g"
+    assert item.ingredients[0].amount_text == "200g"
+    assert item.steps[0].image_url == "https://example.com/step.jpg"
+    assert item.source_url == "https://example.com/recipe"
+    assert item.main_image_url == "https://example.com/source.jpg"
 
 
 def test_to_list_item_not_in_sets():

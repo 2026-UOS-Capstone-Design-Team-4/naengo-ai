@@ -130,7 +130,7 @@ class S3ChatImageStorage:
 
 
 def get_storage_service() -> StorageService:
-    if STORAGE_BACKEND == "passthrough":
+    if STORAGE_BACKEND in {"passthrough", "s3"}:
         return PassthroughStorageService()
     raise ValueError(f"지원하지 않는 STORAGE_BACKEND입니다: {STORAGE_BACKEND}")
 
@@ -162,3 +162,4 @@ def get_chat_image_storage() -> ChatImageStorage:
 
 storage_service = get_storage_service()
 chat_image_storage = get_chat_image_storage()
+user_recipe_image_storage = chat_image_storage

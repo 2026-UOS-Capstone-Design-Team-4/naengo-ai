@@ -15,12 +15,8 @@ def test_build_recipe_search_embedding_text_includes_search_context():
             summary="김치와 두부로 끓이는 국물 요리",
             description="칼칼한 맛으로 먹기 좋은 찌개입니다.",
             ingredients=[
-                RecipeSearchEmbeddingIngredient(
-                    name="김치",
-                    normalized_name="배추김치",
-                    amount_text="200g",
-                ),
-                RecipeSearchEmbeddingIngredient(name="두부", amount_text="1모"),
+                RecipeSearchEmbeddingIngredient(raw_text="배추김치 200g"),
+                RecipeSearchEmbeddingIngredient(raw_text="두부 1모"),
             ],
             categories=["한식", "찌개"],
             tips=["김치는 묵은지를 사용하면 좋습니다."],
@@ -56,7 +52,7 @@ def test_create_search_embedding_uses_built_text_hash_and_vector():
         data=RecipeSearchEmbeddingInput(
             title="버섯 볶음",
             ingredients=[
-                RecipeSearchEmbeddingIngredient(name="버섯", amount_text="100g")
+                RecipeSearchEmbeddingIngredient(raw_text="버섯 100g")
             ],
         ),
     )
