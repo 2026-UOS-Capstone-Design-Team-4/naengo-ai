@@ -130,7 +130,6 @@ class AdminRecipeService:
                 selectinload(Recipe.ingredients_list),
                 selectinload(Recipe.steps),
                 selectinload(Recipe.labels),
-                selectinload(Recipe.media),
                 selectinload(Recipe.embeddings),
                 joinedload(Recipe.source),
             )
