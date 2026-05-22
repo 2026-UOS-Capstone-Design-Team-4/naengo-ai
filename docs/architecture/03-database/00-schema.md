@@ -5,6 +5,7 @@
 ## Core Tables
 
 - `users`
+- `user_identities`
 - `user_profiles`
 - `recipes`
 - `recipe_nutrition`
@@ -12,8 +13,6 @@
 - `recipe_steps`
 - `recipe_labels`
 - `recipe_classifications`
-- `recipe_media`
-- `recipe_image_generations`
 - `recipe_embeddings`
 - `recipe_quality_scores`
 - `recipe_stats`
@@ -26,6 +25,7 @@
 - `chat_messages`
 - `likes`
 - `scraps`
+
 
 ## Ingestion Tables
 
@@ -54,8 +54,7 @@
 - 추천/검색 분류: `recipe_classifications`
 - 추천/검색 분류 작업 상태: `recipes.classification_status`, `recipes.classified_at`
 - 반복 label: `recipe_labels`
-- 이미지/영상: `recipe_media`
-- 이미지 생성 이력: `recipe_image_generations`
+- 이미지 URL: `recipes.source_main_image_url`, `recipe_steps.image_url`
 - 벡터 검색: `recipe_embeddings`
 
 JSONB는 원본 백업이나 구조가 자주 바뀌는 보조 metadata에 제한적으로 사용한다.
@@ -76,18 +75,24 @@ JSONB는 원본 백업이나 구조가 자주 바뀌는 보조 metadata에 제�
 `recipes.source_main_image_url`에도 복사한다. 작성자, 라이선스 등 상세 원본 정보는
 필요한 경우 `source_id`로 JOIN해 `recipe_sources`에서 직접 읽는다.
 
-## Image Generation Tables
+## User Identity
 
-`recipe_image_generations`는 AI 이미지 생성 요청과 결과 상태를 저장한다. 실제 이미지 URL과 storage metadata는 `recipe_media`에 저장한다.
+`user_identities`는 OAuth provider(KAKAO, GOOGLE, NAVER, APPLE)별 로그인 식별자를 저장한다. 한 사용자가 여러 provider로 연결될 수 있다. `users` 1:N 관계이며, `provider + provider_user_id`가 unique constraint다.
 
-원본 source 이미지 URL은 staging에만 보관한다. production import 단계에서 원본 이미지 URL을 `recipe_media`로 바로 복사하지 않는다. 서비스 노출 이미지는 생성/업로드/선택 과정을 거쳐 `recipe_media.image_role = MAIN` 또는 `THUMBNAIL`이 된 media를 사용한다.
+## Image URL Policy
+
+별도 media 테이블은 사용하지 않는다. 이미지 URL은 각 테이블의 컬럼으로 관리한다.
+
+- `recipes.source_main_image_url`: 레시피 대표 이미지 URL
+- `recipe_steps.image_url`: 조리 단계 이미지 URL
+- `recipe_source_extractions.source_main_image_url`, `source_thumbnail_url`: staging 원본 이미지 URL
+- `recipe_source_extracted_steps.source_image_url`: staging 단계 이미지 URL
 
 ## User Recipes
 
 `user_recipes`는 사용자가 제출한 레시피를 바로 `recipes`에 넣지 않고 검수 가능한 draft로 보관하는 테이블이다.
 
-- `submission_text`: 사용자가 처음 제출한 원문 설명
-- `description`, `servings`, `cooking_time_minutes`, `difficulty`: 관리자 검수 대상 구조화 본문 값
+- `title`, `description`, `servings`, `cooking_time_minutes`, `difficulty`: 관리자 검수 대상 구조화 본문 값
 - `user_recipe_ingredients`, `user_recipe_steps`, `user_recipe_labels`, `user_recipe_nutrition`: 사용자 제출 레시피의 구조화 반복 데이터
 - `status`: `PENDING`, `APPROVED`, `REJECTED`
 - `is_active`: 사용자 삭제 여부를 표현하는 soft delete flag

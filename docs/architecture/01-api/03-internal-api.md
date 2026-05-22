@@ -47,8 +47,6 @@ Internal job은 다음 실패를 재처리할 수 있다.
 - `recipe_sources.parse_status = INVALID`
 - `recipe_sources.parse_status = REVIEW_REQUIRED`
 - `recipe_sources.import_status = FAILED`
-- `recipe_image_generations.status = FAILED`
-- storage upload 실패
 - classification 생성 실패
 - embedding 생성 실패
 - live research cache 갱신 실패
@@ -57,15 +55,4 @@ Internal job은 다음 실패를 재처리할 수 있다.
 
 ## Relationship With Admin API
 
-Admin API는 사람이 누르는 action이고, Internal API는 시스템이 반복 실행하는 action이다.
-
-예시:
-
-```text
-admin calls POST /api/v1/admin/recipes/{id}/image-generations
-  -> API creates recipe_image_generations row
-  -> worker/internal job handles provider call and storage upload
-  -> recipe_media and generation status are updated
-```
-
-이 구조로 가면 관리자 화면은 빠르게 응답하고, 실패/재시도는 job 시스템에서 관리할 수 있다.
+Admin API는 사람이 누르는 action이고, Internal API는 시스템이 반복 실행하는 action이다. 오래 걸리는 작업은 Internal job으로 분리해 관리자 화면이 빠르게 응답하게 한다.

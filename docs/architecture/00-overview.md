@@ -45,12 +45,12 @@ docs/
 
 ## Current Design Notes
 
-- 레시피 source는 공공데이터와 만개의레시피를 함께 사용합니다.
+- 레시피 source는 만개의레시피를 사용합니다.
 - source 원본은 staging에 보존하고, production import 전에 Naengo 문체로 재작성합니다.
-- production import는 원본 이미지 URL을 `recipe_media`로 바로 복사하지 않습니다.
-- S3는 AI 생성 이미지 저장을 중심으로 나중에 도입합니다.
-- 관리자 UI/API는 user recipe와 production recipe 조회/검수에 사용합니다.
-- source ingestion과 대량 import는 아직 script-first로 운영합니다.
+- production import는 원본 이미지 URL을 컬럼값으로 복사하고, 별도 media 테이블은 사용하지 않습니다.
+- 관리자 UI/API는 현재 user recipe와 production recipe 조회/검수에 사용합니다.
+- source ingestion과 대량 import는 script-first로 운영합니다. recipe-sources 관리 API는 예정입니다.
+- 게스트 채팅(`/api/v1/guest/chat`)은 인증 없이 사용할 수 있는 채팅 엔드포인트입니다.
 
 ## Detailed Docs
 

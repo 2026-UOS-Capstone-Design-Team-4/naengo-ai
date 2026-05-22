@@ -36,7 +36,6 @@ external dataset / web page
 - `recipe_source_quality_scores`: staging 품질과 confidence를 기록한다. 추정한 필드, 검증 요약, source별 note를 포함한다.
 - `recipes*`: 서비스에서 직접 조회하는 production 데이터다. 승인된 extraction만 이쪽으로 이동한다.
 - `recipe_classifications`: 추천/검색/rerank용 분류 축이다. import 이후 별도 backfill로 만든다.
-- `recipe_media` / `recipe_image_generations`: 서비스 노출 이미지와 AI 생성 이력이다. 원본 source 이미지 URL은 production media로 바로 복사하지 않는다.
 
 ## Text And Metadata Policy
 
@@ -48,16 +47,16 @@ external dataset / web page
 
 ## Image Policy
 
-외부 원본 이미지 URL은 staging provenance로만 둔다.
+외부 원본 이미지 URL은 staging에 보관하고, import 시 production 컬럼으로 복사한다.
 
 ```text
 source image url
   -> recipe_source_extractions.source_main_image_url
   -> recipe_source_extracted_steps.source_image_url
-  -> production import does not create recipe_media
+  -> import: recipes.source_main_image_url, recipe_steps.image_url
 ```
 
-서비스 대표 이미지는 별도 AI 생성/선택 플로우에서 `recipe_image_generations`와 `recipe_media`로 관리한다.
+별도 media 테이블은 사용하지 않는다. 레시피 대표 이미지는 `recipes.source_main_image_url` 컬럼으로 관리한다.
 
 ## Terms
 
@@ -73,6 +72,4 @@ source image url
 - [01. Schema](01-schema.md)
 - [02. Pipeline](02-pipeline.md)
 - [03. Scraper Operations](03-scraper-operations.md)
-- [04. Image Storage](04-images.md)
-- [05. AI Image Generation](05-ai-image-generation.md)
-- [06. Classification and Confidence](06-classification-and-confidence.md)
+- [04. Classification and Confidence](06-classification-and-confidence.md)

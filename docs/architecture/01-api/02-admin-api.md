@@ -4,19 +4,6 @@ Admin API는 관리자 화면에서 사용하는 내부용 API다.
 
 ## Current Scope
 
-### Recipe Sources
-
-```text
-GET    /api/v1/admin/recipe-sources
-GET    /api/v1/admin/recipe-sources/{source_id}
-PATCH  /api/v1/admin/recipe-sources/{source_id}
-POST   /api/v1/admin/recipe-sources/{source_id}/approve
-POST   /api/v1/admin/recipe-sources/{source_id}/reject
-POST   /api/v1/admin/recipe-sources/{source_id}/import
-```
-
-`recipe_sources` 목록 조회, 승인/거절, import 트리거를 제공한다. 실제 파싱 결과 상세는 `recipe_source_extractions*` staging 테이블에 있다.
-
 ### Recipes
 
 ```text
@@ -24,7 +11,7 @@ GET    /api/v1/admin/recipes
 GET    /api/v1/admin/recipes/{recipe_id}
 ```
 
-관리자용 레시피 목록/상세 조회다. 일반 사용자 응답과 달리 재료, 조리 단계, 라벨, 영양 정보, 이미지 목록, 분류 정보를 모두 포함한다. 이미지는 `recipes` 본문 컬럼이 아니라 `recipe_media`에서 조회한다.
+관리자용 레시피 목록/상세 조회다. 일반 사용자 응답과 달리 재료, 조리 단계, 라벨, 영양 정보, 분류 정보를 모두 포함한다. 이미지는 `recipes.source_main_image_url` 컬럼으로 조회한다.
 
 source 원본 정보(URL, 작성자, 라이선스)는 `recipes.source_id`로 `recipe_sources`를 JOIN해서 반환한다.
 
@@ -52,6 +39,19 @@ DELETE /api/v1/admin/user-recipes/{user_recipe_id}
 
 ## Deferred
 
+### Recipe Sources
+
+```text
+GET    /api/v1/admin/recipe-sources
+GET    /api/v1/admin/recipe-sources/{source_id}
+PATCH  /api/v1/admin/recipe-sources/{source_id}
+POST   /api/v1/admin/recipe-sources/{source_id}/approve
+POST   /api/v1/admin/recipe-sources/{source_id}/reject
+POST   /api/v1/admin/recipe-sources/{source_id}/import
+```
+
+`recipe_sources` 목록 조회, 승인/거절, import 트리거다. 현재는 CLI 스크립트로 운영하고, 관리 화면이 필요해지면 추가한다.
+
 ### Activate / Deactivate
 
 ```text
@@ -61,17 +61,6 @@ POST   /api/v1/admin/recipes/{recipe_id}/refresh-embedding
 ```
 
 레시피 노출 상태 변경과 embedding 재생성은 예정 API다.
-
-### AI Image Generations
-
-```text
-GET    /api/v1/admin/recipes/{recipe_id}/image-generations
-POST   /api/v1/admin/recipes/{recipe_id}/image-generations
-POST   /api/v1/admin/recipes/{recipe_id}/image-generations/{generation_id}/select
-POST   /api/v1/admin/recipes/{recipe_id}/image-generations/{generation_id}/reject
-```
-
-AI 이미지 생성 결과는 `recipe_image_generations`와 `recipe_media(image_role = GENERATED_CANDIDATE)`에 보관한다. 관리자가 선택한 후보가 `MAIN` 또는 `THUMBNAIL`로 지정된다.
 
 ### User Recipe AI Enrichment
 

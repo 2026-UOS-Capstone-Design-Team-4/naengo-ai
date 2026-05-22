@@ -5,6 +5,8 @@ Naengo AI API는 사용자 기능, 관리자 기능, 내부 작업을 분리해�
 ## API Groups
 
 ```text
+/api/v1/guest/*
+
 /api/v1/users/*
 /api/v1/recipes/*
 /api/v1/chat/*
@@ -19,6 +21,7 @@ Naengo AI API는 사용자 기능, 관리자 기능, 내부 작업을 분리해�
 
 | Group | Consumer | Responsibility |
 | --- | --- | --- |
+| Guest API | 비로그인 사용자 | 인증 없이 사용할 수 있는 기능 (게스트 채팅) |
 | User API | 모바일/웹 사용자 앱 | 조회, 추천, 채팅, 좋아요, 스크랩, 사용자 제출 |
 | Admin API | 운영자 관리 화면 | 서비스 데이터 관리, user recipe 관리, 향후 source 검수와 이미지 생성 |
 | Internal API | worker, batch, scheduler | 스크래핑, import, embedding, 이미지 처리, cache refresh |
@@ -53,10 +56,9 @@ action이 필요한 경우에는 하위 action path를 사용합니다.
 
 ```text
 POST /admin/recipe-sources/{source_id}/approve
-POST /admin/recipes/{recipe_id}/image-generations/{generation_id}/select
 ```
 
-image generation admin API는 예정 scope입니다. source 검수 API(`/admin/recipe-sources/*`)는 구현되어 있습니다.
+source 검수 API(`/admin/recipe-sources/*`)는 예정 scope입니다.
 
 ## Pagination
 

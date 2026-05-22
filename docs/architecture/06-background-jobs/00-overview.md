@@ -12,8 +12,6 @@ Background job 문서는 오래 걸리거나 재시도가 필요한 작업을 �
 | production import | CLI | 수동 | `import_status`, `imported_recipe_id` |
 | classification backfill | CLI | 수동 | `recipe_classifications`, `recipe_quality_scores` |
 | embedding backfill | CLI 예정 | 수동 | `recipe_embeddings` |
-| AI image generation | Admin API/worker 예정 | 수동 또는 예약 | `recipe_image_generations.status` |
-| storage upload | image generation flow | 내부 호출 | `recipe_media` |
 
 ## Phase 1: CLI Batch
 
@@ -45,25 +43,13 @@ uv run python scripts/backfill/backfill_recipe_classifications.py --limit 300
 | parse/extraction | `recipe_sources.parse_status` |
 | review gate | `recipe_sources.review_status` |
 | production import | `recipe_sources.import_status` |
-| image generation | `recipe_image_generations.status` |
-| media availability | `recipe_media` row |
 | embedding availability | `recipe_embeddings` row |
 
 수집 실패는 보통 row를 만들지 않는다. row 생성 이후 실패는 parse/import/generation status로 표현한다.
 
 ## HTTP Trigger
 
-관리자 UI에서 즉시 요청하는 작업은 FastAPI endpoint가 요청을 받고, 실제 긴 작업은 background task 또는 worker에 넘긴다.
-
-예정 예시:
-
-```text
-POST /api/v1/admin/recipes/{recipe_id}/image-generations
-  -> create recipe_image_generations(status = REQUESTED)
-  -> enqueue generation job
-```
-
-FastAPI `BackgroundTasks`는 가벼운 초기 구현에는 쓸 수 있지만, 장시간 작업/재시도/관측성이 필요한 작업은 Phase 2 worker로 옮긴다.
+관리자 UI에서 즉시 요청하는 작업은 FastAPI endpoint가 요청을 받고, 실제 긴 작업은 background task 또는 worker에 넘긴다. FastAPI `BackgroundTasks`는 가벼운 초기 구현에는 쓸 수 있지만, 장시간 작업/재시도/관측성이 필요한 작업은 Phase 2 worker로 옮긴다.
 
 ## Phase 2: Worker Queue
 
@@ -96,8 +82,6 @@ FastAPI `BackgroundTasks`는 가벼운 초기 구현에는 쓸 수 있지만, �
 | production import | `import_status = FAILED` | 원인 수정 후 재실행 |
 | classification backfill | row 미생성 또는 낮은 confidence | backfill 재실행 |
 | embedding backfill | `recipe_embeddings` row 없음 | backfill 재실행 |
-| AI image generation | `recipe_image_generations.status = FAILED` | 새 generation 요청 |
-| storage upload | generation 실패 처리 | image generation retry |
 
 ## Future Job Table
 

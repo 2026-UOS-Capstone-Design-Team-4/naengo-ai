@@ -48,6 +48,5 @@ require_system
 
 - admin recipe source approve/reject/import
 - admin recipe patch
-- AI image generation request/select/reject
 - user recipe approve/reject
 - internal retry job

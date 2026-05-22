@@ -32,8 +32,6 @@ Naengo AI는 사용자의 보유 재료, 냉장고 사진, 취향 정보를 바�
 - [Data Ingestion Schema](docs/architecture/02-data-ingestion/01-schema.md)
 - [Data Ingestion Pipeline](docs/architecture/02-data-ingestion/02-pipeline.md)
 - [Scraper Operations](docs/architecture/02-data-ingestion/03-scraper-operations.md)
-- [Image Storage](docs/architecture/02-data-ingestion/04-images.md)
-- [AI Image Generation](docs/architecture/02-data-ingestion/05-ai-image-generation.md)
 - [Classification and Confidence](docs/architecture/02-data-ingestion/06-classification-and-confidence.md)
 - [Database Schema](docs/architecture/03-database/00-schema.md)
 - [Database Migration Strategy](docs/architecture/03-database/01-migration-strategy.md)
@@ -119,6 +117,8 @@ docs/
 ## 6. Current Public API
 
 ```text
+POST   /api/v1/guest/chat
+
 GET    /api/v1/chat/rooms
 GET    /api/v1/chat/rooms/{room_id}
 DELETE /api/v1/chat/rooms/{room_id}
@@ -147,13 +147,6 @@ DELETE /api/v1/user-recipes/{user_recipe_id}
 GET    /api/v1/admin/recipes
 GET    /api/v1/admin/recipes/{recipe_id}
 DELETE /api/v1/admin/chat-rooms/{room_id}
-
-GET    /api/v1/admin/recipe-sources
-GET    /api/v1/admin/recipe-sources/{source_id}
-PATCH  /api/v1/admin/recipe-sources/{source_id}
-POST   /api/v1/admin/recipe-sources/{source_id}/approve
-POST   /api/v1/admin/recipe-sources/{source_id}/reject
-POST   /api/v1/admin/recipe-sources/{source_id}/import
 
 GET    /api/v1/admin/user-recipes?status=...&cursor=...
 GET    /api/v1/admin/user-recipes/{user_recipe_id}

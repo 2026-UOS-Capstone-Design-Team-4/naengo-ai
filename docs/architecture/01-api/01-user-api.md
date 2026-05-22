@@ -2,6 +2,16 @@
 
 User API는 일반 사용자 앱에서 호출하는 public contract다. scraping, source import, AI image generation, embedding backfill 같은 운영 작업은 포함하지 않는다.
 
+## Guest Chat
+
+```text
+POST   /api/v1/guest/chat
+```
+
+비로그인 사용자도 사용할 수 있는 채팅 엔드포인트다. 채팅 방을 만들지 않고 요청 본문에 대화 히스토리를 직접 포함한다. 응답은 SSE 스트림으로 반환한다.
+
+인증이 없으므로 사용자 프로필 기반 개인화, 채팅 히스토리 저장, 좋아요/스크랩은 사용할 수 없다.
+
 ## Users
 
 ```text
