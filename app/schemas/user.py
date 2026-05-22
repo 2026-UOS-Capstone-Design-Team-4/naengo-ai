@@ -3,6 +3,15 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class UserIdentityResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    provider: str
+    email: str | None
+    created_at: datetime
+
+
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -12,7 +21,9 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
     is_blocked: bool
+    user_identities: list[UserIdentityResponse]
     created_at: datetime
+    updated_at: datetime
 
 
 class UserProfileResponse(BaseModel):
