@@ -460,6 +460,10 @@ class UserRecipe(Base):
     def tips(self) -> list[str]:
         return [label.label_value for label in self.labels if label.label_type == "TIP"]
 
+    @property
+    def warnings(self) -> list[str]:
+        return [label.label_value for label in self.labels if label.label_type == "WARNING"]
+
 
 class UserRecipeIngredient(Base):
     __tablename__ = "user_recipe_ingredients"

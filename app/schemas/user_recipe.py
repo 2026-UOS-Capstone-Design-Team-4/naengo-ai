@@ -116,6 +116,7 @@ class UserRecipeResponse(BaseModel):
     category: list[str] = []
     tags: list[str] = []
     tips: list[str] = []
+    warnings: list[str] = []
     ingredients: list[UserRecipeIngredientSchema] = []
     steps: list[UserRecipeStepSchema] = []
     labels: list[UserRecipeLabelSchema] = []
