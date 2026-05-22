@@ -201,7 +201,7 @@ Content-Type: multipart/form-data
 - 파일당 최대 크기는 10MB다.
 - `client_image_key`가 있으면 같은 stem의 `step_images` 파일이 반드시 있어야 한다.
 - 어떤 step에도 매칭되지 않는 `step_images` 파일은 422로 거절한다.
-- 사용자 생성 API에서는 이미지 URL을 직접 받지 않는다. 서버가 S3에 업로드한 URL을 `user_recipes.source_main_image_url`, `user_recipe_steps.image_url`에 저장한다.
+- 사용자 생성 API에서는 이미지 URL을 직접 받지 않는다. 서버가 S3에 업로드한 URL을 `user_recipes.main_image_url`, `user_recipe_steps.image_url`에 저장한다.
 
 개발 환경은 `docker-compose.dev.yml`의 MinIO를 로컬 S3로 사용한다. 기본 URL은 `http://localhost:9000`, 콘솔은 `http://localhost:9001`이다.
 
