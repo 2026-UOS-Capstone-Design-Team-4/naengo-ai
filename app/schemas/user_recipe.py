@@ -17,12 +17,12 @@ class UserRecipeCreate(BaseModel):
     kcal_per_serving: int | None = Field(default=None, ge=0)
     difficulty: Literal["easy", "normal", "hard"]
     source_url: str | None = None
-    ingredients: list["UserRecipeIngredientCreate"] = Field(min_length=1)
-    steps: list["UserRecipeStepCreate"] = Field(min_length=1)
     category: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     tips: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
+    ingredients: list["UserRecipeIngredientCreate"] = Field(min_length=1)
+    steps: list["UserRecipeStepCreate"] = Field(min_length=1)
 
 
 class UserRecipeIngredientCreate(BaseModel):
@@ -119,7 +119,6 @@ class UserRecipeResponse(BaseModel):
     warnings: list[str] = []
     ingredients: list[UserRecipeIngredientSchema] = []
     steps: list[UserRecipeStepSchema] = []
-    labels: list[UserRecipeLabelSchema] = []
     nutrition: UserRecipeNutritionSchema | None = None
     status: str
     import_status: UserRecipeImportStatus = "NOT_IMPORTED"
