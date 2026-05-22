@@ -178,7 +178,7 @@ class UserRecipeService:
         self.db.flush()
 
         if main_image is not None:
-            recipe.source_main_image_url = self._upload_image(
+            recipe.main_image_url = self._upload_image(
                 main_image,
                 _image_key(
                     user_id,
@@ -283,7 +283,7 @@ class UserRecipeService:
             "kcal_per_serving",
             "difficulty",
             "source_url",
-            "source_main_image_url",
+            "main_image_url",
             "rejection_reason",
         ]
         for field in nullable_fields:
