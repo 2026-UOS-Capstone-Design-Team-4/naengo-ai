@@ -136,6 +136,30 @@ class UserRecipeResponse(BaseModel):
     updated_at: datetime
 
 
+class UserRecipeListItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_recipe_id: int
+    user_id: int
+    title: str
+    description: str | None = None
+    servings: float | None = None
+    yield_quantity: float | None = None
+    yield_unit: str | None = None
+    cooking_time_minutes: int | None = None
+    kcal_per_serving: int | None = None
+    difficulty: str | None = None
+    source_main_image_url: str | None = None
+    category: list[str] = []
+    tags: list[str] = []
+    status: str
+    import_status: UserRecipeImportStatus = "NOT_IMPORTED"
+    is_active: bool = True
+    rejection_reason: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class UserRecipeListResponse(BaseModel):
     items: list[UserRecipeResponse]
     next_cursor: str | None
