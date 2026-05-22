@@ -1,5 +1,8 @@
 from app.api.v1.openapi.errors import VALIDATION_ERROR_RESPONSE, error_response
-from app.api.v1.openapi.examples import USER_RECIPE_EXAMPLE
+from app.api.v1.openapi.examples import (
+    USER_RECIPE_EXAMPLE,
+    USER_RECIPE_LIST_ITEM_EXAMPLE,
+)
 
 USER_RECIPE_NOT_FOUND_RESPONSE = error_response(
     "제출 레시피를 찾을 수 없습니다.",
@@ -20,12 +23,13 @@ GET_USER_RECIPES_DESCRIPTION = r"""
 - 최신순(`created_at` 내림차순)으로 반환합니다.
 - 제출 레시피는 정식 `recipes`에 바로 들어가지 않고 관리자 검수를 기다립니다.
 - 사용자가 삭제하면 실제 삭제 대신 `is_active = false`로 변경합니다.
+- 목록 응답은 카드 렌더링용으로 `ingredients`, `steps`, `labels`, `nutrition`을 제외하고 `category`, `tags`를 포함합니다.
 """
 
 GET_USER_RECIPES_RESPONSES = {
     200: {
         "description": "제출 레시피 목록",
-        "content": {"application/json": {"example": [USER_RECIPE_EXAMPLE]}},
+        "content": {"application/json": {"example": [USER_RECIPE_LIST_ITEM_EXAMPLE]}},
     },
 }
 
