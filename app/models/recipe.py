@@ -394,7 +394,7 @@ class UserRecipe(Base):
     kcal_per_serving = Column(Integer)
     difficulty = Column(String(10))
     source_url = Column(String(1024))
-    source_main_image_url = Column(String(1024))
+    main_image_url = Column(String(1024))
     status = Column(String(20), nullable=False, default="PENDING")
     import_status = Column(String(30), nullable=False, default="NOT_IMPORTED")
     is_active = Column(BOOLEAN, nullable=False, default=True)
@@ -451,6 +451,10 @@ class UserRecipe(Base):
     @property
     def tags(self) -> list[str]:
         return [label.label_value for label in self.labels if label.label_type == "TAG"]
+
+    @property
+    def tips(self) -> list[str]:
+        return [label.label_value for label in self.labels if label.label_type == "TIP"]
 
 
 class UserRecipeIngredient(Base):
