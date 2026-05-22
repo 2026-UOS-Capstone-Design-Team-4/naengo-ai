@@ -26,7 +26,7 @@ class StreamEventBuilder:
     def recipes(self, recipes: list[dict]) -> str:
         return self.event("recipes", recipes)
 
-    def done(self, message_id: int, recipe_ids: list[int]) -> str:
+    def done(self, message_id: int | None, recipe_ids: list[int]) -> str:
         return self.event(
             "done",
             {"message_id": message_id, "recipe_ids": recipe_ids},
