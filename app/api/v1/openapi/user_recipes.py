@@ -89,25 +89,20 @@ POST_USER_RECIPE_DESCRIPTION = r"""
       "amount_text": "300g",
       "quantity": 300,
       "unit": "g",
-      "raw_text": "묵은지 300g",
-      "sort_order": 1
+      "raw_text": "묵은지 300g"
     }
   ],
   "steps": [
     {
       "step_no": 1,
       "instruction": "묵은지를 충분히 볶습니다.",
-      "client_image_key": "step-1",
-      "sort_order": 1
+      "client_image_key": "step-1"
     }
   ],
-  "labels": [
-    {
-      "label_type": "CATEGORY",
-      "label_value": "찌개",
-      "sort_order": 1
-    }
-  ]
+  "category": ["찌개"],
+  "tags": ["한식", "얼큰함"],
+  "tips": ["묵은지를 쓰면 깊은 맛이 납니다."],
+  "warnings": []
 }
 ```
 
