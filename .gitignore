@@ -31,6 +31,7 @@ build/
 !db/**/*.sql
 *.csv
 *.sqlite3
+*.dump
 
 # IDEs
 .idea/
