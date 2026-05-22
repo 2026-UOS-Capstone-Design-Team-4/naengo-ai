@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from app.api.errors import ApiError
+from app.api.v1.openapi.guest_chat import GUEST_CHAT_RESPONSES
 from app.schemas.guest_chat import GuestChatRequest, history_to_model_messages
 from app.services.agent_service import AgentService
 
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
         "`done` 이벤트의 `message_id`는 항상 `null`입니다."
     ),
     response_class=StreamingResponse,
+    responses=GUEST_CHAT_RESPONSES,
 )
 async def guest_chat(request: GuestChatRequest):
     try:
