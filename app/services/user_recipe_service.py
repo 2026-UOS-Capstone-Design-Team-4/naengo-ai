@@ -59,10 +59,7 @@ class UserRecipeService:
         return (
             self.db.query(UserRecipe)
             .options(
-                selectinload(UserRecipe.ingredients),
-                selectinload(UserRecipe.steps),
                 selectinload(UserRecipe.labels),
-                selectinload(UserRecipe.nutrition),
             )
             .filter(
                 UserRecipe.user_id == user_id,
