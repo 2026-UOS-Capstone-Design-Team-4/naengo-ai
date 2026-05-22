@@ -120,8 +120,10 @@ USER_RECIPE_EXAMPLE = {
     "cooking_time_minutes": 25,
     "kcal_per_serving": 320,
     "difficulty": "easy",
-    "source_url": "https://youtube.com/watch?v=example",
-    "source_main_image_url": "https://example.com/kimchi-jjigae.jpg",
+    "main_image_url": "https://example.com/kimchi-jjigae.jpg",
+    "category": ["찌개"],
+    "tags": ["한식", "얼큰함"],
+    "tips": ["묵은지를 쓰면 깊은 맛이 납니다."],
     "ingredients": [
         {
             "name": "묵은지",
@@ -136,9 +138,11 @@ USER_RECIPE_EXAMPLE = {
         {
             "step_no": 1,
             "instruction": "돼지고기를 먹기 좋은 크기로 썹니다.",
+            "image_url": "https://example.com/kimchi-step-1.jpg",
             "sort_order": 1,
         }
     ],
+    "source_url": "https://youtube.com/watch?v=example",
     "labels": [{"label_type": "CATEGORY", "label_value": "찌개", "sort_order": 1}],
     "nutrition": None,
     "status": "PENDING",
@@ -164,7 +168,7 @@ USER_RECIPE_LIST_ITEM_EXAMPLE = {
     "cooking_time_minutes": 25,
     "kcal_per_serving": 320,
     "difficulty": "easy",
-    "source_main_image_url": "https://example.com/kimchi-jjigae.jpg",
+    "main_image_url": "https://example.com/kimchi-jjigae.jpg",
     "category": ["찌개"],
     "tags": ["한식", "얼큰함"],
     "status": "PENDING",
@@ -185,8 +189,35 @@ USER_RECIPE_REVIEWED_EXAMPLE = {
 }
 
 RECIPE_DETAIL_RESPONSE_EXAMPLE = {
-    **RECIPE_EXAMPLE,
     "id": 1,
+    "title": "김치두부찌개",
+    "summary": "김치와 두부로 끓이는 칼칼한 찌개",
+    "description": "칼칼하고 깊은 맛의 김치두부찌개입니다.",
+    "servings": 2.0,
+    "cooking_time_minutes": 20,
+    "kcal_per_serving": 180,
+    "difficulty": "easy",
+    "main_image_url": "https://example.com/source-image.jpg",
+    "category": ["한식", "찌개"],
+    "tags": ["얼큰함", "국물요리"],
+    "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
+    "ingredients": [INGREDIENT_EXAMPLE],
+    "steps": [
+        {
+            "step_no": 1,
+            "instruction": "냄비에 기름을 두르고 돼지고기를 볶습니다.",
+            "image_url": None,
+            "tip": None,
+        },
+        {
+            "step_no": 2,
+            "instruction": "김치를 넣고 함께 볶습니다.",
+            "image_url": None,
+            "tip": None,
+        },
+    ],
+    "source_url": "https://www.10000recipe.com/recipe/123456",
+    "author_type": "ADMIN",
     "created_at": "2026-04-01T09:00:00+09:00",
     "likes_count": 42,
     "scrap_count": 15,
