@@ -25,6 +25,11 @@ class User(Base):
     is_active = Column(BOOLEAN, nullable=False, default=True)
     is_blocked = Column(BOOLEAN, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
     # 관계 설정
     profile = relationship("UserProfile", back_populates="user", uselist=False)
@@ -37,7 +42,15 @@ class User(Base):
     scraps = relationship("Scrap", back_populates="user")
     likes = relationship("Like", back_populates="user")
     chat_rooms = relationship("ChatRoom", back_populates="user")
-    social_accounts = relationship("SocialAccount", back_populates="user")
+    social_accounts = relationship(
+        "SocialAccount",
+        back_populates="user",
+        order_by="SocialAccount.id",
+    )
+
+    @property
+    def user_identities(self):
+        return self.social_accounts
 
 
 class UserProfile(Base):
