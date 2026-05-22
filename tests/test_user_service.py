@@ -24,16 +24,16 @@ class FakeUserService(UserService):
         return self.profile
 
 
-def test_get_profile_response_returns_user_input_latest_first():
+def test_get_profile_response_returns_user_input_in_stored_order():
     profile = SimpleNamespace(user_input=["old", "middle", "new"])
     service = FakeUserService(profile)
 
     response = service.get_profile_response(user_id=1)
 
-    assert response.user_input == ["new", "middle", "old"]
+    assert response.user_input == ["old", "middle", "new"]
 
 
-def test_append_profile_user_input_stores_at_end_and_returns_latest_first():
+def test_append_profile_user_input_stores_at_end_and_returns_stored_order():
     profile = SimpleNamespace(user_input=["old"])
     service = FakeUserService(profile)
 
@@ -43,7 +43,7 @@ def test_append_profile_user_input_stores_at_end_and_returns_latest_first():
     )
 
     assert profile.user_input == ["old", "new"]
-    assert response.user_input == ["new", "old"]
+    assert response.user_input == ["old", "new"]
     assert service.db.committed is True
 
 
@@ -57,7 +57,7 @@ def test_delete_profile_user_inputs_removes_requested_sentence():
     )
 
     assert profile.user_input == ["old", "new"]
-    assert response.user_input == ["new", "old"]
+    assert response.user_input == ["old", "new"]
     assert service.db.committed is True
 
 
@@ -71,5 +71,5 @@ def test_delete_profile_user_inputs_removes_one_matching_sentence():
     )
 
     assert profile.user_input == ["same", "new"]
-    assert response.user_input == ["new", "same"]
+    assert response.user_input == ["same", "new"]
     assert service.db.committed is True

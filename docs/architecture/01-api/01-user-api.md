@@ -26,8 +26,8 @@ DELETE /api/v1/users/me/profile
 저장 순서:
 
 - DB에는 오래된 입력부터 저장한다.
-- `POST /me/profile`은 입력 문장을 agent가 사용자 정보인지 확인하고, 저장용 한 문장으로 정리한 뒤 배열 마지막에 append한다.
-- `GET /me/profile` 응답은 최신 입력을 먼저 볼 수 있도록 마지막 요소부터 반환한다.
+- `POST /me/profile`은 한두 문장의 입력만 받는다.
+- 입력 문장을 agent가 사용자 정보인지 확인하고, 저장용 한 문장으로 정리한 뒤 배열 마지막에 append한다.
 
 추가:
 
@@ -61,7 +61,7 @@ DELETE /api/v1/users/me/profile
 }
 ```
 
-삭제 API는 요청한 문장과 정확히 일치하는 항목을 제거한다. 응답은 항상 최신순 `user_input` 배열이다.
+삭제 API는 요청한 문장과 정확히 일치하는 항목을 제거한다.
 
 채팅 중 agent가 명확한 사용자 정보를 발견하면 정책에 따라 profile update 후보를 만들 수 있다. 민감하거나 모호한 정보는 바로 저장하지 않고 확인 흐름을 거친다.
 

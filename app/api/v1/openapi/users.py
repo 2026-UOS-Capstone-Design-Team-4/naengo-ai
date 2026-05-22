@@ -57,11 +57,7 @@ PATCH_ME_RESPONSES = {
 }
 
 GET_MY_PROFILE_SUMMARY = "내 프로필 조회"
-GET_MY_PROFILE_DESCRIPTION = r"""
-사용자가 직접 저장한 취향, 알레르기, 선호 정보를 조회합니다.
-
-응답의 `user_input`은 최근에 추가된 문장이 먼저 오도록 반환됩니다.
-"""
+GET_MY_PROFILE_DESCRIPTION = "사용자가 직접 저장한 취향, 알레르기, 선호 정보를 조회합니다."
 
 GET_MY_PROFILE_RESPONSES = {
     200: {
@@ -73,7 +69,10 @@ GET_MY_PROFILE_RESPONSES = {
 
 POST_MY_PROFILE_USER_INPUT_SUMMARY = "프로필 문장 추가"
 POST_MY_PROFILE_USER_INPUT_DESCRIPTION = r"""
-사용자 프로필에 저장할 문장 하나를 추가합니다.
+사용자 프로필에 저장할 정보를 추가합니다.
+
+- 입력은 한두 문장까지만 허용합니다.
+- 서버는 저장 전에 AI로 문체를 정리해 한 문장으로 저장합니다.
 
 요청 예시:
 

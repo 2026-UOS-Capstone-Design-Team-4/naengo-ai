@@ -69,7 +69,7 @@ class UserService:
         profile = self.get_profile(user_id)
         if not profile:
             return None
-        return UserProfileResponse(user_input=_latest_first(profile.user_input))
+        return UserProfileResponse(user_input=_clean_user_inputs(profile.user_input))
 
     def append_profile_user_input(
         self,
@@ -82,12 +82,14 @@ class UserService:
 
         text = _clean_user_input(body.text)
         if text is None:
-            return UserProfileResponse(user_input=_latest_first(profile.user_input))
+            return UserProfileResponse(
+                user_input=_clean_user_inputs(profile.user_input),
+            )
 
         profile.user_input = [*_clean_user_inputs(profile.user_input), text]
         self.db.commit()
         self.db.refresh(profile)
-        return UserProfileResponse(user_input=_latest_first(profile.user_input))
+        return UserProfileResponse(user_input=_clean_user_inputs(profile.user_input))
 
     def delete_profile_user_inputs(
         self,
@@ -108,7 +110,7 @@ class UserService:
         profile.user_input = current_inputs
         self.db.commit()
         self.db.refresh(profile)
-        return UserProfileResponse(user_input=_latest_first(profile.user_input))
+        return UserProfileResponse(user_input=_clean_user_inputs(profile.user_input))
 
 
 def _clean_user_input(value: str) -> str | None:
@@ -124,7 +126,3 @@ def _clean_user_inputs(values: list[str] | None) -> list[str]:
         for value in values
         if isinstance(value, str) and (text := _clean_user_input(value)) is not None
     ]
-
-
-def _latest_first(values: list[str] | None) -> list[str]:
-    return list(reversed(_clean_user_inputs(values)))

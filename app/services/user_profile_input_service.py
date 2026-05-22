@@ -12,6 +12,10 @@ class UserProfileInputNormalizeError(Exception):
     pass
 
 
+MAX_PROFILE_INPUT_SENTENCES = 2
+PROFILE_INPUT_TOO_MANY_SENTENCES_REASON = "too many sentences"
+
+
 class UserProfileInputOutput(BaseModel):
     is_user_info: bool
     normalized_sentence: str | None = None
@@ -40,6 +44,12 @@ class UserProfileInputNormalizer:
                 is_user_info=False,
                 normalized_sentence=None,
                 reason="empty input",
+            )
+        if _count_sentences(prompt) > MAX_PROFILE_INPUT_SENTENCES:
+            return UserProfileInputResult(
+                is_user_info=False,
+                normalized_sentence=None,
+                reason=PROFILE_INPUT_TOO_MANY_SENTENCES_REASON,
             )
 
         try:
@@ -81,6 +91,22 @@ def _clean_sentence(value: str | None) -> str | None:
         return None
     sentence = " ".join(value.strip().split())
     return sentence or None
+
+
+def _count_sentences(value: str) -> int:
+    chunks = []
+    current = []
+    for char in value.strip():
+        current.append(char)
+        if char in {".", "?", "!", "。", "？", "！", "\n"}:
+            chunk = "".join(current).strip()
+            if chunk:
+                chunks.append(chunk)
+            current = []
+    tail = "".join(current).strip()
+    if tail:
+        chunks.append(tail)
+    return len(chunks)
 
 
 _SYSTEM_PROMPT = """
