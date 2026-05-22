@@ -64,22 +64,6 @@ async def get_room_messages(
     return chat_service.get_room_messages(room_id)
 
 
-@router.delete(
-    "/rooms/{room_id}",
-    summary=DELETE_ROOM_SUMMARY,
-    description=DELETE_ROOM_DESCRIPTION,
-    responses=DELETE_ROOM_RESPONSES,
-)
-async def delete_room(
-    room_id: int,
-    db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id),
-):
-    if not ChatService(db).delete_room(room_id, current_user_id):
-        raise ApiError(404, "RESOURCE_NOT_FOUND", "채팅방을 찾을 수 없습니다.")
-    return {"message": "채팅방이 삭제되었습니다."}
-
-
 @router.post(
     "/rooms",
     summary=CHAT_NEW_ROOM_SUMMARY,
@@ -157,3 +141,19 @@ async def chat_in_room(
     except Exception as exc:
         logger.error("chat_in_room 오류: %s", exc)
         raise ApiError(500, "INTERNAL_ERROR", str(exc)) from exc
+
+
+@router.delete(
+    "/rooms/{room_id}",
+    summary=DELETE_ROOM_SUMMARY,
+    description=DELETE_ROOM_DESCRIPTION,
+    responses=DELETE_ROOM_RESPONSES,
+)
+async def delete_room(
+    room_id: int,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    if not ChatService(db).delete_room(room_id, current_user_id):
+        raise ApiError(404, "RESOURCE_NOT_FOUND", "채팅방을 찾을 수 없습니다.")
+    return {"message": "채팅방이 삭제되었습니다."}
