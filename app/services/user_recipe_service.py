@@ -39,6 +39,10 @@ class UserRecipeImageValidationError(ValueError):
     pass
 
 
+class UserRecipeStorageError(RuntimeError):
+    pass
+
+
 @dataclass(frozen=True)
 class UserRecipeImageUpload:
     filename: str
@@ -229,9 +233,12 @@ class UserRecipeService:
 
     def _upload_image(self, image: UserRecipeImageUpload, key: str) -> str:
         _validate_image(image)
-        url = self.image_storage.upload_bytes(image.data, key, image.content_type)
+        try:
+            url = self.image_storage.upload_bytes(image.data, key, image.content_type)
+        except Exception as exc:
+            raise UserRecipeStorageError("Image storage is unavailable.") from exc
         if url is None:
-            raise UserRecipeImageValidationError("Image storage is not configured.")
+            raise UserRecipeStorageError("Image storage is not configured.")
         return url
 
     def delete_user_recipe(
