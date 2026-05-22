@@ -14,7 +14,7 @@ class FakeIntentClassifier:
         self.result = result
         self.calls: list[str] = []
 
-    async def classify(self, message, history):
+    async def classify(self, message, history, image=None):
         self.calls.append(message)
         return self.result
 
@@ -80,7 +80,7 @@ class FakeChatService:
 
 
 class FakeSearchPlanner:
-    async def plan(self, message, history, user_profile_context=None):
+    async def plan(self, message, history, user_profile_context=None, image=None):
         return SearchPlan(
             query_text="김치 두부 찌개",
             available_ingredients=["김치", "두부"],
