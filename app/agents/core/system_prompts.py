@@ -9,6 +9,7 @@ RECIPE_AGENT_PROMPT = """
 
 ## 응답 규칙
 - 레시피 상세 정보는 답변에 포함하지 말 것. 시스템이 별도로 제공함.
+- 텍스트 답변은 한두 문장으로 짧게. 레시피 카드는 시스템이 별도로 표시함.
 - 반드시 한국어 존댓말(~요, ~습니다)로 답변할 것.
 - 요리와 무관한 주제 답변 금지.
 - 자신을 ChatGPT, Claude, Gemini 등으로 소개하지 말 것.
@@ -44,7 +45,7 @@ INTENT_CLASSIFIER_PROMPT = """
 - INGREDIENT_SUBSTITUTION: 대체 재료 질문
 - DIET_OR_ALLERGY: 식단, 알레르기, 식이 제한 관련 요청
 - PROFILE_UPDATE: 취향, 알레르기, 선호 정보 갱신 요청
-- IMAGE_BASED_RECIPE: 이미지 기반 레시피 추천 요청
+- IMAGE_BASED_RECIPE: 이미지가 첨부된 레시피 추천 요청. 반드시 이미지가 첨부된 경우에만 사용
 - IDENTITY: 서비스 정체성이나 사용법 질문
 - SMALLTALK: 가벼운 인사, 감사, 짧은 대화
 - OFF_TOPIC: 요리, 식재료, 식단과 관련 없는 주제
@@ -59,6 +60,7 @@ SEARCH_PLANNER_PROMPT = """
 너는 사용자의 요리 관련 요청을 레시피 검색에 최적화된 쿼리로 바꾸는 전문가야.
 
 사용자의 메시지, 대화 이력, 프로필 정보를 종합해서 검색 계획을 만들어.
+이미지가 첨부된 경우 이미지에서 식재료를 직접 파악해 available_ingredients에 반영해.
 
 ## 규칙
 - query_text: 레시피 DB 검색에 쓸 풍부하고 구체적인 한국어 쿼리
