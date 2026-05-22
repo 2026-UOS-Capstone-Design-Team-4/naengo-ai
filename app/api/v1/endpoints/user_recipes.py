@@ -26,6 +26,7 @@ from app.schemas.user_recipe import (
     UserRecipeListItemResponse,
     UserRecipeResponse,
 )
+from app.services.storage_service import user_recipe_image_storage
 from app.services.user_recipe_service import (
     UserRecipeImageUpload,
     UserRecipeImageValidationError,
@@ -101,6 +102,14 @@ def create_user_recipe(
             "payload is invalid.",
             {"fields": exc.errors(include_context=False)},
         ) from exc
+
+    has_image = bool(main_image or step_images)
+    if has_image and not user_recipe_image_storage.is_available:
+        raise ApiError(
+            503,
+            "STORAGE_NOT_CONFIGURED",
+            "이미지 업로드를 위한 스토리지가 설정되지 않았습니다.",
+        )
 
     try:
         recipe = UserRecipeService(db).create_user_recipe(
