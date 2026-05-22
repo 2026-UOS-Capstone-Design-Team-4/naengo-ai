@@ -31,7 +31,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 | `perf`     | 성능 개선에 대한 커밋                                 |
 
 - 커밋 메시지는 한국어로 작성합니다.
-- 커밋 시 파일을 하나씩 나눠서 커밋합니다. 여러 파일을 한 번에 커밋하지 않습니다.
+- 커밋 시 파일을 기능 단위로 나눠서 커밋합니다. 여러 파일을 한 번에 커밋하지 않습니다.
 - 기능 단위로 커밋하며, `uv.lock` 파일도 함께 커밋해 주세요.
 
 ## Push 전 체크리스트
