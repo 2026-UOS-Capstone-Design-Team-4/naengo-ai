@@ -48,6 +48,7 @@ RECIPE_EXAMPLE = {
     "category": ["한식", "찌개"],
     "tags": ["얼큰함", "국물요리"],
     "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
+    "warnings": [],
     "source_url": "https://www.10000recipe.com/recipe/123456",
     "main_image_url": "https://example.com/source-image.jpg",
     "author_type": "ADMIN",
@@ -124,6 +125,7 @@ USER_RECIPE_EXAMPLE = {
     "category": ["찌개"],
     "tags": ["한식", "얼큰함"],
     "tips": ["묵은지를 쓰면 깊은 맛이 납니다."],
+    "warnings": [],
     "ingredients": [
         {
             "name": "묵은지",
@@ -201,6 +203,7 @@ RECIPE_DETAIL_RESPONSE_EXAMPLE = {
     "category": ["한식", "찌개"],
     "tags": ["얼큰함", "국물요리"],
     "tips": ["김치는 충분히 익은 것을 사용하면 맛이 더 좋습니다."],
+    "warnings": [],
     "ingredients": [INGREDIENT_EXAMPLE],
     "steps": [
         {
