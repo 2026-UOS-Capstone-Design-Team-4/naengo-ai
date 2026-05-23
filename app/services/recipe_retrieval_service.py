@@ -128,7 +128,7 @@ class RecipeRetrievalService:
                 selectinload(Recipe.ingredients_list),
                 selectinload(Recipe.steps),
                 selectinload(Recipe.labels),
-                selectinload(Recipe.media),
+                selectinload(Recipe.stats),
                 selectinload(Recipe.classifications),
             )
             .order_by(dist_expr)
@@ -185,8 +185,8 @@ class RecipeRetrievalService:
                 }
                 for step in recipe.steps
             ],
-            "likes_count": recipe.likes_count,
-            "scrap_count": recipe.scrap_count,
+            "likes_count": recipe.stats.likes_count if recipe.stats else 0,
+            "scrap_count": recipe.stats.scrap_count if recipe.stats else 0,
             "is_liked": recipe.recipe_id in (liked_ids or set()),
             "is_scrapped": recipe.recipe_id in (scrapped_ids or set()),
         }

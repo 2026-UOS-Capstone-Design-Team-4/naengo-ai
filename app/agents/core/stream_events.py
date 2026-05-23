@@ -1,10 +1,13 @@
 import json
 from typing import Any
 
+from fastapi.encoders import jsonable_encoder
+
 
 class StreamEventBuilder:
     def event(self, event: str, data: Any) -> str:
-        return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+        encoded = jsonable_encoder(data)
+        return f"event: {event}\ndata: {json.dumps(encoded, ensure_ascii=False)}\n\n"
 
     def metadata(
         self,

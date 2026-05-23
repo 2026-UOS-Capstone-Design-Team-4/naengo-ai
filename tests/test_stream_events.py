@@ -1,4 +1,5 @@
 ﻿import json
+from decimal import Decimal
 
 from app.agents.core.stream_events import StreamEventBuilder
 
@@ -39,3 +40,20 @@ def test_metadata_event_merges_extra_payload():
         "model": "test-model",
         "source_count": 2,
     }
+
+
+def test_recipes_event_serializes_decimal_values():
+    event, data = parse_sse(
+        StreamEventBuilder().recipes(
+            [
+                {
+                    "id": 1,
+                    "title": "삼겹살 구이",
+                    "ingredients": [{"name": "삼겹살", "quantity": Decimal("1.5")}],
+                }
+            ]
+        )
+    )
+
+    assert event == "recipes"
+    assert data[0]["ingredients"][0]["quantity"] == 1.5

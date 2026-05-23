@@ -1,7 +1,13 @@
 from types import SimpleNamespace
 
-from app.models.recipe import Recipe, RecipeClassification, RecipeIngredient
+from app.models.recipe import (
+    Recipe,
+    RecipeClassification,
+    RecipeIngredient,
+    RecipeStats,
+)
 from app.services.recipe_retrieval_service import (
+    RecipeRetrievalService,
     _candidate_limit,
     _ingredient_match_strength,
     _ingredient_variants,
@@ -219,3 +225,24 @@ def test_variant_main_ingredient_scores_lower_than_exact_match():
     variant = _recipe(2, ["대패삼겹살"], difficulty="normal")
 
     assert _plan_bonus(exact, plan) > _plan_bonus(variant, plan)
+
+
+def test_recipe_to_payload_reads_counts_from_stats_relationship():
+    recipe = _recipe(1, ["삼겹살"], title="삼겹살 구이")
+    recipe.stats = RecipeStats(likes_count=7, scrap_count=2)
+    service = RecipeRetrievalService(embedder=None, session_factory=None)
+
+    payload = service.recipe_to_payload(recipe)
+
+    assert payload["likes_count"] == 7
+    assert payload["scrap_count"] == 2
+
+
+def test_recipe_to_payload_defaults_counts_when_stats_is_missing():
+    recipe = _recipe(1, ["삼겹살"], title="삼겹살 구이")
+    service = RecipeRetrievalService(embedder=None, session_factory=None)
+
+    payload = service.recipe_to_payload(recipe)
+
+    assert payload["likes_count"] == 0
+    assert payload["scrap_count"] == 0
