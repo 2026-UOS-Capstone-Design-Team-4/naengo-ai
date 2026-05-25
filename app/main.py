@@ -42,8 +42,9 @@ app = FastAPI(
         "- **제출 레시피**: 사용자가 직접 레시피를 제출하고 관리자가 승인할 수 있습니다.\n"
         "- **관리자**: 제출 레시피 검토와 승인 흐름을 제공합니다.\n\n"
         "## 인증\n"
-        "> 현재 실제 사용자 인증은 구현되어 있지 않습니다. "
-        "모든 API는 임시로 `.env`의 `TEMP_USER_ID` 값을 현재 사용자로 사용합니다."
+        "> 로그인 API는 외부 백엔드에서 처리합니다. "
+        "인증이 필요한 API는 `Authorization: Bearer <access_token>` 헤더로 전달된 "
+        "HS512 JWT access token을 검증합니다."
     ),
     version="0.1.0",
     docs_url=None,

@@ -32,7 +32,8 @@ class Settings(BaseSettings):
     api_key: str = Field(alias="API_KEY")
     base_url: str | None = Field(default=None, alias="BASE_URL")
     model_name: str = Field(alias="MODEL_NAME")
-    temp_user_id: int = 1
+    jwt_secret_key: str | None = Field(default=None, alias="JWT_SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS512", alias="JWT_ALGORITHM")
     internal_api_secret: str | None = Field(
         default=None,
         alias="INTERNAL_API_SECRET",
@@ -71,6 +72,7 @@ class Settings(BaseSettings):
         alias="RECIPE_IMPORT_AI_TIMEOUT_SECONDS",
     )
 
+
 settings = Settings()
 
 DATABASE_URL = settings.database_url
@@ -81,7 +83,8 @@ API_KEY = settings.api_key
 BASE_URL = normalize_optional_url(settings.base_url)
 MODEL_NAME = settings.model_name
 
-TEMP_USER_ID = settings.temp_user_id
+JWT_SECRET_KEY = settings.jwt_secret_key
+JWT_ALGORITHM = settings.jwt_algorithm
 INTERNAL_API_SECRET = settings.internal_api_secret
 STORAGE_BACKEND = settings.storage_backend
 S3_ENDPOINT = settings.s3_endpoint
