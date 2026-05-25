@@ -73,6 +73,20 @@ class UserRecipeService:
             .all()
         )
 
+    def get_approved_user_recipes(self) -> list[UserRecipe]:
+        return (
+            self.db.query(UserRecipe)
+            .options(
+                selectinload(UserRecipe.labels),
+            )
+            .filter(
+                UserRecipe.status == "APPROVED",
+                UserRecipe.is_active.is_(True),
+            )
+            .order_by(UserRecipe.created_at.desc())
+            .all()
+        )
+
     def get_admin_user_recipes(
         self,
         *,
@@ -84,9 +98,7 @@ class UserRecipeService:
         limit: int = 20,
     ) -> tuple[list[UserRecipe], str | None]:
         cursor_id = (
-            _parse_admin_user_recipe_cursor(cursor)
-            if cursor is not None
-            else None
+            _parse_admin_user_recipe_cursor(cursor) if cursor is not None else None
         )
         query = self.db.query(UserRecipe).options(
             selectinload(UserRecipe.ingredients),
@@ -106,11 +118,7 @@ class UserRecipeService:
         if cursor_id is not None:
             query = query.filter(UserRecipe.user_recipe_id < cursor_id)
 
-        rows = (
-            query.order_by(UserRecipe.user_recipe_id.desc())
-            .limit(limit + 1)
-            .all()
-        )
+        rows = query.order_by(UserRecipe.user_recipe_id.desc()).limit(limit + 1).all()
         has_next = len(rows) > limit
         items = rows[:limit]
         next_cursor = (
@@ -136,6 +144,26 @@ class UserRecipeService:
             .filter(
                 UserRecipe.user_recipe_id == user_recipe_id,
                 UserRecipe.user_id == user_id,
+                UserRecipe.is_active.is_(True),
+            )
+            .first()
+        )
+
+    def get_approved_user_recipe(
+        self,
+        user_recipe_id: int,
+    ) -> UserRecipe | None:
+        return (
+            self.db.query(UserRecipe)
+            .options(
+                selectinload(UserRecipe.ingredients),
+                selectinload(UserRecipe.steps),
+                selectinload(UserRecipe.labels),
+                selectinload(UserRecipe.nutrition),
+            )
+            .filter(
+                UserRecipe.user_recipe_id == user_recipe_id,
+                UserRecipe.status == "APPROVED",
                 UserRecipe.is_active.is_(True),
             )
             .first()
@@ -218,7 +246,9 @@ class UserRecipeService:
             )
             for i, step in enumerate(body.steps)
         ]
-        recipe.labels = _build_labels(body.category, body.tags, body.tips, body.warnings)
+        recipe.labels = _build_labels(
+            body.category, body.tags, body.tips, body.warnings
+        )
         self.db.commit()
         self.db.refresh(recipe)
         return recipe
@@ -375,8 +405,7 @@ def _client_image_key_from_filename(filename: str) -> str:
 def _image_key(user_id: int, user_recipe_id: int, scope: str, filename: str) -> str:
     extension = _image_extension(filename)
     return (
-        f"user-recipes/{user_id}/{user_recipe_id}/{scope}/"
-        f"{uuid.uuid4().hex}{extension}"
+        f"user-recipes/{user_id}/{user_recipe_id}/{scope}/{uuid.uuid4().hex}{extension}"
     )
 
 
@@ -399,13 +428,29 @@ def _build_labels(
 ) -> list[UserRecipeLabel]:
     labels = []
     for i, v in enumerate(category):
-        labels.append(UserRecipeLabel(label_type="CATEGORY", label_value=v, source="ADMIN", sort_order=i))
+        labels.append(
+            UserRecipeLabel(
+                label_type="CATEGORY", label_value=v, source="ADMIN", sort_order=i
+            )
+        )
     for i, v in enumerate(tags):
-        labels.append(UserRecipeLabel(label_type="TAG", label_value=v, source="ADMIN", sort_order=i))
+        labels.append(
+            UserRecipeLabel(
+                label_type="TAG", label_value=v, source="ADMIN", sort_order=i
+            )
+        )
     for i, v in enumerate(tips):
-        labels.append(UserRecipeLabel(label_type="TIP", label_value=v, source="ADMIN", sort_order=i))
+        labels.append(
+            UserRecipeLabel(
+                label_type="TIP", label_value=v, source="ADMIN", sort_order=i
+            )
+        )
     for i, v in enumerate(warnings):
-        labels.append(UserRecipeLabel(label_type="WARNING", label_value=v, source="ADMIN", sort_order=i))
+        labels.append(
+            UserRecipeLabel(
+                label_type="WARNING", label_value=v, source="ADMIN", sort_order=i
+            )
+        )
     return labels
 
 

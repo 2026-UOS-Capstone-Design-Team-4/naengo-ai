@@ -10,6 +10,12 @@ from app.api.v1.openapi.user_recipes import (
     DELETE_USER_RECIPE_DESCRIPTION,
     DELETE_USER_RECIPE_RESPONSES,
     DELETE_USER_RECIPE_SUMMARY,
+    GET_APPROVED_USER_RECIPE_DESCRIPTION,
+    GET_APPROVED_USER_RECIPE_RESPONSES,
+    GET_APPROVED_USER_RECIPE_SUMMARY,
+    GET_APPROVED_USER_RECIPES_DESCRIPTION,
+    GET_APPROVED_USER_RECIPES_RESPONSES,
+    GET_APPROVED_USER_RECIPES_SUMMARY,
     GET_USER_RECIPE_DESCRIPTION,
     GET_USER_RECIPE_RESPONSES,
     GET_USER_RECIPE_SUMMARY,
@@ -39,6 +45,20 @@ router = APIRouter()
 
 @router.get(
     "",
+    summary=GET_APPROVED_USER_RECIPES_SUMMARY,
+    description=GET_APPROVED_USER_RECIPES_DESCRIPTION,
+    response_model=list[UserRecipeListItemResponse],
+    responses=GET_APPROVED_USER_RECIPES_RESPONSES,
+)
+def get_approved_user_recipes(
+    db: Session = Depends(get_db),
+    _: int = Depends(get_current_user_id),
+):
+    return UserRecipeService(db).get_approved_user_recipes()
+
+
+@router.get(
+    "/me",
     summary=GET_USER_RECIPES_SUMMARY,
     description=GET_USER_RECIPES_DESCRIPTION,
     response_model=list[UserRecipeListItemResponse],
@@ -52,7 +72,7 @@ def get_user_recipes(
 
 
 @router.get(
-    "/{user_recipe_id}",
+    "/me/{user_recipe_id}",
     summary=GET_USER_RECIPE_SUMMARY,
     description=GET_USER_RECIPE_DESCRIPTION,
     response_model=UserRecipeResponse,
@@ -74,7 +94,7 @@ def get_user_recipe(
 
 
 @router.post(
-    "",
+    "/me",
     summary=POST_USER_RECIPE_SUMMARY,
     description=POST_USER_RECIPE_DESCRIPTION,
     response_model=UserRecipeResponse,
@@ -117,13 +137,12 @@ def create_user_recipe(
             body,
             current_user_id,
             main_image=_to_image_upload(main_image) if main_image else None,
-            step_images=[
-                _to_image_upload(image)
-                for image in (step_images or [])
-            ],
+            step_images=[_to_image_upload(image) for image in (step_images or [])],
         )
     except UserRecipeStorageError as exc:
-        raise ApiError(503, "STORAGE_ERROR", "이미지 스토리지를 사용할 수 없습니다.") from exc
+        raise ApiError(
+            503, "STORAGE_ERROR", "이미지 스토리지를 사용할 수 없습니다."
+        ) from exc
     except UserRecipeImageValidationError as exc:
         raise ApiError(422, "INVALID_IMAGE", str(exc)) from exc
     if not recipe:
@@ -132,7 +151,7 @@ def create_user_recipe(
 
 
 @router.delete(
-    "/{user_recipe_id}",
+    "/me/{user_recipe_id}",
     summary=DELETE_USER_RECIPE_SUMMARY,
     description=DELETE_USER_RECIPE_DESCRIPTION,
     responses=DELETE_USER_RECIPE_RESPONSES,
@@ -150,6 +169,28 @@ def delete_user_recipe(
             "제출 레시피를 찾을 수 없습니다.",
         )
     return {"message": "레시피가 삭제되었습니다."}
+
+
+@router.get(
+    "/{user_recipe_id}",
+    summary=GET_APPROVED_USER_RECIPE_SUMMARY,
+    description=GET_APPROVED_USER_RECIPE_DESCRIPTION,
+    response_model=UserRecipeResponse,
+    responses=GET_APPROVED_USER_RECIPE_RESPONSES,
+)
+def get_approved_user_recipe(
+    user_recipe_id: int,
+    db: Session = Depends(get_db),
+    _: int = Depends(get_current_user_id),
+):
+    recipe = UserRecipeService(db).get_approved_user_recipe(user_recipe_id)
+    if not recipe:
+        raise ApiError(
+            404,
+            "USER_RECIPE_NOT_FOUND",
+            "제출 레시피를 찾을 수 없습니다.",
+        )
+    return recipe
 
 
 def _to_image_upload(file: UploadFile) -> UserRecipeImageUpload:

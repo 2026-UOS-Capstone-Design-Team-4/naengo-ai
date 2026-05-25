@@ -16,7 +16,38 @@ USER_NOT_FOUND_RESPONSE = error_response(
     "사용자를 찾을 수 없습니다.",
 )
 
-GET_USER_RECIPES_SUMMARY = "제출 레시피 목록 조회"
+GET_APPROVED_USER_RECIPES_SUMMARY = "승인된 사용자 레시피 목록 조회"
+GET_APPROVED_USER_RECIPES_DESCRIPTION = r"""
+승인된 사용자 제출 레시피 목록을 반환합니다.
+
+- `APPROVED` 상태이면서 활성 상태인 사용자 제출 레시피만 반환합니다.
+- 최신순(`created_at` 내림차순)으로 반환합니다.
+- 목록 응답은 카드 렌더링용으로 `ingredients`, `steps`, `labels`, `nutrition`을 제외하고 `category`, `tags`를 포함합니다.
+"""
+
+GET_APPROVED_USER_RECIPES_RESPONSES = {
+    200: {
+        "description": "승인된 사용자 레시피 목록",
+        "content": {"application/json": {"example": [USER_RECIPE_LIST_ITEM_EXAMPLE]}},
+    },
+}
+
+GET_APPROVED_USER_RECIPE_SUMMARY = "승인된 사용자 레시피 단건 조회"
+GET_APPROVED_USER_RECIPE_DESCRIPTION = r"""
+승인된 사용자 제출 레시피 하나를 조회합니다.
+
+`APPROVED` 상태이면서 활성 상태인 레시피만 조회할 수 있습니다.
+"""
+
+GET_APPROVED_USER_RECIPE_RESPONSES = {
+    200: {
+        "description": "승인된 사용자 레시피 상세",
+        "content": {"application/json": {"example": USER_RECIPE_EXAMPLE}},
+    },
+    404: USER_RECIPE_NOT_FOUND_RESPONSE,
+}
+
+GET_USER_RECIPES_SUMMARY = "내 제출 레시피 목록 조회"
 GET_USER_RECIPES_DESCRIPTION = r"""
 현재 사용자가 제출한 레시피 목록을 반환합니다.
 
@@ -33,7 +64,7 @@ GET_USER_RECIPES_RESPONSES = {
     },
 }
 
-GET_USER_RECIPE_SUMMARY = "제출 레시피 단건 조회"
+GET_USER_RECIPE_SUMMARY = "내 제출 레시피 단건 조회"
 GET_USER_RECIPE_DESCRIPTION = r"""
 제출한 레시피 하나를 조회합니다.
 
@@ -130,7 +161,9 @@ DELETE_USER_RECIPE_DESCRIPTION = r"""
 DELETE_USER_RECIPE_RESPONSES = {
     200: {
         "description": "삭제 성공",
-        "content": {"application/json": {"example": {"message": "레시피가 삭제되었습니다."}}},
+        "content": {
+            "application/json": {"example": {"message": "레시피가 삭제되었습니다."}}
+        },
     },
     404: USER_RECIPE_NOT_FOUND_RESPONSE,
 }

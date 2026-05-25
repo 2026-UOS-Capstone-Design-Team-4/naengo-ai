@@ -135,14 +135,29 @@ Chat API는 추천 또는 일반 답변을 반환한다.
 ```text
 GET    /api/v1/user-recipes
 GET    /api/v1/user-recipes/{user_recipe_id}
-POST   /api/v1/user-recipes
-DELETE /api/v1/user-recipes/{user_recipe_id}
+GET    /api/v1/user-recipes/me
+GET    /api/v1/user-recipes/me/{user_recipe_id}
+POST   /api/v1/user-recipes/me
+DELETE /api/v1/user-recipes/me/{user_recipe_id}
 ```
 
-사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `user_recipes`와 `user_recipe_*` 하위 테이블에 검수 가능한 구조화 초안으로 저장한다. 생성 요청은 이미지 업로드를 함께 받을 수 있도록 `multipart/form-data`를 사용한다. 사용자가 삭제하면 실제 삭제 대신 `is_active = false`로 바꾸어 관리자 검수 상태(`PENDING`, `APPROVED`, `REJECTED`)와 분리한다.
+`/api/v1/user-recipes`는 승인된 사용자 제출 레시피의 공개 조회 API다.
+`status = APPROVED`, `is_active = true`인 레시피만 반환한다.
+
+```text
+GET    /api/v1/user-recipes
+GET    /api/v1/user-recipes/{user_recipe_id}
+```
+
+`/api/v1/user-recipes/me`는 현재 사용자가 직접 제출한 레시피 관리 API다.
+사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `user_recipes`와
+`user_recipe_*` 하위 테이블에 검수 가능한 구조화 초안으로 저장한다. 생성 요청은
+이미지 업로드를 함께 받을 수 있도록 `multipart/form-data`를 사용한다. 사용자가
+삭제하면 실제 삭제 대신 `is_active = false`로 바꾸어 관리자 검수 상태(`PENDING`,
+`APPROVED`, `REJECTED`)와 분리한다.
 
 ```http
-POST /api/v1/user-recipes
+POST /api/v1/user-recipes/me
 Content-Type: multipart/form-data
 ```
 

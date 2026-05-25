@@ -141,8 +141,10 @@ DELETE /api/v1/users/me/profile
 
 GET    /api/v1/user-recipes
 GET    /api/v1/user-recipes/{user_recipe_id}
-POST   /api/v1/user-recipes
-DELETE /api/v1/user-recipes/{user_recipe_id}
+GET    /api/v1/user-recipes/me
+GET    /api/v1/user-recipes/me/{user_recipe_id}
+POST   /api/v1/user-recipes/me
+DELETE /api/v1/user-recipes/me/{user_recipe_id}
 
 GET    /api/v1/admin/recipes
 GET    /api/v1/admin/recipes/{recipe_id}
