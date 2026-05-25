@@ -171,6 +171,12 @@ class UserRecipePublicListItemResponse(UserRecipeListItemResponse):
     user: UserRecipeAuthorResponse
 
 
+class UserRecipePublicListResponse(BaseModel):
+    items: list[UserRecipePublicListItemResponse]
+    next_cursor: str | None
+    has_next: bool
+
+
 class UserRecipeListResponse(BaseModel):
     items: list[UserRecipeResponse]
     next_cursor: str | None

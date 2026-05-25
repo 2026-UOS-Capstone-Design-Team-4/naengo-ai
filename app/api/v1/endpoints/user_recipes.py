@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
@@ -30,7 +30,7 @@ from app.db.session import get_db
 from app.schemas.user_recipe import (
     UserRecipeCreate,
     UserRecipeListItemResponse,
-    UserRecipePublicListItemResponse,
+    UserRecipePublicListResponse,
     UserRecipePublicResponse,
     UserRecipeResponse,
 )
@@ -38,6 +38,7 @@ from app.services.storage_service import user_recipe_image_storage
 from app.services.user_recipe_service import (
     UserRecipeImageUpload,
     UserRecipeImageValidationError,
+    UserRecipeInvalidCursorError,
     UserRecipeService,
     UserRecipeStorageError,
 )
@@ -49,14 +50,35 @@ router = APIRouter()
     "",
     summary=GET_APPROVED_USER_RECIPES_SUMMARY,
     description=GET_APPROVED_USER_RECIPES_DESCRIPTION,
-    response_model=list[UserRecipePublicListItemResponse],
+    response_model=UserRecipePublicListResponse,
     responses=GET_APPROVED_USER_RECIPES_RESPONSES,
 )
 def get_approved_user_recipes(
+    cursor: str | None = Query(
+        default=None,
+        description="이전 응답의 next_cursor. base64url JSON cursor입니다.",
+    ),
+    limit: int = Query(
+        default=20,
+        ge=1,
+        le=100,
+        description="한 번에 가져올 사용자 레시피 개수",
+    ),
     db: Session = Depends(get_db),
     _: int = Depends(get_current_user_id),
 ):
-    return UserRecipeService(db).get_approved_user_recipes()
+    try:
+        items, next_cursor = UserRecipeService(db).get_approved_user_recipes(
+            cursor,
+            limit,
+        )
+    except UserRecipeInvalidCursorError:
+        raise ApiError(400, "INVALID_CURSOR", "Cursor is invalid.") from None
+    return UserRecipePublicListResponse(
+        items=items,
+        next_cursor=next_cursor,
+        has_next=next_cursor is not None,
+    )
 
 
 @router.get(

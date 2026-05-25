@@ -6,6 +6,10 @@ from app.api.v1.endpoints import user_recipes as endpoint_module
 from app.main import app
 from app.models.recipe import UserRecipe, UserRecipeLabel, UserRecipeStep
 from app.models.user import User
+from app.services.user_recipe_service import (
+    UserRecipeInvalidCursorError,
+    _build_public_user_recipe_cursor,
+)
 
 client = TestClient(app)
 
@@ -14,47 +18,11 @@ class FakeUserRecipeService:
     def __init__(self, _db):
         pass
 
-    def get_approved_user_recipes(self):
-        return [
-            UserRecipe(
-                user_recipe_id=22,
-                user_id=8,
-                title="Approved kimchi stew",
-                description="A public approved recipe.",
-                servings=2,
-                cooking_time_minutes=25,
-                kcal_per_serving=320,
-                difficulty="easy",
-                main_image_url="https://example.com/approved-kimchi.jpg",
-                user=User(
-                    user_id=8,
-                    username="author@example.com",
-                    nickname="레시피작성자",
-                ),
-                labels=[
-                    UserRecipeLabel(
-                        label_type="CATEGORY",
-                        label_value="찌개",
-                        source="ADMIN",
-                        sort_order=1,
-                    ),
-                    UserRecipeLabel(
-                        label_type="TAG",
-                        label_value="얼큰함",
-                        source="ADMIN",
-                        sort_order=2,
-                    ),
-                ],
-                ingredients=[],
-                steps=[],
-                status="APPROVED",
-                import_status="NOT_IMPORTED",
-                is_active=True,
-                rejection_reason=None,
-                created_at=datetime(2026, 5, 18, tzinfo=UTC),
-                updated_at=datetime(2026, 5, 18, tzinfo=UTC),
-            )
-        ]
+    def get_approved_user_recipes(self, cursor=None, limit=20):
+        self.cursor = cursor
+        self.limit = limit
+        recipe = _approved_user_recipe_list_item()
+        return [recipe], _build_public_user_recipe_cursor(recipe)
 
     def get_approved_user_recipe(self, user_recipe_id):
         if user_recipe_id != 22:
@@ -225,10 +193,15 @@ def test_approved_user_recipe_list_returns_public_approved_recipes(monkeypatch):
         FakeUserRecipeService,
     )
 
-    response = client.get("/api/v1/user-recipes")
+    response = client.get("/api/v1/user-recipes?cursor=abc&limit=3")
 
     assert response.status_code == 200
-    item = response.json()[0]
+    body = response.json()
+    assert body["next_cursor"] == _build_public_user_recipe_cursor(
+        _approved_user_recipe_list_item()
+    )
+    assert body["has_next"] is True
+    item = body["items"][0]
     assert item["user_recipe_id"] == 22
     assert item["user_id"] == 8
     assert item["user"] == {"user_id": 8, "nickname": "레시피작성자"}
@@ -239,6 +212,23 @@ def test_approved_user_recipe_list_returns_public_approved_recipes(monkeypatch):
     assert "steps" not in item
     assert "labels" not in item
     assert "nutrition" not in item
+
+
+def test_approved_user_recipe_list_returns_400_for_invalid_cursor(monkeypatch):
+    class InvalidCursorService(FakeUserRecipeService):
+        def get_approved_user_recipes(self, cursor=None, limit=20):
+            raise UserRecipeInvalidCursorError("Invalid cursor.")
+
+    monkeypatch.setattr(
+        endpoint_module,
+        "UserRecipeService",
+        InvalidCursorService,
+    )
+
+    response = client.get("/api/v1/user-recipes?cursor=bad")
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_CURSOR"
 
 
 def test_approved_user_recipe_detail_returns_public_detail(monkeypatch):
@@ -301,3 +291,44 @@ def test_my_user_recipe_detail_returns_category_tags_and_step_image(monkeypatch)
     assert body["tips"] == ["묵은지를 쓰면 좋아요"]
     assert body["main_image_url"] == "https://example.com/kimchi.jpg"
     assert body["steps"][0]["image_url"] == "https://example.com/step-1.jpg"
+
+
+def _approved_user_recipe_list_item():
+    return UserRecipe(
+        user_recipe_id=22,
+        user_id=8,
+        title="Approved kimchi stew",
+        description="A public approved recipe.",
+        servings=2,
+        cooking_time_minutes=25,
+        kcal_per_serving=320,
+        difficulty="easy",
+        main_image_url="https://example.com/approved-kimchi.jpg",
+        user=User(
+            user_id=8,
+            username="author@example.com",
+            nickname="레시피작성자",
+        ),
+        labels=[
+            UserRecipeLabel(
+                label_type="CATEGORY",
+                label_value="찌개",
+                source="ADMIN",
+                sort_order=1,
+            ),
+            UserRecipeLabel(
+                label_type="TAG",
+                label_value="얼큰함",
+                source="ADMIN",
+                sort_order=2,
+            ),
+        ],
+        ingredients=[],
+        steps=[],
+        status="APPROVED",
+        import_status="NOT_IMPORTED",
+        is_active=True,
+        rejection_reason=None,
+        created_at=datetime(2026, 5, 18, tzinfo=UTC),
+        updated_at=datetime(2026, 5, 18, tzinfo=UTC),
+    )

@@ -133,7 +133,7 @@ Chat API는 추천 또는 일반 답변을 반환한다.
 ## User Recipes
 
 ```text
-GET    /api/v1/user-recipes
+GET    /api/v1/user-recipes?cursor=...&limit=20
 GET    /api/v1/user-recipes/{user_recipe_id}
 GET    /api/v1/user-recipes/me
 GET    /api/v1/user-recipes/me/{user_recipe_id}
@@ -146,8 +146,18 @@ DELETE /api/v1/user-recipes/me/{user_recipe_id}
 작성자 표시를 위해 `user` 객체를 포함하며, 공개 필드는 `user_id`, `nickname`으로 제한한다.
 
 ```text
-GET    /api/v1/user-recipes
+GET    /api/v1/user-recipes?cursor=...&limit=20
 GET    /api/v1/user-recipes/{user_recipe_id}
+```
+
+목록 응답은 cursor pagination 래퍼를 사용한다.
+
+```json
+{
+  "items": [],
+  "next_cursor": null,
+  "has_next": false
+}
 ```
 
 `/api/v1/user-recipes/me`는 현재 사용자가 직접 제출한 레시피 관리 API다.

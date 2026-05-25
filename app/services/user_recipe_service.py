@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.recipe import (
@@ -73,8 +74,15 @@ class UserRecipeService:
             .all()
         )
 
-    def get_approved_user_recipes(self) -> list[UserRecipe]:
-        return (
+    def get_approved_user_recipes(
+        self,
+        cursor: str | None = None,
+        limit: int = 20,
+    ) -> tuple[list[UserRecipe], str | None]:
+        cursor_values = (
+            _parse_public_user_recipe_cursor(cursor) if cursor is not None else None
+        )
+        query = (
             self.db.query(UserRecipe)
             .options(
                 selectinload(UserRecipe.labels),
@@ -84,9 +92,33 @@ class UserRecipeService:
                 UserRecipe.status == "APPROVED",
                 UserRecipe.is_active.is_(True),
             )
-            .order_by(UserRecipe.created_at.desc())
+        )
+        if cursor_values is not None:
+            cursor_created_at, cursor_id = cursor_values
+            query = query.filter(
+                or_(
+                    UserRecipe.created_at < cursor_created_at,
+                    and_(
+                        UserRecipe.created_at == cursor_created_at,
+                        UserRecipe.user_recipe_id < cursor_id,
+                    ),
+                )
+            )
+
+        rows = (
+            query.order_by(
+                UserRecipe.created_at.desc(),
+                UserRecipe.user_recipe_id.desc(),
+            )
+            .limit(limit + 1)
             .all()
         )
+        has_next = len(rows) > limit
+        items = rows[:limit]
+        next_cursor = (
+            _build_public_user_recipe_cursor(items[-1]) if has_next and items else None
+        )
+        return items, next_cursor
 
     def get_admin_user_recipes(
         self,
@@ -378,6 +410,16 @@ def _build_admin_user_recipe_cursor(user_recipe_id: int) -> str:
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
 
+def _build_public_user_recipe_cursor(recipe: UserRecipe) -> str:
+    payload: dict[str, Any] = {
+        "sort": "approved_latest",
+        "created_at": recipe.created_at.isoformat(),
+        "user_recipe_id": recipe.user_recipe_id,
+    }
+    raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode()
+    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+
 def _validate_image(image: UserRecipeImageUpload) -> None:
     if image.content_type not in ALLOWED_USER_RECIPE_IMAGE_TYPES:
         raise UserRecipeImageValidationError("Unsupported image content type.")
@@ -467,5 +509,22 @@ def _parse_admin_user_recipe_cursor(cursor: str) -> int:
         raise UserRecipeInvalidCursorError("Invalid cursor.")
     try:
         return int(payload["user_recipe_id"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise UserRecipeInvalidCursorError("Invalid cursor.") from exc
+
+
+def _parse_public_user_recipe_cursor(cursor: str) -> tuple[datetime, int]:
+    try:
+        padding = "=" * (-len(cursor) % 4)
+        raw = base64.urlsafe_b64decode(f"{cursor}{padding}".encode())
+        payload = json.loads(raw)
+    except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise UserRecipeInvalidCursorError("Invalid cursor.") from exc
+    if not isinstance(payload, dict) or payload.get("sort") != "approved_latest":
+        raise UserRecipeInvalidCursorError("Invalid cursor.")
+    try:
+        return datetime.fromisoformat(payload["created_at"]), int(
+            payload["user_recipe_id"]
+        )
     except (KeyError, TypeError, ValueError) as exc:
         raise UserRecipeInvalidCursorError("Invalid cursor.") from exc

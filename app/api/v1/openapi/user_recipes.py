@@ -3,7 +3,7 @@ from app.api.v1.openapi.examples import (
     USER_RECIPE_EXAMPLE,
     USER_RECIPE_LIST_ITEM_EXAMPLE,
     USER_RECIPE_PUBLIC_EXAMPLE,
-    USER_RECIPE_PUBLIC_LIST_ITEM_EXAMPLE,
+    USER_RECIPE_PUBLIC_LIST_RESPONSE_EXAMPLE,
 )
 
 USER_RECIPE_NOT_FOUND_RESPONSE = error_response(
@@ -23,7 +23,10 @@ GET_APPROVED_USER_RECIPES_DESCRIPTION = r"""
 승인된 사용자 제출 레시피 목록을 반환합니다.
 
 - `APPROVED` 상태이면서 활성 상태인 사용자 제출 레시피만 반환합니다.
-- 최신순(`created_at` 내림차순)으로 반환합니다.
+- 최신순(`created_at DESC, user_recipe_id DESC`)으로 반환합니다.
+- `cursor`는 이전 응답의 `next_cursor`를 그대로 전달하는 base64url JSON cursor입니다.
+- 첫 페이지는 `cursor`를 비워서 요청합니다.
+- `limit` 기본값은 20, 최대값은 100입니다.
 - 작성자 표시용 `user` 객체(`user_id`, `nickname`)를 포함합니다.
 - 목록 응답은 카드 렌더링용으로 `ingredients`, `steps`, `labels`, `nutrition`을 제외하고 `category`, `tags`를 포함합니다.
 """
@@ -32,9 +35,10 @@ GET_APPROVED_USER_RECIPES_RESPONSES = {
     200: {
         "description": "승인된 사용자 레시피 목록",
         "content": {
-            "application/json": {"example": [USER_RECIPE_PUBLIC_LIST_ITEM_EXAMPLE]}
+            "application/json": {"example": USER_RECIPE_PUBLIC_LIST_RESPONSE_EXAMPLE}
         },
     },
+    400: error_response("잘못된 커서", "INVALID_CURSOR", "Cursor is invalid."),
 }
 
 GET_APPROVED_USER_RECIPE_SUMMARY = "승인된 사용자 레시피 단건 조회"
