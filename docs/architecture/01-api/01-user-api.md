@@ -143,6 +143,7 @@ DELETE /api/v1/user-recipes/me/{user_recipe_id}
 
 `/api/v1/user-recipes`는 승인된 사용자 제출 레시피의 공개 조회 API다.
 `status = APPROVED`, `is_active = true`인 레시피만 반환한다.
+작성자 표시를 위해 `user` 객체를 포함하며, 공개 필드는 `user_id`, `nickname`으로 제한한다.
 
 ```text
 GET    /api/v1/user-recipes

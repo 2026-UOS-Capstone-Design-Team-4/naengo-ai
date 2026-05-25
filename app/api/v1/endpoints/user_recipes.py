@@ -30,6 +30,8 @@ from app.db.session import get_db
 from app.schemas.user_recipe import (
     UserRecipeCreate,
     UserRecipeListItemResponse,
+    UserRecipePublicListItemResponse,
+    UserRecipePublicResponse,
     UserRecipeResponse,
 )
 from app.services.storage_service import user_recipe_image_storage
@@ -47,7 +49,7 @@ router = APIRouter()
     "",
     summary=GET_APPROVED_USER_RECIPES_SUMMARY,
     description=GET_APPROVED_USER_RECIPES_DESCRIPTION,
-    response_model=list[UserRecipeListItemResponse],
+    response_model=list[UserRecipePublicListItemResponse],
     responses=GET_APPROVED_USER_RECIPES_RESPONSES,
 )
 def get_approved_user_recipes(
@@ -175,7 +177,7 @@ def delete_user_recipe(
     "/{user_recipe_id}",
     summary=GET_APPROVED_USER_RECIPE_SUMMARY,
     description=GET_APPROVED_USER_RECIPE_DESCRIPTION,
-    response_model=UserRecipeResponse,
+    response_model=UserRecipePublicResponse,
     responses=GET_APPROVED_USER_RECIPE_RESPONSES,
 )
 def get_approved_user_recipe(

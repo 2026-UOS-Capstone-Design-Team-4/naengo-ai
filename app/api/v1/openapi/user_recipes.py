@@ -2,6 +2,8 @@ from app.api.v1.openapi.errors import VALIDATION_ERROR_RESPONSE, error_response
 from app.api.v1.openapi.examples import (
     USER_RECIPE_EXAMPLE,
     USER_RECIPE_LIST_ITEM_EXAMPLE,
+    USER_RECIPE_PUBLIC_EXAMPLE,
+    USER_RECIPE_PUBLIC_LIST_ITEM_EXAMPLE,
 )
 
 USER_RECIPE_NOT_FOUND_RESPONSE = error_response(
@@ -22,13 +24,16 @@ GET_APPROVED_USER_RECIPES_DESCRIPTION = r"""
 
 - `APPROVED` 상태이면서 활성 상태인 사용자 제출 레시피만 반환합니다.
 - 최신순(`created_at` 내림차순)으로 반환합니다.
+- 작성자 표시용 `user` 객체(`user_id`, `nickname`)를 포함합니다.
 - 목록 응답은 카드 렌더링용으로 `ingredients`, `steps`, `labels`, `nutrition`을 제외하고 `category`, `tags`를 포함합니다.
 """
 
 GET_APPROVED_USER_RECIPES_RESPONSES = {
     200: {
         "description": "승인된 사용자 레시피 목록",
-        "content": {"application/json": {"example": [USER_RECIPE_LIST_ITEM_EXAMPLE]}},
+        "content": {
+            "application/json": {"example": [USER_RECIPE_PUBLIC_LIST_ITEM_EXAMPLE]}
+        },
     },
 }
 
@@ -37,12 +42,13 @@ GET_APPROVED_USER_RECIPE_DESCRIPTION = r"""
 승인된 사용자 제출 레시피 하나를 조회합니다.
 
 `APPROVED` 상태이면서 활성 상태인 레시피만 조회할 수 있습니다.
+작성자 표시용 `user` 객체(`user_id`, `nickname`)를 포함합니다.
 """
 
 GET_APPROVED_USER_RECIPE_RESPONSES = {
     200: {
         "description": "승인된 사용자 레시피 상세",
-        "content": {"application/json": {"example": USER_RECIPE_EXAMPLE}},
+        "content": {"application/json": {"example": USER_RECIPE_PUBLIC_EXAMPLE}},
     },
     404: USER_RECIPE_NOT_FOUND_RESPONSE,
 }

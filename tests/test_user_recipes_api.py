@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from app.api.v1.endpoints import user_recipes as endpoint_module
 from app.main import app
 from app.models.recipe import UserRecipe, UserRecipeLabel, UserRecipeStep
+from app.models.user import User
 
 client = TestClient(app)
 
@@ -25,6 +26,11 @@ class FakeUserRecipeService:
                 kcal_per_serving=320,
                 difficulty="easy",
                 main_image_url="https://example.com/approved-kimchi.jpg",
+                user=User(
+                    user_id=8,
+                    username="author@example.com",
+                    nickname="레시피작성자",
+                ),
                 labels=[
                     UserRecipeLabel(
                         label_type="CATEGORY",
@@ -63,6 +69,11 @@ class FakeUserRecipeService:
             kcal_per_serving=320,
             difficulty="easy",
             main_image_url="https://example.com/approved-kimchi.jpg",
+            user=User(
+                user_id=8,
+                username="author@example.com",
+                nickname="레시피작성자",
+            ),
             labels=[
                 UserRecipeLabel(
                     label_type="CATEGORY",
@@ -220,6 +231,7 @@ def test_approved_user_recipe_list_returns_public_approved_recipes(monkeypatch):
     item = response.json()[0]
     assert item["user_recipe_id"] == 22
     assert item["user_id"] == 8
+    assert item["user"] == {"user_id": 8, "nickname": "레시피작성자"}
     assert item["status"] == "APPROVED"
     assert item["category"] == ["찌개"]
     assert item["tags"] == ["얼큰함"]
@@ -242,6 +254,7 @@ def test_approved_user_recipe_detail_returns_public_detail(monkeypatch):
     body = response.json()
     assert body["user_recipe_id"] == 22
     assert body["user_id"] == 8
+    assert body["user"] == {"user_id": 8, "nickname": "레시피작성자"}
     assert body["status"] == "APPROVED"
     assert body["category"] == ["찌개"]
     assert body["tags"] == ["얼큰함"]

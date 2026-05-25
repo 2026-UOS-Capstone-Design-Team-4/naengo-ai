@@ -98,6 +98,13 @@ class UserRecipeNutritionSchema(BaseModel):
     raw: dict = Field(default_factory=dict)
 
 
+class UserRecipeAuthorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    nickname: str
+
+
 class UserRecipeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -132,6 +139,10 @@ class UserRecipeResponse(BaseModel):
     updated_at: datetime
 
 
+class UserRecipePublicResponse(UserRecipeResponse):
+    user: UserRecipeAuthorResponse
+
+
 class UserRecipeListItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -154,6 +165,10 @@ class UserRecipeListItemResponse(BaseModel):
     rejection_reason: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class UserRecipePublicListItemResponse(UserRecipeListItemResponse):
+    user: UserRecipeAuthorResponse
 
 
 class UserRecipeListResponse(BaseModel):

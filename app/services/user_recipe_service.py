@@ -78,6 +78,7 @@ class UserRecipeService:
             self.db.query(UserRecipe)
             .options(
                 selectinload(UserRecipe.labels),
+                selectinload(UserRecipe.user),
             )
             .filter(
                 UserRecipe.status == "APPROVED",
@@ -140,6 +141,7 @@ class UserRecipeService:
                 selectinload(UserRecipe.steps),
                 selectinload(UserRecipe.labels),
                 selectinload(UserRecipe.nutrition),
+                selectinload(UserRecipe.user),
             )
             .filter(
                 UserRecipe.user_recipe_id == user_recipe_id,
