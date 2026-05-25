@@ -5,6 +5,7 @@ from app.api.v1.endpoints import chat, guest_chat, recipes, user_recipes, users
 from app.api.v1.endpoints.admin import (
     chat_rooms as admin_chat_rooms,
     recipes as admin_recipes,
+    user_recipe_reports as admin_user_recipe_reports,
     user_recipes as admin_user_recipes,
 )
 
@@ -22,6 +23,12 @@ api_router.include_router(
 api_router.include_router(
     admin_user_recipes.router,
     prefix="/admin/user-recipes",
+    tags=["admin"],
+    dependencies=[Depends(require_admin)],
+)
+api_router.include_router(
+    admin_user_recipe_reports.router,
+    prefix="/admin/user-recipe-reports",
     tags=["admin"],
     dependencies=[Depends(require_admin)],
 )

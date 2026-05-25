@@ -99,5 +99,5 @@ class UserProfile(Base):
 
 # Register related models for standalone User imports.
 from app.models.chat import ChatMessage, ChatRoom  # noqa: E402,F401
-from app.models.recipe import Recipe, UserRecipe  # noqa: E402,F401
+from app.models.recipe import Recipe, UserRecipe, UserRecipeReport  # noqa: E402,F401
 from app.models.social import Like, Scrap, SocialAccount  # noqa: E402,F401

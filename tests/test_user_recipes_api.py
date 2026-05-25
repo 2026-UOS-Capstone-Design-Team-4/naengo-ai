@@ -4,8 +4,17 @@ from fastapi.testclient import TestClient
 
 from app.api.v1.endpoints import user_recipes as endpoint_module
 from app.main import app
-from app.models.recipe import UserRecipe, UserRecipeLabel, UserRecipeStep
+from app.models.recipe import (
+    UserRecipe,
+    UserRecipeLabel,
+    UserRecipeReport,
+    UserRecipeStep,
+)
 from app.models.user import User
+from app.services.user_recipe_report_service import (
+    UserRecipeReportAlreadyExistsError,
+    UserRecipeReportOwnRecipeError,
+)
 from app.services.user_recipe_service import (
     UserRecipeInvalidCursorError,
     _build_public_user_recipe_cursor,
@@ -167,6 +176,37 @@ class FakeUserRecipeService:
         )
 
 
+class FakeUserRecipeReportService:
+    def __init__(self, _db):
+        pass
+
+    def create_report(self, user_recipe_id, reporter_user_id, body):
+        return UserRecipeReport(
+            report_id=1,
+            user_recipe_id=user_recipe_id,
+            reporter_user_id=reporter_user_id,
+            recipe_owner_user_id=8,
+            reason=body.reason,
+            description=body.description,
+            status="PENDING",
+            review_note=None,
+            reviewed_by=None,
+            reviewed_at=None,
+            created_at=datetime(2026, 5, 25, tzinfo=UTC),
+            updated_at=datetime(2026, 5, 25, tzinfo=UTC),
+        )
+
+
+class FakeAlreadyReportedService(FakeUserRecipeReportService):
+    def create_report(self, user_recipe_id, reporter_user_id, body):
+        raise UserRecipeReportAlreadyExistsError
+
+
+class FakeOwnRecipeReportService(FakeUserRecipeReportService):
+    def create_report(self, user_recipe_id, reporter_user_id, body):
+        raise UserRecipeReportOwnRecipeError
+
+
 def _override_get_db():
     yield object()
 
@@ -291,6 +331,63 @@ def test_my_user_recipe_detail_returns_category_tags_and_step_image(monkeypatch)
     assert body["tips"] == ["묵은지를 쓰면 좋아요"]
     assert body["main_image_url"] == "https://example.com/kimchi.jpg"
     assert body["steps"][0]["image_url"] == "https://example.com/step-1.jpg"
+
+
+def test_report_user_recipe_creates_pending_report(monkeypatch):
+    monkeypatch.setattr(
+        endpoint_module,
+        "UserRecipeReportService",
+        FakeUserRecipeReportService,
+    )
+
+    response = client.post(
+        "/api/v1/user-recipes/22/reports",
+        json={
+            "reason": "INAPPROPRIATE",
+            "description": "부적절한 표현이 포함되어 있어요",
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["report_id"] == 1
+    assert body["user_recipe_id"] == 22
+    assert body["reporter_user_id"] == 7
+    assert body["recipe_owner_user_id"] == 8
+    assert body["reason"] == "INAPPROPRIATE"
+    assert body["status"] == "PENDING"
+
+
+def test_report_user_recipe_returns_409_for_duplicate_report(monkeypatch):
+    monkeypatch.setattr(
+        endpoint_module,
+        "UserRecipeReportService",
+        FakeAlreadyReportedService,
+    )
+
+    response = client.post(
+        "/api/v1/user-recipes/22/reports",
+        json={"reason": "SPAM"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "ALREADY_REPORTED"
+
+
+def test_report_user_recipe_returns_409_for_own_recipe(monkeypatch):
+    monkeypatch.setattr(
+        endpoint_module,
+        "UserRecipeReportService",
+        FakeOwnRecipeReportService,
+    )
+
+    response = client.post(
+        "/api/v1/user-recipes/22/reports",
+        json={"reason": "OTHER"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "CANNOT_REPORT_OWN_RECIPE"
 
 
 def _approved_user_recipe_list_item():

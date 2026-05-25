@@ -37,6 +37,17 @@ DELETE /api/v1/admin/user-recipes/{user_recipe_id}
 
 사용자 삭제 또는 탈퇴 흐름으로 `is_active = false`가 된 제출 레시피만 관리자 API에서 물리 삭제할 수 있다. 활성 제출건은 관리자 화면에서 바로 삭제하지 않고 검수 상태만 변경한다.
 
+### User Recipe Reports
+
+```text
+GET    /api/v1/admin/user-recipe-reports
+GET    /api/v1/admin/user-recipe-reports/{report_id}
+PATCH  /api/v1/admin/user-recipe-reports/{report_id}
+```
+
+사용자 레시피 신고 검토 큐다. 신고 처리는 레시피 노출 상태를 자동 변경하지 않고,
+관리자가 필요할 때 별도 사용자 레시피 관리 API로 후속 조치한다.
+
 ## Deferred
 
 ### Recipe Sources

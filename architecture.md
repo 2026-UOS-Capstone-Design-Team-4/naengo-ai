@@ -141,6 +141,7 @@ DELETE /api/v1/users/me/profile
 
 GET    /api/v1/user-recipes?cursor=...&limit=20
 GET    /api/v1/user-recipes/{user_recipe_id}
+POST   /api/v1/user-recipes/{user_recipe_id}/reports
 GET    /api/v1/user-recipes/me
 GET    /api/v1/user-recipes/me/{user_recipe_id}
 POST   /api/v1/user-recipes/me
@@ -154,6 +155,10 @@ GET    /api/v1/admin/user-recipes?status=...&cursor=...
 GET    /api/v1/admin/user-recipes/{user_recipe_id}
 PATCH  /api/v1/admin/user-recipes/{user_recipe_id}
 DELETE /api/v1/admin/user-recipes/{user_recipe_id}
+
+GET    /api/v1/admin/user-recipe-reports?status=...&cursor=...
+GET    /api/v1/admin/user-recipe-reports/{report_id}
+PATCH  /api/v1/admin/user-recipe-reports/{report_id}
 ```
 
 ## 7. Near-Term Priorities

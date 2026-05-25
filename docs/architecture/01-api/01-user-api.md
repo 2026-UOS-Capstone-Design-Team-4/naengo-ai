@@ -135,6 +135,7 @@ Chat API는 추천 또는 일반 답변을 반환한다.
 ```text
 GET    /api/v1/user-recipes?cursor=...&limit=20
 GET    /api/v1/user-recipes/{user_recipe_id}
+POST   /api/v1/user-recipes/{user_recipe_id}/reports
 GET    /api/v1/user-recipes/me
 GET    /api/v1/user-recipes/me/{user_recipe_id}
 POST   /api/v1/user-recipes/me
@@ -148,6 +149,7 @@ DELETE /api/v1/user-recipes/me/{user_recipe_id}
 ```text
 GET    /api/v1/user-recipes?cursor=...&limit=20
 GET    /api/v1/user-recipes/{user_recipe_id}
+POST   /api/v1/user-recipes/{user_recipe_id}/reports
 ```
 
 목록 응답은 cursor pagination 래퍼를 사용한다.
@@ -159,6 +161,10 @@ GET    /api/v1/user-recipes/{user_recipe_id}
   "has_next": false
 }
 ```
+
+`POST /api/v1/user-recipes/{user_recipe_id}/reports`는 공개된 사용자 제출 레시피를 신고한다.
+`APPROVED`, `is_active = true`인 레시피만 신고할 수 있고, 본인 레시피와 중복 신고는 거절한다.
+신고는 레시피를 즉시 비노출하지 않고 관리자 검토 큐에 저장한다.
 
 `/api/v1/user-recipes/me`는 현재 사용자가 직접 제출한 레시피 관리 API다.
 사용자가 직접 제출한 레시피는 바로 `recipes`에 들어가지 않고 `user_recipes`와

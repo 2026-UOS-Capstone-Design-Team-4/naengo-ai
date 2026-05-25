@@ -216,6 +216,27 @@ USER_RECIPE_PUBLIC_LIST_RESPONSE_EXAMPLE = {
     "has_next": True,
 }
 
+USER_RECIPE_REPORT_EXAMPLE = {
+    "report_id": 1,
+    "user_recipe_id": 22,
+    "reporter_user_id": 7,
+    "recipe_owner_user_id": 8,
+    "reason": "INAPPROPRIATE",
+    "description": "부적절한 표현이 포함되어 있어요",
+    "status": "PENDING",
+    "review_note": None,
+    "reviewed_by": None,
+    "reviewed_at": None,
+    "created_at": "2026-05-25T12:00:00+09:00",
+    "updated_at": "2026-05-25T12:00:00+09:00",
+}
+
+USER_RECIPE_REPORT_LIST_RESPONSE_EXAMPLE = {
+    "items": [USER_RECIPE_REPORT_EXAMPLE],
+    "next_cursor": "eyJzb3J0IjoibGF0ZXN0IiwicmVwb3J0X2lkIjoxfQ",
+    "has_next": True,
+}
+
 USER_RECIPE_REVIEWED_EXAMPLE = {
     **USER_RECIPE_EXAMPLE,
     "status": "APPROVED",

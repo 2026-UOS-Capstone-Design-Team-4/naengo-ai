@@ -21,6 +21,7 @@
 - `user_recipe_steps`
 - `user_recipe_labels`
 - `user_recipe_nutrition`
+- `user_recipe_reports`
 - `chat_rooms`
 - `chat_messages`
 - `likes`
@@ -103,6 +104,20 @@ JSONB는 원본 백업이나 구조가 자주 바뀌는 보조 metadata에 제�
 AI 보정 결과는 별도 JSON draft 컬럼에 저장하지 않는다. 관리자가 확인한 값만 admin API로 구조화 필드에 반영하고, `APPROVED` 시 제출 레시피가 서비스에 노출 가능한 상태가 된다. production `recipes*` 테이블 import는 별도 작업으로 처리한다.
 
 관리자 물리 삭제는 `is_active = false`인 제출 레시피에만 허용한다. 활성 제출 레시피의 삭제는 사용자 삭제/탈퇴 흐름에서 soft delete로 먼저 처리한다.
+
+## User Recipe Reports
+
+`user_recipe_reports`는 공개된 사용자 제출 레시피에 대한 사용자 신고를 저장한다.
+신고는 레시피 노출 상태와 분리해 관리자 검토 큐로 관리한다.
+
+- `user_recipe_id`: 신고 대상 사용자 레시피
+- `reporter_user_id`: 신고한 사용자
+- `recipe_owner_user_id`: 신고 대상 레시피 작성자
+- `reason`: `INAPPROPRIATE`, `COPYRIGHT`, `SPAM`, `DANGEROUS`, `FALSE_INFO`, `OTHER`
+- `status`: `PENDING`, `REVIEWING`, `RESOLVED`, `REJECTED`
+- `review_note`, `reviewed_by`, `reviewed_at`: 관리자 검토 결과
+
+같은 사용자는 같은 사용자 레시피를 한 번만 신고할 수 있다.
 
 ## Vector Search
 

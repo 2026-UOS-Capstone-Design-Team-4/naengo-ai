@@ -6,6 +6,11 @@ from sqlalchemy.orm import Session
 
 from app.api.errors import ApiError
 from app.api.v1.deps import get_current_user_id
+from app.api.v1.openapi.user_recipe_reports import (
+    POST_USER_RECIPE_REPORT_DESCRIPTION,
+    POST_USER_RECIPE_REPORT_RESPONSES,
+    POST_USER_RECIPE_REPORT_SUMMARY,
+)
 from app.api.v1.openapi.user_recipes import (
     DELETE_USER_RECIPE_DESCRIPTION,
     DELETE_USER_RECIPE_RESPONSES,
@@ -34,7 +39,17 @@ from app.schemas.user_recipe import (
     UserRecipePublicResponse,
     UserRecipeResponse,
 )
+from app.schemas.user_recipe_report import (
+    UserRecipeReportCreate,
+    UserRecipeReportResponse,
+)
 from app.services.storage_service import user_recipe_image_storage
+from app.services.user_recipe_report_service import (
+    UserRecipeReportAlreadyExistsError,
+    UserRecipeReportNotFoundError,
+    UserRecipeReportOwnRecipeError,
+    UserRecipeReportService,
+)
 from app.services.user_recipe_service import (
     UserRecipeImageUpload,
     UserRecipeImageValidationError,
@@ -193,6 +208,46 @@ def delete_user_recipe(
             "제출 레시피를 찾을 수 없습니다.",
         )
     return {"message": "레시피가 삭제되었습니다."}
+
+
+@router.post(
+    "/{user_recipe_id}/reports",
+    summary=POST_USER_RECIPE_REPORT_SUMMARY,
+    description=POST_USER_RECIPE_REPORT_DESCRIPTION,
+    response_model=UserRecipeReportResponse,
+    responses=POST_USER_RECIPE_REPORT_RESPONSES,
+    status_code=201,
+)
+def report_user_recipe(
+    user_recipe_id: int,
+    body: UserRecipeReportCreate,
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    try:
+        return UserRecipeReportService(db).create_report(
+            user_recipe_id,
+            current_user_id,
+            body,
+        )
+    except UserRecipeReportNotFoundError:
+        raise ApiError(
+            404,
+            "USER_RECIPE_NOT_FOUND",
+            "신고 가능한 사용자 레시피를 찾을 수 없습니다.",
+        ) from None
+    except UserRecipeReportOwnRecipeError:
+        raise ApiError(
+            409,
+            "CANNOT_REPORT_OWN_RECIPE",
+            "본인이 작성한 레시피는 신고할 수 없습니다.",
+        ) from None
+    except UserRecipeReportAlreadyExistsError:
+        raise ApiError(
+            409,
+            "ALREADY_REPORTED",
+            "이미 신고한 사용자 레시피입니다.",
+        ) from None
 
 
 @router.get(

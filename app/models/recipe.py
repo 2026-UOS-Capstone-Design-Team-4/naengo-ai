@@ -8,6 +8,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -200,7 +201,11 @@ class Recipe(Base):
 
     @property
     def warnings(self) -> list[str]:
-        return [label.label_value for label in self.labels if label.label_type == "WARNING"]
+        return [
+            label.label_value
+            for label in self.labels
+            if label.label_type == "WARNING"
+        ]
 
     @property
     def image_url(self) -> str | None:
@@ -442,6 +447,11 @@ class UserRecipe(Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    reports = relationship(
+        "UserRecipeReport",
+        back_populates="user_recipe",
+        cascade="all, delete-orphan",
+    )
     imported_recipe = relationship("Recipe", foreign_keys=[imported_recipe_id])
 
     @property
@@ -462,7 +472,11 @@ class UserRecipe(Base):
 
     @property
     def warnings(self) -> list[str]:
-        return [label.label_value for label in self.labels if label.label_type == "WARNING"]
+        return [
+            label.label_value
+            for label in self.labels
+            if label.label_type == "WARNING"
+        ]
 
 
 class UserRecipeIngredient(Base):
@@ -542,6 +556,47 @@ class UserRecipeNutrition(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user_recipe = relationship("UserRecipe", back_populates="nutrition")
+
+
+class UserRecipeReport(Base):
+    __tablename__ = "user_recipe_reports"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_recipe_id",
+            "reporter_user_id",
+            name="uq_user_recipe_reports_recipe_reporter",
+        ),
+    )
+
+    report_id = Column(Integer, primary_key=True, index=True)
+    user_recipe_id = Column(
+        Integer,
+        ForeignKey("user_recipes.user_recipe_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    reporter_user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    recipe_owner_user_id = Column(
+        Integer,
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    reason = Column(String(30), nullable=False)
+    description = Column(Text)
+    status = Column(String(20), nullable=False, default="PENDING")
+    review_note = Column(Text)
+    reviewed_by = Column(Integer, ForeignKey("users.user_id", ondelete="SET NULL"))
+    reviewed_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user_recipe = relationship("UserRecipe", back_populates="reports")
+    reporter = relationship("User", foreign_keys=[reporter_user_id])
+    recipe_owner = relationship("User", foreign_keys=[recipe_owner_user_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])
 
 
 class RecipeQualityScore(Base):
