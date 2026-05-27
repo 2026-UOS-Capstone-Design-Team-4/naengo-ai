@@ -8,17 +8,17 @@ AI Agent가 직접 웹을 다루지 않고 `LiveResearchService`를 호출하는
 
 ```text
 User Message
-  -> IntentClassifier
-  -> IntentAgentRouter
-      -> RecipeRetrievalService
-      -> LiveResearchService
-          -> SourcePolicy
+  -> MainIntentAgent
+  -> DomainPlanner
+      -> LiveResearchService (필요 시)
           -> SearchProvider
-          -> PageFetcher
-          -> ContentExtractor
-          -> EvidenceSummarizer
-          -> CitationBuilder
+          -> SourcePolicy
+          -> Evidence / CitationBuilder
+      -> RecipeRetrievalService (레시피 검색이 필요한 경우)
 ```
+
+페이지 본문 fetch와 별도 summarization은 향후 확장 지점이다. 기본 흐름은
+검색 provider가 제공하는 후보 metadata와 snippet을 짧은 evidence로 정리한다.
 
 ## When To Use
 
@@ -40,11 +40,12 @@ User Message
 
 ```text
 AgentService
-  -> IntentAgentRouter
-      -> LiveResearchService.research(query, context)
+  -> MainIntentAgent / DomainPlanner
+      -> LiveResearchService
 ```
 
-Agent는 research 결과의 요약과 citation을 활용한다. 검색 provider, 페이지 파싱, 캐싱은 LiveResearchService 내부 책임이다.
+Agent는 research 결과의 요약과 citation을 활용한다. 검색 provider, 출처 필터링,
+evidence 정리, 캐싱은 LiveResearchService 내부 책임이다.
 
 ## Subdocuments
 

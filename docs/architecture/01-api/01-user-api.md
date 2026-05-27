@@ -125,8 +125,8 @@ Chat API는 추천 또는 일반 답변을 반환한다.
 
 - assistant message
 - 추천 레시피 id 목록
-- 추천 근거 요약
-- 사용자 검색 조건
+- `evidence` SSE 이벤트의 추천 근거 요약
+- `evidence` SSE 이벤트의 사용자 검색 조건
 - 프로필 업데이트 후보 또는 확인 정보
 - live research 사용 여부
 

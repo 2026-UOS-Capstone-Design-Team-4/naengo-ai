@@ -15,15 +15,40 @@ CHAT_ROOM_NOT_FOUND_RESPONSE = error_response(
     "채팅방을 찾을 수 없습니다.",
 )
 
+STORAGE_NOT_CONFIGURED_RESPONSE = error_response(
+    "이미지 전송을 위한 스토리지가 설정되지 않았습니다.",
+    "STORAGE_NOT_CONFIGURED",
+    "이미지 전송을 위한 스토리지가 설정되지 않았습니다.",
+)
+
+CHAT_VALIDATION_RESPONSE = error_response(
+    "요청 값이 유효하지 않습니다. (이미지 크기 초과 등)",
+    "VALIDATION_FAILED",
+    "Request validation failed.",
+    {
+        "fields": [
+            {
+                "name": "body.image",
+                "reason": "Value error, 이미지 크기는 10MB를 초과할 수 없습니다.",
+            }
+        ]
+    },
+)
+
 _COMMON_SSE_DESCRIPTION = (
     r"""
 - **응답 방식**: `text/event-stream` 형식으로 이벤트를 실시간 전송합니다.
-- **metadata 이벤트**: intent 분류 결과, live research 사용 여부, source count를 전송합니다.
+- **metadata 이벤트**: primary task, live research 사용 여부, source count를 전송합니다.
+- **planning 이벤트**: planner, sub intent, answer strategy, 선택된 answer agent를 전송합니다.
+- **context 이벤트**: 이전 추천 레시피를 이어 묻는 `COOKING_QA`에서 참조가 해석되면 `{"resolved_recipe_id": 1, "title": "김치두부찌개"}` 형식으로 전송합니다.
+  예: "첫 번째로 추천한 김치두부찌개에서 돼지고기를 빼도 돼?"처럼 최근 추천 레시피를 이어 묻는 경우입니다.
+- **retrieval 이벤트**: RAG 검색 상태(`started`, `completed`, `failed`)와 선택된 레시피 수를 전송합니다.
+- **evidence 이벤트**: RAG 검색이 완료되면 추천 근거 요약과 사용자 검색 조건을 `{"recipes": [...], "constraints": {...}}` 형식으로 전송합니다.
 - **message 이벤트**: AI 텍스트 조각을 `{"content": "..."}` 형식으로 여러 번 전송합니다.
-- **profile_update 이벤트**: `PROFILE_UPDATE` intent일 때만 전송합니다. `AUTO_SAVE` 또는 `REQUIRE_CONFIRMATION` 결과만 포함되며, `IGNORE`는 전송하지 않습니다.
+- **profile_update 이벤트**: 프로필 관리 또는 요리 관련 흐름의 프로필 side effect에서 `AUTO_SAVE` 또는 `REQUIRE_CONFIRMATION` 결과만 포함되며, `IGNORE`는 전송하지 않습니다. 저장 안내는 일반 `message` 조각에도 포함될 수 있습니다.
 - **recipes 이벤트**: 레시피 추천 흐름에서 응답 완료 후 검색된 레시피 목록을 `RecipeResponse[]`로 전송합니다.
-- **done 이벤트**: 스트림 종료를 알립니다. `message_id`는 저장된 AI 메시지 ID입니다.
-- **error 이벤트**: 처리 중 오류가 발생하면 표준 에러 payload를 전송합니다.
+- **done 이벤트**: 스트림 종료를 나타내는 terminal 이벤트입니다. `message_id`는 저장된 AI 메시지 ID이며, 저장 전 오류에서는 `null`일 수 있습니다.
+- **error 이벤트**: 처리 중 오류가 발생하면 표준 에러 payload를 전송합니다. 가능한 경우 이후 terminal `done` 이벤트가 이어집니다.
 - **이미지**: `image`에 base64 data URL을 넣으면 멀티모달 입력으로 처리합니다.
 """
     + RECIPE_RESPONSE_TABLE
@@ -118,10 +143,35 @@ CHAT_ROOM_DESCRIPTION = (
 )
 
 _RECIPES_EVENT_DATA = json.dumps([RECIPE_EXAMPLE], ensure_ascii=False)
+_EVIDENCE_EVENT_DATA = json.dumps(
+    {
+        "recipes": [
+            {
+                "recipe_id": 1,
+                "title": "김치두부찌개",
+                "why_matched": ["김치", "두부", "20분 이내"],
+                "risk_flags": [],
+                "missing_ingredients": [],
+                "time_minutes": 20,
+                "difficulty": "easy",
+            }
+        ],
+        "constraints": {"avoid_ingredients": ["새우"], "max_time_minutes": 20},
+    },
+    ensure_ascii=False,
+)
 
 _COMMON_SSE_STREAM = (
     "event: metadata\n"
-    'data: {"intent_type":"RECIPE_RECOMMENDATION","model":"gpt-5.4-mini","used_live_research":false,"source_count":0}\n\n'
+    'data: {"primary_task":"RECIPE_FIND","model":"gpt-5.4-mini","used_live_research":false,"source_count":0}\n\n'
+    "event: planning\n"
+    'data: {"primary_task":"RECIPE_FIND","sub_intent":"BY_INGREDIENTS","answer_strategy":"RECIPE_RECOMMENDATION","planner":"RecipeFindPlanner","selected_agent":"recipe_agent","confidence":0.92}\n\n'
+    "event: retrieval\n"
+    'data: {"status":"started"}\n\n'
+    "event: retrieval\n"
+    'data: {"status":"completed","candidate_count":1,"selected_count":1}\n\n'
+    "event: evidence\n"
+    f"data: {_EVIDENCE_EVENT_DATA}\n\n"
     "event: message\n"
     'data: {"content": "김치와 두부로 만들 수 있는 레시피를 찾아볼게요."}\n\n'
     "event: message\n"
@@ -139,14 +189,14 @@ CHAT_NEW_ROOM_RESPONSES = {
             "text/event-stream": {
                 "schema": {
                     "type": "string",
-                    "example": (
-                        "event: room\n"
-                        'data: {"room_id": 1}\n\n'
-                    ) + _COMMON_SSE_STREAM,
+                    "example": ('event: room\ndata: {"room_id": 1}\n\n')
+                    + _COMMON_SSE_STREAM,
                 }
             }
         },
     },
+    422: CHAT_VALIDATION_RESPONSE,
+    503: STORAGE_NOT_CONFIGURED_RESPONSE,
     500: INTERNAL_ERROR_RESPONSE,
 }
 
@@ -163,5 +213,7 @@ CHAT_ROOM_RESPONSES = {
         },
     },
     404: CHAT_ROOM_NOT_FOUND_RESPONSE,
+    422: CHAT_VALIDATION_RESPONSE,
+    503: STORAGE_NOT_CONFIGURED_RESPONSE,
     500: INTERNAL_ERROR_RESPONSE,
 }

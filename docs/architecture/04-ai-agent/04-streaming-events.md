@@ -7,25 +7,40 @@ AI 채팅 응답은 SSE로 스트리밍한다.
 | Event | Data | Purpose |
 | --- | --- | --- |
 | `room` | `{ "room_id": number }` | 새 채팅방 ID 전달 (`POST /rooms` 전용) |
-| `metadata` | `{ "intent_type": string, "model": string, "used_live_research": boolean, "source_count": number }` | 스트림 메타데이터 |
+| `metadata` | `{ "primary_task": string, "model": string, "used_live_research": boolean, "source_count": number }` | 스트림 메타데이터 |
+| `planning` | `{ "primary_task": string, "sub_intent": string?, "answer_strategy": string, "planner": string?, "selected_agent": string?, "confidence": number }` | task/planner/sub-intent/선택 agent |
+| `context` | `{ "resolved_recipe_id": number, "title": string }` | 최근 추천 등 참조 해석 결과 |
+| `retrieval` | `{ "status": "started" \| "completed" \| "failed", "candidate_count": number?, "selected_count": number? }` | RAG 검색 진행/결과 |
+| `evidence` | `{ "recipes": EvidenceRecipe[], "constraints": object }` | 추천 근거 요약과 사용자 검색 조건 |
 | `message` | `{ "content": string }` | AI 답변 chunk |
 | `profile_update` | `{ "action": string, "candidates": ProfileUpdateCandidate[] }` | 프로필 저장/확인 결과 |
 | `recipes` | `Recipe[]` | 추천 레시피 목록 |
-| `done` | `{ "message_id": number, "recipe_ids": number[] }` | 정상 종료 |
+| `done` | `{ "message_id": number \| null, "recipe_ids": number[] }` | 스트림 종료 |
 | `error` | `{ "code": string, "message": string }` | 스트림 중 오류 |
 
 ## Rules
 
 - `room`은 `POST /rooms`(새 방 생성)에서만 전송한다. 기존 방 메시지(`POST /rooms/{room_id}`)에서는 보내지 않는다.
 - `message`는 순수 텍스트 delta만 보낸다.
+- `planning`은 응답 생성 전에 현재 task, sub intent, answer strategy, 선택된 answer agent를 알려준다.
+- `context`는 "첫 번째로 추천한 김치두부찌개"처럼 이전 추천을 가리키는 참조가
+  실제 레시피로 해석된 경우에만 보낸다.
+- `retrieval`은 RAG 검색이 수행된 경우에만 보내며, 긴 검색 UI를 위해 시작과
+  완료/실패 상태를 구분할 수 있다.
+- `evidence`는 RAG 검색이 완료되고 근거 또는 검색 조건이 있는 경우에만 보낸다.
+  프론트에서 추천 이유, 제외 조건, 시간 제한 같은 설명 UI에 사용한다.
 - `profile_update`는 `AUTO_SAVE`, `REQUIRE_CONFIRMATION` 결과만 보낸다. `IGNORE`는 전송하지 않는다.
 - `recipes`는 중복 제거된 최종 추천 목록만 보낸다.
-- `done`은 DB 저장 완료 후 보낸다.
-- 예외 발생 시 가능한 경우 `error` 이벤트를 보내고 스트림을 닫는다.
+- `done`은 스트림의 terminal event다. 로그인 채팅은 DB 저장 완료 후
+  `message_id`를 포함하고, 게스트 채팅이나 저장되지 않은 종료는
+  `message_id=null`을 보낸다.
+- 예외 발생 시 가능한 경우 `error` 이벤트를 보내고, 클라이언트 종료 처리를
+  단순하게 하기 위해 terminal `done` 이벤트로 닫는다.
 
 ## Profile Update Event
 
-`PROFILE_UPDATE` route에서 자동 저장했거나 사용자 확인이 필요한 후보가 있으면 `profile_update` 이벤트를 보낼 수 있다.
+`PROFILE_MANAGEMENT` task 또는 로그인 사용자의 요리 관련 턴에서 자동 저장했거나
+사용자 확인이 필요한 후보가 있으면 `profile_update` 이벤트를 보낼 수 있다.
 
 자동 저장 예:
 

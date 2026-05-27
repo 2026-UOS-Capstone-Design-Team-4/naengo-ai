@@ -1,20 +1,20 @@
 # 03. Agent Integration
 
-Live Research는 AI Agent의 route 중 하나로 연결된다.
+Live Research는 main intent와 domain plan이 최신성 필요성을 감지했을 때
+보조 context로 연결된다.
 
-## Intent Types
+## Primary Tasks
 
-Live Research 정보가 필요한 intent:
+Live Research 정보가 필요할 수 있는 task:
 
-- `RECIPE_RECOMMENDATION`
-- `COOKING_TIP`
-- `INGREDIENT_SUBSTITUTION`
-- `DIET_OR_ALLERGY`
+- `RECIPE_FIND`
+- `COOKING_QA`
 
 추가 flag:
 
 ```json
 {
+  "needs_live_research": true,
   "requires_freshness": true,
   "requires_external_evidence": true
 }
@@ -23,9 +23,9 @@ Live Research 정보가 필요한 intent:
 ## Routing
 
 ```text
-IntentClassifier
-  -> IntentAgentRouter
-      -> if fresh/current/trend required:
+MainIntentAgent
+  -> DomainPlanner
+      -> if fresh/current/trend/external evidence required:
            LiveResearchService
       -> else:
            RecipeRetrievalService
@@ -61,7 +61,7 @@ Live research evidence:
 
 ```json
 {
-  "intent_type": "RECIPE_RECOMMENDATION",
+  "primary_task": "RECIPE_FIND",
   "used_live_research": true,
   "source_count": 3
 }
