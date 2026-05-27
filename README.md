@@ -39,5 +39,6 @@ FastAPI 기반 AI 요리 어시스턴트 서버입니다.
 - `~/naengo-deploy`에는 운영 비밀 파일인 `.env`와 `global-bundle.pem`이 있어야 하며, `docker-compose.prod.yml`은 배포 시 GitHub Actions가 복사합니다.
 - 운영 컨테이너 이름은 `naengo-ai`, 포트는 `8000`입니다.
 - 개발 환경은 `docker-compose.dev.yml`을 사용하며, 코드가 볼륨 마운트되어 일반적인 코드 수정 후 재빌드 없이 반영됩니다.
+- 개발 compose는 `APP_ENV=dev`, `AUTH_DISABLED=true`로 실행되어 Bearer 토큰 없이 개발용 사용자(`DEV_AUTH_USER_ID=1`, `DEV_AUTH_ROLE=ADMIN`)로 API를 호출할 수 있습니다.
 - 개발 compose는 MinIO를 함께 실행합니다. 앱 컨테이너는 `STORAGE_BACKEND=s3`, `S3_ENDPOINT=http://minio:9000`, `S3_PUBLIC_URL=http://localhost:9000`을 사용하며, MinIO 콘솔은 `http://localhost:9001`에서 확인할 수 있습니다.
 - API 문서는 서버 실행 후 `/docs`에서 확인합니다.

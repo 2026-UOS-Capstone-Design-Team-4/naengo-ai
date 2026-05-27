@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     )
 
     database_url: str = Field(alias="DATABASE_URL")
+    app_env: str = Field(default="prod", alias="APP_ENV")
     embedding_api_key: str = Field(alias="EMBEDDING_API_KEY")
     embedding_model: str = Field(
         default=DEFAULT_EMBEDDING_MODEL,
@@ -34,6 +35,9 @@ class Settings(BaseSettings):
     model_name: str = Field(alias="MODEL_NAME")
     jwt_secret_key: str | None = Field(default=None, alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS512", alias="JWT_ALGORITHM")
+    auth_disabled: bool = Field(default=False, alias="AUTH_DISABLED")
+    dev_auth_user_id: int = Field(default=1, alias="DEV_AUTH_USER_ID")
+    dev_auth_role: str = Field(default="USER", alias="DEV_AUTH_ROLE")
     internal_api_secret: str | None = Field(
         default=None,
         alias="INTERNAL_API_SECRET",
@@ -76,6 +80,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 DATABASE_URL = settings.database_url
+APP_ENV = settings.app_env
 EMBEDDING_API_KEY = settings.embedding_api_key
 EMBEDDING_MODEL = settings.embedding_model
 
@@ -85,6 +90,9 @@ MODEL_NAME = settings.model_name
 
 JWT_SECRET_KEY = settings.jwt_secret_key
 JWT_ALGORITHM = settings.jwt_algorithm
+AUTH_DISABLED = settings.auth_disabled
+DEV_AUTH_USER_ID = settings.dev_auth_user_id
+DEV_AUTH_ROLE = settings.dev_auth_role
 INTERNAL_API_SECRET = settings.internal_api_secret
 STORAGE_BACKEND = settings.storage_backend
 S3_ENDPOINT = settings.s3_endpoint

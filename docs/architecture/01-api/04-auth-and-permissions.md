@@ -57,6 +57,22 @@ JWT 정책:
 
 Internal API는 사용자 access token이 아니라 `X-Internal-Secret` 기반 인증을 사용한다.
 
+## Dev Auth Bypass
+
+로컬 개발 환경에서는 프론트엔드/Swagger 확인 편의를 위해 사용자 access token 검증을
+우회할 수 있다. 이 우회는 `APP_ENV`가 `dev`, `development`, `local` 중 하나이고
+`AUTH_DISABLED=true`일 때만 동작한다.
+
+동작:
+
+- Bearer token이 없어도 `DEV_AUTH_USER_ID`의 개발 사용자로 처리한다.
+- 개발 사용자가 DB에 없으면 기본 사용자와 빈 프로필을 생성한다.
+- `DEV_AUTH_ROLE=ADMIN`이면 Admin API도 로그인 없이 호출할 수 있다.
+- `APP_ENV`가 개발 환경이 아닌데 `AUTH_DISABLED=true`이면 요청을 실패시킨다.
+
+`docker-compose.dev.yml`은 기본적으로 `APP_ENV=dev`, `AUTH_DISABLED=true`,
+`DEV_AUTH_USER_ID=1`, `DEV_AUTH_ROLE=ADMIN`을 사용한다.
+
 ## Dependency Direction
 
 ```text
