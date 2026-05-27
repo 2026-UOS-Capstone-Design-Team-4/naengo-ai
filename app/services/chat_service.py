@@ -105,6 +105,28 @@ class ChatService:
     def load_recent_history(self, room_id: int, limit: int) -> list[ModelMessage]:
         return self.load_history(room_id)[-limit:]
 
+    def load_recent_recipe_refs(self, room_id: int, limit: int = 5) -> list[int]:
+        messages = (
+            self.db.query(ChatMessage)
+            .filter(
+                ChatMessage.room_id == room_id,
+                ChatMessage.role == "model",
+                ChatMessage.recipe_ids.isnot(None),
+            )
+            .order_by(ChatMessage.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+        recipe_ids: list[int] = []
+        for msg in messages:
+            if isinstance(msg.recipe_ids, list):
+                recipe_ids.extend(
+                    recipe_id
+                    for recipe_id in msg.recipe_ids
+                    if isinstance(recipe_id, int)
+                )
+        return recipe_ids
+
     def save_messages(
         self,
         room_id: int,

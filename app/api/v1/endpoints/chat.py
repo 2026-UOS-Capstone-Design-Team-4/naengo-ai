@@ -81,23 +81,26 @@ async def create_room_and_chat(
         chat_service = ChatService(db)
         room = chat_service.create_room(current_user_id, request.prompt)
         agent_service = AgentService()
+        stream = await agent_service.stream(
+            prompt=request.prompt,
+            image=request.image,
+            room_id=room.room_id,
+            history=[],
+            user_id=current_user_id,
+            chat_service=chat_service,
+            db=db,
+        )
 
         async def generate():
             data = json.dumps({"room_id": room.room_id})
             yield f"event: room\ndata: {data}\n\n"
-            async for chunk in await agent_service.stream(
-                prompt=request.prompt,
-                image=request.image,
-                room_id=room.room_id,
-                history=[],
-                user_id=current_user_id,
-                chat_service=chat_service,
-                db=db,
-            ):
+            async for chunk in stream:
                 yield chunk
 
         return StreamingResponse(generate(), media_type="text/event-stream")
 
+    except (ApiError, HTTPException):
+        raise
     except Exception as exc:
         logger.error("create_room_and_chat 오류: %s", exc)
         raise ApiError(500, "INTERNAL_ERROR", str(exc)) from exc

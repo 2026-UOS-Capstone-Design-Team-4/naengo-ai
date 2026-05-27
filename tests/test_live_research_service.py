@@ -1,6 +1,8 @@
+from app.agents.intent.intent_models import PrimaryTask
 from app.services.live_research_service import (
     BraveSearchProvider,
     DisabledSearchProvider,
+    LiveResearchDecision,
     LiveResearchService,
     ResearchQuery,
     SearchCandidate,
@@ -26,12 +28,57 @@ class FakeSearchProvider:
         ]
 
 
-def test_should_research_for_fresh_food_intent():
-    service = LiveResearchService()
+class FakeDecisionAgent:
+    def __init__(self, outputs):
+        self.outputs = list(outputs)
+        self.prompts = []
 
-    assert service.should_research("RECIPE_RECOMMENDATION", "요즘 유행하는 요리 뭐야?")
-    assert not service.should_research("RECIPE_RECOMMENDATION", "김치랑 두부 있어")
-    assert not service.should_research("OFF_TOPIC", "요즘 주식 알려줘")
+    def run_sync(self, prompt: str):
+        self.prompts.append(prompt)
+        output = self.outputs.pop(0)
+        return type("Result", (), {"output": output})()
+
+
+def test_should_research_for_fresh_food_intent():
+    agent = FakeDecisionAgent(
+        [
+            LiveResearchDecision(
+                should_research=True,
+                query="요즘 유행하는 요리",
+                freshness_required=True,
+                topic="food_trend",
+            ),
+            LiveResearchDecision(should_research=False),
+        ]
+    )
+    service = LiveResearchService(decision_agent=agent)
+
+    assert service.should_research(PrimaryTask.RECIPE_FIND, "요즘 유행하는 요리 뭐야?")
+    assert not service.should_research(PrimaryTask.RECIPE_FIND, "김치랑 두부 있어")
+    assert not service.should_research(PrimaryTask.OFF_TOPIC, "요즘 주식 알려줘")
+    assert "[User message]\n요즘 유행하는 요리 뭐야?" in agent.prompts[0]
+
+
+def test_build_query_uses_ai_sanitized_query():
+    agent = FakeDecisionAgent(
+        [
+            LiveResearchDecision(
+                should_research=True,
+                query="요즘 저탄수 레시피",
+                freshness_required=True,
+                topic="food_trend",
+            )
+        ]
+    )
+    service = LiveResearchService(decision_agent=agent)
+
+    query = service.build_query(
+        "요즘 당뇨 때문에 저탄수 레시피 뭐가 좋아?",
+        PrimaryTask.RECIPE_FIND,
+    )
+
+    assert query.query == "요즘 저탄수 레시피"
+    assert query.freshness_required is True
 
 
 def test_source_policy_filters_invalid_and_low_quality_candidates():

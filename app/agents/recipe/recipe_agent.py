@@ -7,7 +7,10 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from app.agents.core.dependencies import RecipeDeps
 from app.agents.core.system_prompts import (
     COOKING_ANSWER_PROMPT,
+    INGREDIENT_SUBSTITUTION_PROMPT,
     RECIPE_AGENT_PROMPT,
+    RECIPE_CONTEXT_QA_PROMPT,
+    SAFETY_COOKING_PROMPT,
     SMALLTALK_AGENT_PROMPT,
 )
 from app.core import config
@@ -31,6 +34,21 @@ cooking_agent = Agent(
     system_prompt=COOKING_ANSWER_PROMPT,
 )
 
+recipe_context_qa_agent = Agent(
+    _model,
+    system_prompt=RECIPE_CONTEXT_QA_PROMPT,
+)
+
+ingredient_substitution_agent = Agent(
+    _model,
+    system_prompt=INGREDIENT_SUBSTITUTION_PROMPT,
+)
+
+safety_cooking_agent = Agent(
+    _model,
+    system_prompt=SAFETY_COOKING_PROMPT,
+)
+
 smalltalk_agent = Agent(
     _model,
     system_prompt=SMALLTALK_AGENT_PROMPT,
@@ -47,6 +65,10 @@ def search_recipes(ctx: RunContext[RecipeDeps], query: str) -> str:
         )
         logger.info("레시피 검색: 사전 검색 결과 재사용")
         return f"검색 재료: {query}\n찾은 레시피: {titles}"
+
+    if not ctx.deps.retrieval_allowed:
+        logger.info("레시피 검색: planner 판단에 따라 검색 생략")
+        return "이번 요청은 레시피 DB 검색 없이 답변해도 됩니다."
 
     search_query = (
         ctx.deps.search_plan.query_text

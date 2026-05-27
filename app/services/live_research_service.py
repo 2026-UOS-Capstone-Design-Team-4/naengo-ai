@@ -6,7 +6,12 @@ from typing import Any, Protocol
 from urllib.parse import urlparse
 
 import requests
+from pydantic import BaseModel
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
+from app.agents.intent.intent_models import PrimaryTask
 from app.core import config
 
 
@@ -17,6 +22,14 @@ class ResearchQuery:
     freshness_required: bool = False
     topic: str = "food"
     max_sources: int = 5
+
+
+class LiveResearchDecision(BaseModel):
+    should_research: bool = False
+    query: str | None = None
+    freshness_required: bool = False
+    topic: str = "food"
+    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -152,15 +165,9 @@ class CitationBuilder:
         return "\n".join(lines)
 
 
-_FRESHNESS_PATTERN = re.compile(
-    r"(최신|최근|요즘|요새|유행|트렌드|SNS|인스타|틱톡|릴스|올해|이번\s*시즌|제철)",
-    re.IGNORECASE,
-)
-_LIVE_RESEARCH_INTENTS = {
-    "RECIPE_RECOMMENDATION",
-    "COOKING_TIP",
-    "INGREDIENT_SUBSTITUTION",
-    "DIET_OR_ALLERGY",
+_LIVE_RESEARCH_TASKS = {
+    PrimaryTask.RECIPE_FIND,
+    PrimaryTask.COOKING_QA,
 }
 
 
@@ -170,32 +177,54 @@ class LiveResearchService:
         search_provider: SearchProvider | None = None,
         source_policy: SourcePolicy | None = None,
         citation_builder: CitationBuilder | None = None,
+        decision_agent: Agent | None = None,
     ) -> None:
         self.search_provider = search_provider or DisabledSearchProvider()
         self.source_policy = source_policy or SourcePolicy()
         self.citation_builder = citation_builder or CitationBuilder()
+        self.decision_agent = decision_agent or _build_live_research_decision_agent()
         self._cache: dict[str, CacheEntry] = {}
 
-    def should_research(self, intent_type: str, message: str) -> bool:
-        return (
-            intent_type in _LIVE_RESEARCH_INTENTS
-            and bool(_FRESHNESS_PATTERN.search(message))
-        )
+    def should_research(self, primary_task: PrimaryTask | str, message: str) -> bool:
+        return self.decide(primary_task, message).should_research
 
     def build_query(
         self,
         message: str,
-        intent_type: str,
+        primary_task: PrimaryTask | str,
         locale: str = "ko-KR",
         max_sources: int = 5,
     ) -> ResearchQuery:
+        decision = self.decide(primary_task, message)
         return ResearchQuery(
-            query=message.strip(),
+            query=(decision.query or message).strip(),
             locale=locale,
-            freshness_required=self.should_research(intent_type, message),
-            topic=_topic_for_intent(intent_type),
+            freshness_required=decision.freshness_required,
+            topic=decision.topic or _topic_for_task(_coerce_primary_task(primary_task)),
             max_sources=max_sources,
         )
+
+    def decide(
+        self,
+        primary_task: PrimaryTask | str,
+        message: str,
+    ) -> LiveResearchDecision:
+        task = _coerce_primary_task(primary_task)
+        if task not in _LIVE_RESEARCH_TASKS:
+            return LiveResearchDecision(
+                should_research=False,
+                query=None,
+                freshness_required=False,
+                topic=_topic_for_task(task),
+                reason="task is not eligible for live research",
+            )
+        result = self.decision_agent.run_sync(
+            f"[Primary task]\n{task.value}\n\n[User message]\n{message.strip()}"
+        )
+        output = result.output
+        if output.should_research and not output.query:
+            return output.model_copy(update={"query": message.strip()})
+        return output
 
     def research(self, query: ResearchQuery) -> LiveResearchResult:
         now = datetime.now(UTC)
@@ -248,7 +277,16 @@ def get_search_provider() -> SearchProvider:
     return DisabledSearchProvider()
 
 
-live_research_service = LiveResearchService(search_provider=get_search_provider())
+def _build_live_research_decision_agent() -> Agent:
+    model = OpenAIChatModel(
+        config.MODEL_NAME,
+        provider=OpenAIProvider(api_key=config.API_KEY, base_url=config.BASE_URL),
+    )
+    return Agent(
+        model,
+        output_type=LiveResearchDecision,
+        system_prompt=_LIVE_RESEARCH_DECISION_PROMPT,
+    )
 
 
 def _brave_params(query: ResearchQuery) -> dict[str, Any]:
@@ -341,10 +379,17 @@ def _candidate_confidence(candidate: SearchCandidate) -> float:
     return min(round(score, 2), 0.9)
 
 
-def _topic_for_intent(intent_type: str) -> str:
-    if intent_type == "DIET_OR_ALLERGY":
-        return "diet"
-    if intent_type in {"COOKING_TIP", "INGREDIENT_SUBSTITUTION"}:
+def _coerce_primary_task(value: PrimaryTask | str) -> PrimaryTask:
+    if isinstance(value, PrimaryTask):
+        return value
+    try:
+        return PrimaryTask(value)
+    except ValueError:
+        return PrimaryTask.OFF_TOPIC
+
+
+def _topic_for_task(primary_task: PrimaryTask) -> str:
+    if primary_task == PrimaryTask.COOKING_QA:
         return "cooking_info"
     return "food_trend"
 
@@ -370,3 +415,38 @@ def _ttl_for_query(query: ResearchQuery) -> timedelta:
     if query.topic == "seasonal":
         return timedelta(days=7)
     return timedelta(days=30)
+
+
+_LIVE_RESEARCH_DECISION_PROMPT = """
+You decide whether a cooking assistant needs external live web research.
+Return structured output only.
+
+Use live research only when the user needs current, recent, seasonal, trend, or
+external-evidence information that the local recipe database may not contain.
+Do not use live research for ordinary recipe recommendations or general cooking
+questions that can be answered without current web evidence.
+
+If should_research is true:
+- query must be a concise web search query in Korean.
+- remove personal, medical, allergy, identity, and account details from query.
+- keep only the food topic and freshness need.
+- freshness_required should be true for current or trend-sensitive requests.
+- topic should be food_trend, cooking_info, or seasonal.
+
+If the message contains sensitive personal or health details, never include
+those details in query. If removing them leaves no useful current-search topic,
+set should_research=false.
+
+Examples:
+- "요즘 유행하는 김밥 뭐야?"
+  => should_research=true, query="요즘 유행하는 김밥"
+- "요즘 당뇨 때문에 저탄수 레시피 뭐가 좋아?"
+  => should_research=true, query="요즘 저탄수 레시피"
+- "요즘 새우 알레르기 있는데 유행 레시피 추천해줘"
+  => should_research=true, query="요즘 유행 레시피"
+- "김치랑 두부 있어"
+  => should_research=false
+""".strip()
+
+
+live_research_service = LiveResearchService(search_provider=get_search_provider())

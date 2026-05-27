@@ -1,10 +1,14 @@
-import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from pydantic import BaseModel, Field
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 from sqlalchemy.orm import Session
 
+from app.core import config
 from app.models.user import UserProfile
 
 
@@ -59,6 +63,23 @@ class ProfileUpdateDecision:
         }
 
 
+class ProfileUpdateAIOutputCandidate(BaseModel):
+    field: str
+    operation: ProfileUpdateOperation = ProfileUpdateOperation.ADD
+    value: str | int | float
+    evidence: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    scope: str
+    subject: str
+    reason: str | None = None
+
+
+class ProfileUpdateAIOutput(BaseModel):
+    action: ProfileUpdateAction = ProfileUpdateAction.IGNORE
+    candidates: list[ProfileUpdateAIOutputCandidate] = []
+    message: str | None = None
+
+
 _ALLOWLIST_FIELDS = {
     "allergies",
     "dietary_restrictions",
@@ -70,175 +91,35 @@ _ALLOWLIST_FIELDS = {
     "preferred_cooking_time_minutes",
     "serving_size",
 }
-_AUTO_SAVE_CONFIDENCE = 0.9
-_TEMPORARY_PATTERN = re.compile(
-    r"(오늘|이번(?:엔|에는)?|지금(?:은)?|요즘|이번 주|당장)"
-)
-_OTHER_SUBJECT_PATTERN = re.compile(
-    r"(친구|가족|엄마|아빠|아이|애가|손님|동료|남친|여친|아내|남편)"
-)
-_SELF_PATTERN = re.compile(r"(나|나는|난|저|저는|제가|내가|내|앞으로)")
-_HEALTH_PATTERN = re.compile(r"(당뇨|고혈압|질병|병원|의사|치료|약|혈당|신장|간질환)")
-_JOKE_OR_HYPOTHETICAL_PATTERN = re.compile(r"(만약|예를 들면|예시|농담|라고 치면)")
-_TOKEN_PATTERN = r"([가-힣A-Za-z0-9]+)"
+
+
+class ProfileUpdateAnalyzer:
+    def __init__(self, agent: Agent | None = None) -> None:
+        self._agent = agent or _build_profile_update_agent()
+
+    def analyze(
+        self,
+        message: str,
+        profile: UserProfile | None = None,
+    ) -> ProfileUpdateDecision:
+        prompt = _profile_update_prompt(message, profile)
+        result = self._agent.run_sync(prompt)
+        return _decision_from_ai_output(result.output)
 
 
 class ProfileUpdateExtractor:
+    def __init__(self, analyzer: ProfileUpdateAnalyzer | None = None) -> None:
+        self._analyzer = analyzer or ProfileUpdateAnalyzer()
+
     def extract(self, message: str) -> list[ProfileUpdateCandidate]:
-        text = message.strip()
-        subject = _detect_subject(text)
-        scope = _detect_scope(text)
-        candidates: list[ProfileUpdateCandidate] = []
+        return self._analyzer.analyze(message).candidates
 
-        candidates.extend(self._extract_allergies(text, subject, scope))
-        candidates.extend(self._extract_disliked_ingredients(text, subject, scope))
-        candidates.extend(self._extract_preferred_ingredients(text, subject, scope))
-        candidates.extend(self._extract_dietary_restrictions(text, subject, scope))
-        candidates.extend(self._extract_cooking_time(text, subject, scope))
-        candidates.extend(self._extract_serving_size(text, subject, scope))
-        return candidates
-
-    def _extract_allergies(
-        self, text: str, subject: str, scope: str
-    ) -> list[ProfileUpdateCandidate]:
-        candidates = []
-        patterns = [
-            rf"{_TOKEN_PATTERN}\s*알레르기(?:가|는)?\s*(?:있어|있음|있습니다|있어요)",
-            rf"(?:알레르기(?:가|는)?\s*){_TOKEN_PATTERN}",
-        ]
-        for pattern in patterns:
-            for match in re.finditer(pattern, text):
-                value = _normalize_food(match.group(1))
-                if value:
-                    candidates.append(
-                        _candidate(
-                            field="allergies",
-                            value=value,
-                            evidence=text,
-                            subject=subject,
-                            scope=scope,
-                            confidence=0.96 if subject == "self" else 0.7,
-                        )
-                    )
-        return _dedupe_candidates(candidates)
-
-    def _extract_disliked_ingredients(
-        self, text: str, subject: str, scope: str
-    ) -> list[ProfileUpdateCandidate]:
-        candidates = []
-        patterns = [
-            rf"{_TOKEN_PATTERN}(?:은|는|이|가)?\s*(?:싫어|싫습니다|싫어요|못\s*먹어|못\s*먹어요)",
-            rf"(?:앞으로\s*)?{_TOKEN_PATTERN}(?:은|는)?\s*(?:빼줘|제외해줘|넣지\s*마)",
-        ]
-        for pattern in patterns:
-            for match in re.finditer(pattern, text):
-                value = _normalize_food(match.group(1))
-                if value and value not in {"오늘", "요즘", "이번"}:
-                    candidates.append(
-                        _candidate(
-                            field="disliked_ingredients",
-                            value=value,
-                            evidence=text,
-                            subject=subject,
-                            scope=scope,
-                            confidence=0.94 if subject == "self" else 0.68,
-                        )
-                    )
-        return _dedupe_candidates(candidates)
-
-    def _extract_preferred_ingredients(
-        self, text: str, subject: str, scope: str
-    ) -> list[ProfileUpdateCandidate]:
-        candidates = []
-        pattern = rf"{_TOKEN_PATTERN}(?:은|는|이|가)?\s*(?:좋아|좋아해|좋습니다|좋아요)"
-        for match in re.finditer(pattern, text):
-            value = _normalize_food(match.group(1))
-            if value:
-                candidates.append(
-                    _candidate(
-                        field="preferred_ingredients",
-                        value=value,
-                        evidence=text,
-                        subject=subject,
-                        scope=scope,
-                        confidence=0.93 if subject == "self" else 0.68,
-                    )
-                )
-        return _dedupe_candidates(candidates)
-
-    def _extract_dietary_restrictions(
-        self, text: str, subject: str, scope: str
-    ) -> list[ProfileUpdateCandidate]:
-        keywords = {
-            "비건": "비건",
-            "채식": "채식",
-            "저탄수": "저탄수화물",
-            "저탄고지": "저탄수화물",
-            "글루텐프리": "글루텐프리",
-            "무글루텐": "글루텐프리",
-            "유제품 안": "유제품 제한",
-        }
-        candidates = []
-        for raw, normalized in keywords.items():
-            if raw in text:
-                candidates.append(
-                    _candidate(
-                        field="dietary_restrictions",
-                        value=normalized,
-                        evidence=text,
-                        subject=subject,
-                        scope=scope,
-                        confidence=0.92 if subject == "self" else 0.7,
-                        )
-                )
-        if "탄수화물" in text and re.search(r"(줄|적게|낮)", text):
-            candidates.append(
-                _candidate(
-                    field="dietary_restrictions",
-                    value="저탄수화물",
-                    evidence=text,
-                    subject=subject,
-                    scope=scope,
-                    confidence=0.86,
-                )
-            )
-        return _dedupe_candidates(candidates)
-
-    def _extract_cooking_time(
-        self, text: str, subject: str, scope: str
-    ) -> list[ProfileUpdateCandidate]:
-        match = re.search(r"(\d{1,3})\s*분\s*(?:안에|이내|내)", text)
-        if not match:
-            return []
-        return [
-            ProfileUpdateCandidate(
-                field="preferred_cooking_time_minutes",
-                operation=ProfileUpdateOperation.SET,
-                value=int(match.group(1)),
-                evidence=text,
-                confidence=0.94 if subject == "self" else 0.7,
-                scope=scope,
-                subject=subject,
-            )
-        ]
-
-    def _extract_serving_size(
-        self, text: str, subject: str, scope: str
-    ) -> list[ProfileUpdateCandidate]:
-        match = re.search(r"(\d{1,2})\s*인분", text)
-        if not match:
-            return []
-        return [
-            ProfileUpdateCandidate(
-                field="serving_size",
-                operation=ProfileUpdateOperation.SET,
-                value=float(match.group(1)),
-                evidence=text,
-                confidence=0.9 if subject == "self" else 0.68,
-                scope=scope,
-                subject=subject,
-            )
-        ]
+    def analyze(
+        self,
+        message: str,
+        profile: UserProfile | None = None,
+    ) -> ProfileUpdateDecision:
+        return self._analyzer.analyze(message, profile)
 
 
 class ProfileUpdatePolicy:
@@ -247,52 +128,14 @@ class ProfileUpdatePolicy:
         candidates: list[ProfileUpdateCandidate],
         profile: UserProfile | None,
     ) -> ProfileUpdateDecision:
+        del profile
         if not candidates:
             return ProfileUpdateDecision(ProfileUpdateAction.IGNORE, [])
-
-        auto_save = []
-        confirmation = []
-        for candidate in candidates:
-            reason = self._confirmation_reason(candidate, profile)
-            if reason is None:
-                auto_save.append(candidate)
-            elif reason != "ignore":
-                confirmation.append(_with_reason(candidate, reason))
-
-        if auto_save:
-            return ProfileUpdateDecision(
-                action=ProfileUpdateAction.AUTO_SAVE,
-                candidates=auto_save,
-                message=_build_auto_save_message(auto_save),
-            )
-        if confirmation:
-            return ProfileUpdateDecision(
-                action=ProfileUpdateAction.REQUIRE_CONFIRMATION,
-                candidates=confirmation,
-                message=_build_confirmation_message(confirmation),
-            )
-        return ProfileUpdateDecision(ProfileUpdateAction.IGNORE, [])
-
-    def _confirmation_reason(
-        self,
-        candidate: ProfileUpdateCandidate,
-        profile: UserProfile | None,
-    ) -> str | None:
-        if candidate.field not in _ALLOWLIST_FIELDS:
-            return "ignore"
-        if candidate.subject == "other":
-            return "ignore"
-        if candidate.scope != "long_term":
-            return "일시적인 조건일 수 있어 장기 프로필 저장 전 확인이 필요함"
-        if _HEALTH_PATTERN.search(candidate.evidence):
-            return "건강 상태와 연결된 식단 정보라 사용자 확인이 필요함"
-        if candidate.subject != "self":
-            return "주어가 본인인지 명확하지 않아 확인이 필요함"
-        if candidate.confidence < _AUTO_SAVE_CONFIDENCE:
-            return "confidence가 자동 저장 기준보다 낮아 확인이 필요함"
-        if _has_conflict(candidate, profile):
-            return "기존 프로필과 충돌해 사용자 확인이 필요함"
-        return None
+        return ProfileUpdateDecision(
+            action=ProfileUpdateAction.REQUIRE_CONFIRMATION,
+            candidates=candidates,
+            message=_build_confirmation_message(candidates),
+        )
 
 
 class UserProfileService:
@@ -327,92 +170,79 @@ class UserProfileService:
         return profile
 
 
-profile_update_extractor = ProfileUpdateExtractor()
-profile_update_policy = ProfileUpdatePolicy()
-
-
-def _candidate(
-    field: str,
-    value: str,
-    evidence: str,
-    subject: str,
-    scope: str,
-    confidence: float,
-) -> ProfileUpdateCandidate:
-    return ProfileUpdateCandidate(
-        field=field,
-        operation=ProfileUpdateOperation.ADD,
-        value=value,
-        evidence=evidence,
-        confidence=confidence,
-        scope=scope,
-        subject=subject,
+def _decision_from_ai_output(output: ProfileUpdateAIOutput) -> ProfileUpdateDecision:
+    candidates = [
+        ProfileUpdateCandidate(
+            field=item.field,
+            operation=item.operation,
+            value=item.value,
+            evidence=item.evidence,
+            confidence=item.confidence,
+            scope=item.scope,
+            subject=item.subject,
+            reason=item.reason,
+        )
+        for item in output.candidates
+        if item.field in _ALLOWLIST_FIELDS
+    ]
+    if output.action == ProfileUpdateAction.IGNORE or not candidates:
+        return ProfileUpdateDecision(ProfileUpdateAction.IGNORE, [])
+    return ProfileUpdateDecision(
+        action=output.action,
+        candidates=candidates,
+        message=output.message or _message_for_action(output.action, candidates),
     )
 
 
-def _detect_subject(text: str) -> str:
-    if _OTHER_SUBJECT_PATTERN.search(text):
-        return "other"
-    if _SELF_PATTERN.search(text):
-        return "self"
-    return "ambiguous"
-
-
-def _detect_scope(text: str) -> str:
-    if _TEMPORARY_PATTERN.search(text):
-        return "temporary"
-    if _JOKE_OR_HYPOTHETICAL_PATTERN.search(text):
-        return "hypothetical"
-    return "long_term"
-
-
-def _normalize_food(value: str) -> str:
-    return value.strip(" 은는이가을를도,.;!?~")
-
-
-def _dedupe_candidates(
+def _message_for_action(
+    action: ProfileUpdateAction,
     candidates: list[ProfileUpdateCandidate],
-) -> list[ProfileUpdateCandidate]:
-    seen = set()
-    result = []
-    for candidate in candidates:
-        key = (candidate.field, candidate.operation, candidate.value)
-        if key not in seen:
-            result.append(candidate)
-            seen.add(key)
-    return result
+) -> str:
+    if action == ProfileUpdateAction.AUTO_SAVE:
+        return _build_auto_save_message(candidates)
+    if action == ProfileUpdateAction.REQUIRE_CONFIRMATION:
+        return _build_confirmation_message(candidates)
+    return ""
 
 
-def _with_reason(
-    candidate: ProfileUpdateCandidate, reason: str
-) -> ProfileUpdateCandidate:
-    return ProfileUpdateCandidate(
-        field=candidate.field,
-        operation=candidate.operation,
-        value=candidate.value,
-        evidence=candidate.evidence,
-        confidence=candidate.confidence,
-        scope=candidate.scope,
-        subject=candidate.subject,
-        reason=reason,
+def _build_profile_update_agent() -> Agent:
+    model = OpenAIChatModel(
+        config.MODEL_NAME,
+        provider=OpenAIProvider(api_key=config.API_KEY, base_url=config.BASE_URL),
     )
+    return Agent(
+        model,
+        output_type=ProfileUpdateAIOutput,
+        system_prompt=_PROFILE_UPDATE_PROMPT,
+    )
+
+
+def _profile_update_prompt(message: str, profile: UserProfile | None) -> str:
+    return (
+        f"[Current profile]\n{_profile_context(profile)}\n\n"
+        f"[User message]\n{message.strip()}"
+    )
+
+
+def _profile_context(profile: UserProfile | None) -> str:
+    if profile is None:
+        return "No saved profile."
+    payload = {
+        "allergies": _list_value(profile.allergies),
+        "dietary_restrictions": _list_value(profile.dietary_restrictions),
+        "preferred_ingredients": _list_value(profile.preferred_ingredients),
+        "disliked_ingredients": _list_value(profile.disliked_ingredients),
+        "preferred_categories": _list_value(profile.preferred_categories),
+        "taste_keywords": _list_value(profile.taste_keywords),
+        "cooking_skill": profile.cooking_skill,
+        "preferred_cooking_time_minutes": profile.preferred_cooking_time_minutes,
+        "serving_size": float(profile.serving_size) if profile.serving_size else None,
+    }
+    return str(payload)
 
 
 def _list_value(value: Any) -> list[Any]:
     return list(value) if isinstance(value, list) else []
-
-
-def _has_conflict(
-    candidate: ProfileUpdateCandidate, profile: UserProfile | None
-) -> bool:
-    if profile is None:
-        return False
-    value = candidate.value
-    if candidate.field == "preferred_ingredients":
-        return value in _list_value(profile.disliked_ingredients)
-    if candidate.field == "disliked_ingredients":
-        return value in _list_value(profile.preferred_ingredients)
-    return False
 
 
 def _build_auto_save_message(candidates: list[ProfileUpdateCandidate]) -> str:
@@ -441,3 +271,53 @@ def _format_candidate(candidate: ProfileUpdateCandidate) -> str:
     elif candidate.field == "serving_size":
         value = f"{value:g}인분" if isinstance(value, float) else f"{value}인분"
     return f"{label} '{value}'"
+
+
+_PROFILE_UPDATE_PROMPT = """
+You decide whether a user chat message should update long-term recipe
+personalization profile data. Return structured output only.
+
+Allowed fields:
+- allergies
+- dietary_restrictions
+- preferred_ingredients
+- disliked_ingredients
+- preferred_categories
+- taste_keywords
+- cooking_skill
+- preferred_cooking_time_minutes
+- serving_size
+
+Use AUTO_SAVE only when the message clearly states stable information about the
+user themself and does not conflict with the current profile.
+
+Use REQUIRE_CONFIRMATION when the information may be stable but is ambiguous,
+temporary, health-related, or conflicts with the current profile.
+
+Use IGNORE for questions, negations, hypotheticals, jokes, temporary recipe
+requests, unrelated text, and information about another person.
+
+For candidates:
+- field must be one allowed field.
+- operation is add for list fields and set for scalar fields.
+- value must be the normalized Korean value or a number for numeric fields.
+- evidence is the exact user phrase that supports the candidate.
+- confidence is 0.0 to 1.0.
+- subject should be self, other, or ambiguous.
+- scope should be long_term, temporary, hypothetical, or unclear.
+- reason should briefly explain uncertainty when action is REQUIRE_CONFIRMATION.
+
+Examples:
+- "나 새우 알러지 있어" => AUTO_SAVE allergies 새우
+- "나는 계란 알레르기는 없어" => IGNORE
+- "나 알레르기 있어 새우" => AUTO_SAVE allergies 새우
+- "국내산 새우 알레르기 있어?" => IGNORE
+- "오늘은 고수 빼줘" => IGNORE
+- "당뇨 때문에 탄수화물을 줄여야 해" => REQUIRE_CONFIRMATION
+- "새우 알레르기 있는 친구가 와" => IGNORE
+""".strip()
+
+
+profile_update_analyzer = ProfileUpdateAnalyzer()
+profile_update_extractor = ProfileUpdateExtractor(profile_update_analyzer)
+profile_update_policy = ProfileUpdatePolicy()

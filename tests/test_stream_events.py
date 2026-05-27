@@ -28,7 +28,7 @@ def test_done_event_includes_message_id_and_recipe_ids():
 def test_metadata_event_merges_extra_payload():
     event, data = parse_sse(
         StreamEventBuilder().metadata(
-            "RECIPE_RECOMMENDATION",
+            "RECIPE_FIND",
             "test-model",
             extra={"source_count": 2},
         )
@@ -36,7 +36,7 @@ def test_metadata_event_merges_extra_payload():
 
     assert event == "metadata"
     assert data == {
-        "intent_type": "RECIPE_RECOMMENDATION",
+        "primary_task": "RECIPE_FIND",
         "model": "test-model",
         "source_count": 2,
     }
@@ -57,3 +57,60 @@ def test_recipes_event_serializes_decimal_values():
 
     assert event == "recipes"
     assert data[0]["ingredients"][0]["quantity"] == 1.5
+
+
+def test_planning_event_includes_answer_strategy():
+    event, data = parse_sse(
+        StreamEventBuilder().planning(
+            {
+                "primary_task": "RECIPE_FIND",
+                "sub_intent": "BY_INGREDIENTS",
+                "answer_strategy": "RECIPE_RECOMMENDATION",
+                "planner": "RecipeFindPlanner",
+                "selected_agent": "recipe_agent",
+            }
+        )
+    )
+
+    assert event == "planning"
+    assert data["primary_task"] == "RECIPE_FIND"
+    assert data["sub_intent"] == "BY_INGREDIENTS"
+    assert data["answer_strategy"] == "RECIPE_RECOMMENDATION"
+    assert data["selected_agent"] == "recipe_agent"
+
+
+def test_retrieval_event_reports_counts():
+    event, data = parse_sse(
+        StreamEventBuilder().retrieval(
+            {"status": "completed", "candidate_count": 30, "selected_count": 3}
+        )
+    )
+
+    assert event == "retrieval"
+    assert data["status"] == "completed"
+    assert data["selected_count"] == 3
+
+
+def test_evidence_event_serializes_recommendation_evidence():
+    event, data = parse_sse(
+        StreamEventBuilder().evidence(
+            {
+                "recipes": [
+                    {
+                        "recipe_id": 1,
+                        "title": "김치두부찌개",
+                        "why_matched": ["김치", "두부"],
+                        "risk_flags": [],
+                        "missing_ingredients": [],
+                        "time_minutes": 20,
+                        "difficulty": "easy",
+                    }
+                ],
+                "constraints": {"avoid_ingredients": ["새우"]},
+            }
+        )
+    )
+
+    assert event == "evidence"
+    assert data["recipes"][0]["why_matched"] == ["김치", "두부"]
+    assert data["constraints"] == {"avoid_ingredients": ["새우"]}

@@ -32,6 +32,10 @@ MAIN_INGREDIENT_SUBSTRING_BONUS = 0.5
 AVAILABLE_INGREDIENT_VARIANT_BONUS = 0.25
 ALL_MAIN_INGREDIENTS_BONUS = 2.0
 MAIN_INGREDIENT_MATCH_RATIO_BONUS = 1.0
+PREFERRED_INGREDIENT_BONUS = 0.6
+DISLIKED_INGREDIENT_PENALTY = 3.0
+SKILL_DIFFICULTY_BONUS = 0.8
+TIME_PREFERENCE_PENALTY = 0.8
 _INGREDIENT_SYNONYMS = {
     "계란": {"달걀"},
     "달걀": {"계란"},
@@ -81,12 +85,13 @@ class RecipeRetrievalService:
             if recipes or plan is None:
                 return recipes
 
+            fallback_plan = _hard_constraint_fallback_plan(plan)
             return self._search_once(
                 db,
                 query_vector,
                 limit=limit,
                 score_cutoff=score_cutoff,
-                plan=None,
+                plan=fallback_plan,
             )
         finally:
             db.close()
@@ -141,6 +146,13 @@ class RecipeRetrievalService:
             logger.info("RAG 반환 수: final=%d", len(recipes))
             _log_ranked_candidates(recipes, distances, plan=None, limit=limit)
             return recipes
+        lexical_recipes = _lexical_candidates(
+            db,
+            plan,
+            hard_filters=hard_filters,
+            candidate_limit=candidate_limit,
+        )
+        recipes = _merge_recipes(recipes, lexical_recipes)
         reranked = _rerank_recipes(recipes, plan)[:limit]
         logger.info(
             "RAG 반환 수: before_rerank=%d final=%d",
@@ -167,7 +179,6 @@ class RecipeRetrievalService:
             "difficulty": recipe.difficulty,
             "author_type": recipe.author_type,
             "main_image_url": recipe.main_image_url,
-            "image_url": recipe.image_url,
             "source_url": recipe.source_url,
             "created_at": recipe.created_at.isoformat() if recipe.created_at else None,
             "category": recipe.category,
@@ -175,7 +186,6 @@ class RecipeRetrievalService:
             "tips": recipe.tips,
             "warnings": recipe.warnings,
             "ingredients": recipe.ingredients,
-            "ingredients_raw": recipe.ingredients_raw,
             "steps": [
                 {
                     "step_no": step.step_no,
@@ -198,6 +208,31 @@ recipe_retrieval_service = RecipeRetrievalService(
 )
 
 
+def _hard_constraint_fallback_plan(plan: Any | None) -> dict[str, Any] | None:
+    if plan is None:
+        return None
+    return {
+        "target_dish_name": None,
+        "available_ingredients": [],
+        "main_ingredients": [],
+        "required_ingredients": _plan_list(plan, "required_ingredients"),
+        "avoid_ingredients": _plan_list(plan, "avoid_ingredients"),
+        "allergies": _plan_list(plan, "allergies"),
+        "cooking_time_max": _positive_int(_plan_value(plan, "cooking_time_max")),
+        "difficulty": None,
+        "cooking_skill": None,
+        "preferred_cooking_time_minutes": None,
+        "preferred_ingredients": [],
+        "disliked_ingredients": _plan_list(plan, "disliked_ingredients"),
+        "taste_keywords": [],
+        "diet_keywords": [],
+        "dish_type": None,
+        "cuisine_type": None,
+        "cooking_method": None,
+        "servings": None,
+    }
+
+
 def _hard_filters(plan: Any | None) -> list:
     if plan is None:
         return []
@@ -211,6 +246,7 @@ def _hard_filters(plan: Any | None) -> list:
         filters.append(_ingredient_exists(ingredient))
 
     avoid_ingredients = _plan_list(plan, "avoid_ingredients")
+    avoid_ingredients.extend(_plan_list(plan, "allergies"))
     if avoid_ingredients:
         avoid_filters = [
             _ingredient_exists(ingredient) for ingredient in avoid_ingredients
@@ -233,6 +269,60 @@ def _ingredient_exists(ingredient: str):
             )
         ]),
     )
+
+
+def _lexical_candidates(
+    db: Session,
+    plan: Any,
+    hard_filters: list,
+    candidate_limit: int,
+) -> list[Recipe]:
+    lexical_filters = _lexical_filters(plan)
+    if not lexical_filters:
+        return []
+    stmt = (
+        select(Recipe)
+        .where(
+            Recipe.is_active.is_(True),
+            *hard_filters,
+            or_(*lexical_filters),
+        )
+        .options(
+            selectinload(Recipe.ingredients_list),
+            selectinload(Recipe.steps),
+            selectinload(Recipe.labels),
+            selectinload(Recipe.stats),
+            selectinload(Recipe.classifications),
+        )
+        .limit(candidate_limit)
+    )
+    return list(db.execute(stmt).scalars())
+
+
+def _lexical_filters(plan: Any) -> list:
+    filters = []
+    target_dish_name = _clean_text(_plan_value(plan, "target_dish_name"))
+    if target_dish_name:
+        filters.append(Recipe.title.ilike(f"%{target_dish_name}%"))
+    ingredients = [
+        *_plan_list(plan, "main_ingredients"),
+        *_plan_list(plan, "available_ingredients"),
+        *_plan_list(plan, "required_ingredients"),
+    ]
+    for ingredient in ingredients:
+        filters.append(_ingredient_exists(ingredient))
+    return filters
+
+
+def _merge_recipes(primary: list[Recipe], secondary: list[Recipe]) -> list[Recipe]:
+    seen = set()
+    merged = []
+    for recipe in [*primary, *secondary]:
+        if recipe.recipe_id in seen:
+            continue
+        merged.append(recipe)
+        seen.add(recipe.recipe_id)
+    return merged
 
 
 def _rerank_recipes(recipes: list[Recipe], plan: Any) -> list[Recipe]:
@@ -275,12 +365,34 @@ def _plan_bonus(recipe: Recipe, plan: Any) -> float:
         if _ingredient_match_strength(ingredient_values, value) in {"exact", "variant"}:
             score += 2.0
 
+    for value in _plan_list(plan, "preferred_ingredients"):
+        score += _available_ingredient_bonus(ingredient_values, value)
+        if _ingredient_match_strength(ingredient_values, value):
+            score += PREFERRED_INGREDIENT_BONUS
+
+    for value in _plan_list(plan, "disliked_ingredients"):
+        if _ingredient_match_strength(ingredient_values, value):
+            score -= DISLIKED_INGREDIENT_PENALTY
+
     difficulty = _clean_text(_plan_value(plan, "difficulty"))
     if difficulty:
         if difficulty == recipe.difficulty:
             score += REQUESTED_DIFFICULTY_BONUS
     else:
         score += DEFAULT_DIFFICULTY_BONUS.get(recipe.difficulty, 0.0)
+    cooking_skill = _clean_text(_plan_value(plan, "cooking_skill"))
+    if cooking_skill and cooking_skill == recipe.difficulty:
+        score += SKILL_DIFFICULTY_BONUS
+
+    preferred_time = _positive_int(
+        _plan_value(plan, "preferred_cooking_time_minutes")
+    )
+    if (
+        preferred_time is not None
+        and recipe.cooking_time_minutes is not None
+        and recipe.cooking_time_minutes > preferred_time
+    ):
+        score -= TIME_PREFERENCE_PENALTY
 
     classification = recipe.classifications
     if classification is not None:
@@ -355,6 +467,14 @@ def _candidate_debug_payload(
         "available_matches": _matched_ingredients(
             ingredient_values,
             _plan_list(plan, "available_ingredients"),
+        ),
+        "preferred_matches": _matched_ingredients(
+            ingredient_values,
+            _plan_list(plan, "preferred_ingredients"),
+        ),
+        "disliked_matches": _matched_ingredients(
+            ingredient_values,
+            _plan_list(plan, "disliked_ingredients"),
         ),
         "required_matches": _matched_ingredients(
             ingredient_values,

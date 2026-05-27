@@ -9,8 +9,11 @@ from app.models.recipe import (
 from app.services.recipe_retrieval_service import (
     RecipeRetrievalService,
     _candidate_limit,
+    _hard_constraint_fallback_plan,
     _ingredient_match_strength,
     _ingredient_variants,
+    _lexical_filters,
+    _merge_recipes,
     _plan_bonus,
     _rerank_recipes,
 )
@@ -201,6 +204,27 @@ def test_candidate_limit_expands_for_multiple_main_ingredients():
     assert _candidate_limit(3, plan) == 30
 
 
+def test_lexical_filters_are_built_from_title_and_ingredients():
+    plan = SimpleNamespace(
+        target_dish_name="김치찌개",
+        main_ingredients=["김치"],
+        available_ingredients=["두부"],
+        required_ingredients=[],
+    )
+
+    assert len(_lexical_filters(plan)) == 3
+
+
+def test_merge_recipes_dedupes_by_recipe_id():
+    first = _recipe(1, ["김치"])
+    duplicated = _recipe(1, ["김치"])
+    second = _recipe(2, ["두부"])
+
+    merged = _merge_recipes([first], [duplicated, second])
+
+    assert [recipe.recipe_id for recipe in merged] == [1, 2]
+
+
 def test_ingredient_match_strength_distinguishes_exact_variant_and_substring():
     assert _ingredient_match_strength({"삼겹살"}, "삼겹살") == "exact"
     assert _ingredient_match_strength({"대패삼겹살"}, "삼겹살") == "variant"
@@ -227,6 +251,60 @@ def test_variant_main_ingredient_scores_lower_than_exact_match():
     assert _plan_bonus(exact, plan) > _plan_bonus(variant, plan)
 
 
+def test_rerank_uses_profile_preference_signals():
+    plan = SimpleNamespace(
+        target_dish_name=None,
+        available_ingredients=[],
+        main_ingredients=[],
+        required_ingredients=[],
+        preferred_ingredients=["두부"],
+        disliked_ingredients=["고수"],
+        difficulty=None,
+        cooking_skill=None,
+        preferred_cooking_time_minutes=None,
+        taste_keywords=[],
+        diet_keywords=[],
+        dish_type=None,
+        cuisine_type=None,
+        cooking_method=None,
+        servings=None,
+    )
+    preferred = _recipe(1, ["두부"])
+    disliked = _recipe(2, ["고수"])
+
+    ranked = _rerank_recipes([disliked, preferred], plan)
+
+    assert [recipe.recipe_id for recipe in ranked] == [1, 2]
+
+
+def test_rerank_uses_skill_and_time_preferences():
+    plan = SimpleNamespace(
+        target_dish_name=None,
+        available_ingredients=[],
+        main_ingredients=[],
+        required_ingredients=[],
+        preferred_ingredients=[],
+        disliked_ingredients=[],
+        difficulty=None,
+        cooking_skill="easy",
+        preferred_cooking_time_minutes=15,
+        taste_keywords=[],
+        diet_keywords=[],
+        dish_type=None,
+        cuisine_type=None,
+        cooking_method=None,
+        servings=None,
+    )
+    quick_easy = _recipe(1, ["계란"], difficulty="easy")
+    quick_easy.cooking_time_minutes = 10
+    slow_hard = _recipe(2, ["계란"], difficulty="hard")
+    slow_hard.cooking_time_minutes = 60
+
+    ranked = _rerank_recipes([slow_hard, quick_easy], plan)
+
+    assert [recipe.recipe_id for recipe in ranked] == [1, 2]
+
+
 def test_recipe_to_payload_reads_counts_from_stats_relationship():
     recipe = _recipe(1, ["삼겹살"], title="삼겹살 구이")
     recipe.stats = RecipeStats(likes_count=7, scrap_count=2)
@@ -238,6 +316,31 @@ def test_recipe_to_payload_reads_counts_from_stats_relationship():
     assert payload["scrap_count"] == 2
 
 
+def test_recipe_to_payload_matches_recipe_response_media_and_ingredients_contract():
+    recipe = _recipe(1, ["삼겹살"], title="삼겹살 구이")
+    recipe.main_image_url = "https://example.com/main.jpg"
+    recipe.ai_main_image_url = "https://example.com/generated.jpg"
+    service = RecipeRetrievalService(embedder=None, session_factory=None)
+
+    payload = service.recipe_to_payload(recipe)
+
+    assert payload["main_image_url"] == "https://example.com/main.jpg"
+    assert "image_url" not in payload
+    assert "ingredients_raw" not in payload
+    assert payload["ingredients"] == [
+        {
+            "group_name": None,
+            "name": "삼겹살",
+            "amount_text": None,
+            "quantity": None,
+            "unit": None,
+            "note": None,
+            "raw_text": None,
+            "is_optional": False,
+        }
+    ]
+
+
 def test_recipe_to_payload_defaults_counts_when_stats_is_missing():
     recipe = _recipe(1, ["삼겹살"], title="삼겹살 구이")
     service = RecipeRetrievalService(embedder=None, session_factory=None)
@@ -246,3 +349,30 @@ def test_recipe_to_payload_defaults_counts_when_stats_is_missing():
 
     assert payload["likes_count"] == 0
     assert payload["scrap_count"] == 0
+
+
+def test_hard_constraint_fallback_plan_preserves_only_hard_filters():
+    plan = SimpleNamespace(
+        target_dish_name="김치찌개",
+        available_ingredients=["김치"],
+        main_ingredients=["김치"],
+        required_ingredients=["두부"],
+        avoid_ingredients=["고수"],
+        allergies=["새우"],
+        cooking_time_max=20,
+        preferred_ingredients=["김치"],
+        disliked_ingredients=["고수"],
+        taste_keywords=["칼칼함"],
+        diet_keywords=["저탄수화물"],
+    )
+
+    fallback = _hard_constraint_fallback_plan(plan)
+
+    assert fallback["target_dish_name"] is None
+    assert fallback["available_ingredients"] == []
+    assert fallback["main_ingredients"] == []
+    assert fallback["required_ingredients"] == ["두부"]
+    assert fallback["avoid_ingredients"] == ["고수"]
+    assert fallback["allergies"] == ["새우"]
+    assert fallback["cooking_time_max"] == 20
+    assert fallback["taste_keywords"] == []

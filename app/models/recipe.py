@@ -119,7 +119,7 @@ class Recipe(Base):
                 "unit": item.unit,
                 "note": item.note,
                 "raw_text": item.raw_text,
-                "is_optional": item.is_optional,
+                "is_optional": bool(item.is_optional),
             }
             for item in self.ingredients_list
         ]
