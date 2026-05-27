@@ -74,7 +74,7 @@ jobs:
             set -e
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
             cd ~/naengo-deploy
-            test -f .env || (echo "Missing ~/naengo-deploy/.env" >&2; exit 1)
+            test -f .env.prod || (echo "Missing ~/naengo-deploy/.env.prod" >&2; exit 1)
             test -f global-bundle.pem || (echo "Missing ~/naengo-deploy/global-bundle.pem" >&2; exit 1)
             NAENGO_AI_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} docker-compose -f docker-compose.prod.yml pull
             NAENGO_AI_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} docker-compose -f docker-compose.prod.yml up -d --force-recreate
