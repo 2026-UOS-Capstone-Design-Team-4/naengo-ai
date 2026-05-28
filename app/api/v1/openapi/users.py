@@ -56,6 +56,19 @@ PATCH_ME_RESPONSES = {
     422: VALIDATION_ERROR_RESPONSE,
 }
 
+DELETE_ME_SUMMARY = "회원 탈퇴"
+DELETE_ME_DESCRIPTION = r"""
+현재 사용자 계정을 탈퇴 처리합니다.
+
+탈퇴 시 계정은 비활성화되며 이후 같은 access token으로 인증이 필요한 API를 사용할 수 없습니다.
+계정 비활성화 외의 사용자 데이터는 변경하지 않습니다.
+"""
+
+DELETE_ME_RESPONSES = {
+    204: {"description": "회원 탈퇴 완료"},
+    404: USER_NOT_FOUND_RESPONSE,
+}
+
 GET_MY_PROFILE_SUMMARY = "내 프로필 조회"
 GET_MY_PROFILE_DESCRIPTION = "사용자가 직접 저장한 취향, 알레르기, 선호 정보를 조회합니다."
 

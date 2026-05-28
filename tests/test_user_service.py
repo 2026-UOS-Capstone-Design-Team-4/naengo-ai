@@ -24,6 +24,15 @@ class FakeUserService(UserService):
         return self.profile
 
 
+class FakeWithdrawalUserService(UserService):
+    def __init__(self, user):
+        super().__init__(FakeDb())
+        self.user = user
+
+    def get_user(self, user_id: int):
+        return self.user
+
+
 def test_get_profile_response_returns_user_input_in_stored_order():
     profile = SimpleNamespace(user_input=["old", "middle", "new"])
     service = FakeUserService(profile)
@@ -73,3 +82,34 @@ def test_delete_profile_user_inputs_removes_one_matching_sentence():
     assert profile.user_input == ["same", "new"]
     assert response.user_input == ["same", "new"]
     assert service.db.committed is True
+
+
+def test_withdraw_user_deactivates_account_only():
+    user = SimpleNamespace(
+        is_active=True,
+        is_blocked=True,
+        username="naengo_user",
+        password_hash="hashed",
+        nickname="냉장고요리왕",
+    )
+    service = FakeWithdrawalUserService(user)
+
+    result = service.withdraw_user(user_id=7)
+
+    assert result is True
+    assert user.is_active is False
+    assert user.is_blocked is True
+    assert user.username == "naengo_user"
+    assert user.password_hash == "hashed"
+    assert user.nickname == "냉장고요리왕"
+    assert service.db.committed is True
+
+
+def test_withdraw_user_returns_false_for_inactive_user():
+    user = SimpleNamespace(is_active=False)
+    service = FakeWithdrawalUserService(user)
+
+    result = service.withdraw_user(user_id=7)
+
+    assert result is False
+    assert service.db.committed is False

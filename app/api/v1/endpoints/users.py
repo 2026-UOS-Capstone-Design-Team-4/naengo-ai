@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.errors import ApiError
 from app.api.v1.deps import get_current_user_id
 from app.api.v1.openapi.users import (
+    DELETE_ME_DESCRIPTION,
+    DELETE_ME_RESPONSES,
+    DELETE_ME_SUMMARY,
     DELETE_MY_PROFILE_USER_INPUT_DESCRIPTION,
     DELETE_MY_PROFILE_USER_INPUT_RESPONSES,
     DELETE_MY_PROFILE_USER_INPUT_SUMMARY,
@@ -74,6 +77,23 @@ def update_me(
     if result.status == UserUpdateStatus.NICKNAME_DUPLICATED:
         raise ApiError(409, "CONFLICT", "이미 사용 중인 닉네임입니다.")
     return result.user
+
+
+@router.delete(
+    "/me",
+    summary=DELETE_ME_SUMMARY,
+    description=DELETE_ME_DESCRIPTION,
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=DELETE_ME_RESPONSES,
+)
+def withdraw_me(
+    db: Session = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id),
+):
+    user_service = UserService(db)
+    if not user_service.withdraw_user(current_user_id):
+        raise ApiError(404, "RESOURCE_NOT_FOUND", "사용자를 찾을 수 없습니다.")
+    return None
 
 
 @router.get(

@@ -17,6 +17,7 @@ POST   /api/v1/guest/chat
 ```text
 GET    /api/v1/users/me
 PATCH  /api/v1/users/me
+DELETE /api/v1/users/me
 GET    /api/v1/users/me/profile
 POST   /api/v1/users/me/profile
 DELETE /api/v1/users/me/profile
@@ -25,9 +26,19 @@ DELETE /api/v1/users/me/profile
 역할:
 
 - 내 계정 정보 조회/수정
+- 회원 탈퇴
 - 추천 개인화를 위한 프로필 조회/수정
 
 현재 인증 연동 전까지는 임시 사용자 컨텍스트를 사용하지만, API contract는 인증된 사용자 기준으로 설계한다.
+
+회원 탈퇴:
+
+```http
+DELETE /api/v1/users/me
+```
+
+탈퇴는 물리 삭제 대신 계정 비활성화로 처리한다. `users.is_active = false`가 되면
+이후 인증이 필요한 API를 사용할 수 없다. 계정 비활성화 외의 사용자 데이터는 변경하지 않는다.
 
 ## Profile User Input
 

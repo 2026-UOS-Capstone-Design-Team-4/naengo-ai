@@ -135,6 +135,7 @@ DELETE /api/v1/recipes/{recipe_id}/scraps
 
 GET    /api/v1/users/me
 PATCH  /api/v1/users/me
+DELETE /api/v1/users/me
 GET    /api/v1/users/me/profile
 POST   /api/v1/users/me/profile
 DELETE /api/v1/users/me/profile

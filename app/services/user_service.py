@@ -60,6 +60,15 @@ class UserService:
         self.db.refresh(user)
         return UserUpdateResult(status=UserUpdateStatus.UPDATED, user=user)
 
+    def withdraw_user(self, user_id: int) -> bool:
+        user = self.get_user(user_id)
+        if not user or not user.is_active:
+            return False
+
+        user.is_active = False
+        self.db.commit()
+        return True
+
     def get_profile(self, user_id: int) -> UserProfile | None:
         return (
             self.db.query(UserProfile).filter(UserProfile.user_id == user_id).first()

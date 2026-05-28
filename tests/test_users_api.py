@@ -35,6 +35,18 @@ class FakeUserService:
         )
 
 
+class FakeWithdrawUserService:
+    called_user_id = None
+    result = True
+
+    def __init__(self, _db):
+        pass
+
+    def withdraw_user(self, user_id):
+        type(self).called_user_id = user_id
+        return type(self).result
+
+
 def _override_get_db():
     yield object()
 
@@ -72,3 +84,33 @@ def test_get_me_returns_username_and_user_identities(monkeypatch):
         }
     ]
     assert "provider_user_id" not in body["user_identities"][0]
+
+
+def test_delete_me_withdraws_current_user(monkeypatch):
+    FakeWithdrawUserService.called_user_id = None
+    FakeWithdrawUserService.result = True
+    monkeypatch.setattr(endpoint_module, "UserService", FakeWithdrawUserService)
+
+    response = client.delete("/api/v1/users/me")
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert FakeWithdrawUserService.called_user_id == 7
+
+
+def test_delete_me_returns_not_found_when_user_missing(monkeypatch):
+    FakeWithdrawUserService.called_user_id = None
+    FakeWithdrawUserService.result = False
+    monkeypatch.setattr(endpoint_module, "UserService", FakeWithdrawUserService)
+
+    response = client.delete("/api/v1/users/me")
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": {
+            "code": "RESOURCE_NOT_FOUND",
+            "message": "사용자를 찾을 수 없습니다.",
+            "details": {},
+        }
+    }
+    assert FakeWithdrawUserService.called_user_id == 7
