@@ -7,7 +7,7 @@ class PrimaryTask(StrEnum):
     RECIPE_FIND = "RECIPE_FIND"
     COOKING_QA = "COOKING_QA"
     PROFILE_MANAGEMENT = "PROFILE_MANAGEMENT"
-    SERVICE_QA = "SERVICE_QA"
+    IDENTITY = "IDENTITY"
     SMALLTALK = "SMALLTALK"
     OFF_TOPIC = "OFF_TOPIC"
 
@@ -54,7 +54,7 @@ class ProfileSubIntent(StrEnum):
     CONFIRMATION_REQUIRED = "CONFIRMATION_REQUIRED"
 
 
-class ServiceQASubIntent(StrEnum):
+class IdentitySubIntent(StrEnum):
     IDENTITY = "IDENTITY"
     USAGE = "USAGE"
     LIMITATION = "LIMITATION"

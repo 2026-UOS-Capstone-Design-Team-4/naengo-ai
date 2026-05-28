@@ -11,7 +11,7 @@ User Message
       RECIPE_FIND
       COOKING_QA
       PROFILE_MANAGEMENT
-      SERVICE_QA
+      IDENTITY
       SMALLTALK
       OFF_TOPIC
   -> DomainPlanner

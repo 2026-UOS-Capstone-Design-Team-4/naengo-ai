@@ -29,7 +29,7 @@ flowchart TD
   R --> S
 
   S --> T{"Early route?"}
-  T -->|"OFF_TOPIC / SERVICE_QA"| U["Fixed response"]
+  T -->|"OFF_TOPIC / IDENTITY"| U["Fixed response"]
   T -->|"low confidence / needs clarification"| V["Clarification response"]
   U --> W["SSE: metadata, planning, message"]
   V --> W

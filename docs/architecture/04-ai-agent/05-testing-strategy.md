@@ -56,7 +56,7 @@ AI Agent 테스트에서 LLM과 embedding API 의존성을 경계로 분리한�
 | `김치랑 있는 거 뭐 먹어?` | `RECIPE_FIND` |
 | `새우 알레르기 저장해줘` | `PROFILE_MANAGEMENT` |
 | `새우 알레르기 있는데 뭐 먹지?` | `RECIPE_FIND` + allergy constraint |
-| `너는 누구야?` | `SERVICE_QA` |
+| `너는 누구야?` | `IDENTITY` |
 | `비트코인 시세 알려줘` | `OFF_TOPIC` |
 | `파 없으면 뭐로 대체해?` | `COOKING_QA` |
 

@@ -1,6 +1,7 @@
 import asyncio
 from types import SimpleNamespace
 
+from app.agents.core.system_prompts import MAIN_INTENT_CLASSIFIER_PROMPT
 from app.agents.intent.intent_models import MainIntentResult, PrimaryTask
 from app.agents.intent.main_intent_classifier import MainIntentClassifier
 
@@ -19,7 +20,7 @@ def test_identity_prompt_is_classified_by_model():
     classifier = MainIntentClassifier()
     classifier._agent = FakeIntentAgent(
         MainIntentResult(
-            primary_task=PrimaryTask.SERVICE_QA,
+            primary_task=PrimaryTask.IDENTITY,
             confidence=0.91,
             reason="서비스 정체성 질문",
         )
@@ -27,8 +28,16 @@ def test_identity_prompt_is_classified_by_model():
 
     result = asyncio.run(classifier.classify("너는 누구야?", history=[]))
 
-    assert result.primary_task == PrimaryTask.SERVICE_QA
+    assert result.primary_task == PrimaryTask.IDENTITY
     assert classifier._agent.calls
+
+
+def test_main_intent_prompt_describes_identity_and_off_topic_fallback():
+    assert "IDENTITY" in MAIN_INTENT_CLASSIFIER_PROMPT
+    assert "챗봇의 정체성" in MAIN_INTENT_CLASSIFIER_PROMPT
+    assert "어느 주요 intent에도 해당하지 않는 것 같으면 OFF_TOPIC" in (
+        MAIN_INTENT_CLASSIFIER_PROMPT
+    )
 
 
 def test_smalltalk_prompt_is_classified_by_model():

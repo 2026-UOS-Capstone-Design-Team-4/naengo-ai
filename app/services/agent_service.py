@@ -19,9 +19,9 @@ from app.agents.core.run_context import AgentRunContext
 from app.agents.core.stream_events import stream_event_builder
 from app.agents.core.system_prompts import (
     CLARIFY_MESSAGE,
+    IDENTITY_MESSAGE,
     OFF_TOPIC_MESSAGE,
     PROFILE_MANAGEMENT_EMPTY_MESSAGE,
-    SERVICE_QA_MESSAGE,
 )
 from app.agents.core.user_context import user_context_builder
 from app.agents.intent.answer_router import domain_answer_router
@@ -265,8 +265,8 @@ def _strategy_for_primary_task(primary_task: PrimaryTask) -> AnswerStrategy:
 def _fixed_message_for_task(primary_task: PrimaryTask) -> str | None:
     if primary_task == PrimaryTask.OFF_TOPIC:
         return OFF_TOPIC_MESSAGE
-    if primary_task == PrimaryTask.SERVICE_QA:
-        return SERVICE_QA_MESSAGE
+    if primary_task == PrimaryTask.IDENTITY:
+        return IDENTITY_MESSAGE
     return None
 
 

@@ -49,7 +49,7 @@ AgentService
         -> ProfileUpdateAnalyzer/ProfileUpdatePolicy
         -> UserProfileService
 
-      SMALLTALK / SERVICE_QA / OFF_TOPIC
+      SMALLTALK / IDENTITY / OFF_TOPIC
         -> smalltalk_agent or fixed response
 
   -> LiveResearchService (domain plan 또는 정책상 최신 정보가 필요한 경우)

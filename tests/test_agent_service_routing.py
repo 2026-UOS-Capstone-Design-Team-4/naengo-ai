@@ -437,6 +437,36 @@ def test_off_topic_query_keeps_live_research_off(monkeypatch):
     assert "요리" in events[2][1]["content"]
 
 
+def test_identity_query_returns_fixed_identity_message(monkeypatch):
+    classifier = FakeIntentClassifier(
+        MainIntentResult(
+            primary_task=PrimaryTask.IDENTITY,
+            confidence=1.0,
+            reason="테스트",
+        )
+    )
+    live_research = FakeLiveResearchService(enabled=True)
+    monkeypatch.setattr("app.services.agent_service.main_intent_classifier", classifier)
+    monkeypatch.setattr(
+        "app.services.agent_service.live_research_service",
+        live_research,
+    )
+
+    chunks = asyncio.run(
+        _collect_stream(AgentService(), "너는 누구야?", FakeChatService())
+    )
+
+    events = _parse_events(chunks)
+    assert events[0][1]["primary_task"] == "IDENTITY"
+    assert events[0][1]["used_live_research"] is False
+    assert events[1][0] == "planning"
+    assert events[1][1]["answer_strategy"] == "FIXED"
+    assert events[2][0] == "message"
+    assert "냉고" in events[2][1]["content"]
+    assert live_research.build_query_calls == []
+    assert live_research.research_calls == []
+
+
 def test_recipe_query_prefetches_rag_even_when_agent_does_not_call_tool(monkeypatch):
     classifier = FakeIntentClassifier(
         MainIntentResult(

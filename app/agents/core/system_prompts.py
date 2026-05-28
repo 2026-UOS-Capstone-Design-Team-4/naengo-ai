@@ -45,7 +45,7 @@ MAIN_INTENT_CLASSIFIER_PROMPT = """
 - RECIPE_FIND: 레시피를 찾거나 추천받는 것이 주목적
 - COOKING_QA: 조리법, 대체 재료, 보관, 안전, 영양에 대한 질문
 - PROFILE_MANAGEMENT: 사용자 프로필 저장/수정/삭제/조회가 주목적
-- SERVICE_QA: 서비스 정체성이나 사용법 질문
+- IDENTITY: 챗봇의 정체성, 역할, 기능 범위를 묻는 질문
 - SMALLTALK: 가벼운 대화
 - OFF_TOPIC: 범위 밖 요청
 
@@ -58,11 +58,13 @@ MAIN_INTENT_CLASSIFIER_PROMPT = """
   constraint/topic/input mode로 판단한다
 - 인사, 정체성 질문, 브랜드명 언급이 있어도 요리/레시피 요청이 함께 있으면
   요리 관련 task를 우선한다
-- "너는 누구야?", "냉고는 뭐야?"처럼 서비스 정체성이나 사용법만 묻는 경우만
-  SERVICE_QA로 분류한다
+- "너는 누구야?", "정체가 뭐야?", "냉고는 뭐야?"처럼 챗봇의 정체성이나
+  역할만 묻는 경우는 IDENTITY로 분류한다
 - "ㅎㅇ", "고마워"처럼 요청 없이 가벼운 대화만 있는 경우만 SMALLTALK로 분류한다
 - "ChatGPT처럼 말고 우리 DB 기준으로 추천해줘"처럼 모델/브랜드명이 포함돼도
   레시피 추천 의도가 핵심이면 RECIPE_FIND로 분류한다
+- RECIPE_FIND, COOKING_QA, PROFILE_MANAGEMENT, IDENTITY, SMALLTALK 중
+  어느 주요 intent에도 해당하지 않는 것 같으면 OFF_TOPIC으로 분류한다
 """.strip()
 
 SEARCH_PLANNER_PROMPT = """
@@ -179,7 +181,7 @@ OFF_TOPIC_MESSAGE = (
     "저는 요리와 식재료에 관한 질문만 도와드릴 수 있어요. "
     "냉장고 재료나 요리 관련 질문을 해주세요!"
 )
-SERVICE_QA_MESSAGE = (
+IDENTITY_MESSAGE = (
     "저는 냉고예요! 냉장고 속 재료로 레시피를 추천해드리는 "
     "요리 전문가랍니다. 어떤 재료가 있으신가요?"
 )

@@ -27,7 +27,7 @@ ChatService
 | `RECIPE_FIND` | 레시피 추천, 검색, 필터링, 보유 재료 기반 제안 |
 | `COOKING_QA` | 조리법, 대체 재료, 보관, 안전, 영양 관련 질문 |
 | `PROFILE_MANAGEMENT` | 사용자 프로필 저장, 수정, 삭제, 조회 요청 |
-| `SERVICE_QA` | 서비스 정체성이나 사용법 질문 |
+| `IDENTITY` | 챗봇의 정체성, 역할, 기능 범위 질문 |
 | `SMALLTALK` | 가벼운 일상 대화 |
 | `OFF_TOPIC` | 요리와 무관한 질문 |
 
