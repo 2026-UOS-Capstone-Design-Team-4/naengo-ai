@@ -108,6 +108,7 @@ Detail response는 화면에 필요한 값을 한 번에 제공한다.
 - 출처 표시 정보 (`source_url`, SOURCE 타입 레시피의 상세 provenance는 `source_id`로 `recipe_sources` JOIN)
 
 목록 응답은 카드 렌더링용으로 `description`, `ingredients`, `steps`, `tips`, `source_url`을 제외하고 `category`, `tags`, `main_image_url`을 포함한다.
+`GET /api/v1/recipes`와 `GET /api/v1/recipes/{recipe_id}`는 비로그인 사용자도 조회할 수 있으며, 인증 정보가 없으면 `is_liked = false`, `is_scrapped = false`로 반환한다.
 
 ## Chat
 
@@ -145,6 +146,7 @@ DELETE /api/v1/user-recipes/me/{user_recipe_id}
 `/api/v1/user-recipes`는 승인된 사용자 제출 레시피의 공개 조회 API다.
 `status = APPROVED`, `is_active = true`인 레시피만 반환한다.
 작성자 표시를 위해 `user` 객체를 포함하며, 공개 필드는 `user_id`, `nickname`으로 제한한다.
+목록과 상세 조회는 비로그인 사용자도 사용할 수 있다.
 
 ```text
 GET    /api/v1/user-recipes?cursor=...&limit=20

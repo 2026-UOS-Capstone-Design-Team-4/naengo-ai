@@ -125,6 +125,18 @@ def test_dev_auth_disabled_allows_missing_bearer_token(monkeypatch):
     assert payload.role == "ADMIN"
 
 
+def test_optional_current_token_payload_allows_missing_bearer_token():
+    assert deps.get_optional_current_token_payload(None) is None
+
+
+def test_optional_current_token_payload_rejects_invalid_authorization_header():
+    with pytest.raises(ApiError) as exc:
+        deps.get_optional_current_token_payload("Basic token")
+
+    assert exc.value.status_code == 401
+    assert exc.value.code == "UNAUTHENTICATED"
+
+
 def test_auth_disabled_outside_dev_fails_closed(monkeypatch):
     monkeypatch.setattr(deps, "APP_ENV", "prod")
     monkeypatch.setattr(deps, "AUTH_DISABLED", True)

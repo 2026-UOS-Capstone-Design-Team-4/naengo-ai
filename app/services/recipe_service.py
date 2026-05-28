@@ -47,7 +47,7 @@ class RecipeService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_recipe(self, recipe_id: int, user_id: int) -> RecipeDetailResponse:
+    def get_recipe(self, recipe_id: int, user_id: int | None) -> RecipeDetailResponse:
         stmt = (
             select(Recipe)
             .options(
@@ -65,7 +65,7 @@ class RecipeService:
         return self._to_detail_item(recipe, liked_ids, scrapped_ids)
 
     def get_recipes_by_latest(
-        self, user_id: int, cursor: str | None, limit: int
+        self, user_id: int | None, cursor: str | None, limit: int
     ) -> RecipeListResponse:
         cursor_payload = _decode_cursor(cursor) if cursor else None
         if cursor_payload and cursor_payload.get("sort") != "latest":
@@ -99,7 +99,7 @@ class RecipeService:
         )
 
     def get_recipes_by_likes(
-        self, user_id: int, cursor: str | None, limit: int
+        self, user_id: int | None, cursor: str | None, limit: int
     ) -> RecipeListResponse:
         cursor_likes, cursor_id = None, None
         if cursor:
@@ -146,7 +146,7 @@ class RecipeService:
         )
 
     def get_recipes_by_scraps(
-        self, user_id: int, cursor: str | None, limit: int
+        self, user_id: int | None, cursor: str | None, limit: int
     ) -> RecipeListResponse:
         cursor_scraps, cursor_id = None, None
         if cursor:
@@ -310,9 +310,9 @@ class RecipeService:
         )
 
     def _get_social_sets(
-        self, user_id: int, recipe_ids: list[int]
+        self, user_id: int | None, recipe_ids: list[int]
     ) -> tuple[set[int], set[int]]:
-        if not recipe_ids:
+        if user_id is None or not recipe_ids:
             return set(), set()
         liked = set(
             self.db.execute(

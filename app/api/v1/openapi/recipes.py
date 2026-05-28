@@ -76,6 +76,7 @@ GET_RECIPES_DESCRIPTION = r"""
 `400 INVALID_CURSOR`를 반환합니다.
 
 응답의 각 레시피에는 현재 사용자 기준 `is_liked`, `is_scrapped`가 포함됩니다.
+로그인하지 않은 요청에서는 두 값이 항상 `false`입니다.
 목록 응답은 카드 렌더링에 필요한 요약 필드만 포함하며, 재료/조리 단계/출처 URL은 상세 응답에서 반환합니다.
 """
 
@@ -123,6 +124,7 @@ GET_RECIPE_DESCRIPTION = r"""
 - 삭제되었거나 비활성화된 레시피는 조회할 수 없습니다.
 - 재료, 조리 단계, 팁, 출처 URL을 포함합니다.
 - 현재 사용자 기준 좋아요 여부(`is_liked`)와 스크랩 여부(`is_scrapped`)를 함께 반환합니다.
+- 로그인하지 않은 요청에서는 `is_liked = false`, `is_scrapped = false`를 반환합니다.
 """
 
 GET_RECIPE_RESPONSES = {

@@ -23,6 +23,7 @@ GET_APPROVED_USER_RECIPES_DESCRIPTION = r"""
 승인된 사용자 제출 레시피 목록을 반환합니다.
 
 - `APPROVED` 상태이면서 활성 상태인 사용자 제출 레시피만 반환합니다.
+- 로그인하지 않아도 조회할 수 있습니다.
 - 최신순(`created_at DESC, user_recipe_id DESC`)으로 반환합니다.
 - `cursor`는 이전 응답의 `next_cursor`를 그대로 전달하는 base64url JSON cursor입니다.
 - 첫 페이지는 `cursor`를 비워서 요청합니다.
@@ -46,6 +47,7 @@ GET_APPROVED_USER_RECIPE_DESCRIPTION = r"""
 승인된 사용자 제출 레시피 하나를 조회합니다.
 
 `APPROVED` 상태이면서 활성 상태인 레시피만 조회할 수 있습니다.
+로그인하지 않아도 조회할 수 있습니다.
 작성자 표시용 `user` 객체(`user_id`, `nickname`)를 포함합니다.
 """
 

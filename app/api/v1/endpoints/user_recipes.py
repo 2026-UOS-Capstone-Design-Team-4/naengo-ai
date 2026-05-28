@@ -80,7 +80,6 @@ def get_approved_user_recipes(
         description="한 번에 가져올 사용자 레시피 개수",
     ),
     db: Session = Depends(get_db),
-    _: int = Depends(get_current_user_id),
 ):
     try:
         items, next_cursor = UserRecipeService(db).get_approved_user_recipes(
@@ -260,7 +259,6 @@ def report_user_recipe(
 def get_approved_user_recipe(
     user_recipe_id: int,
     db: Session = Depends(get_db),
-    _: int = Depends(get_current_user_id),
 ):
     recipe = UserRecipeService(db).get_approved_user_recipe(user_recipe_id)
     if not recipe:

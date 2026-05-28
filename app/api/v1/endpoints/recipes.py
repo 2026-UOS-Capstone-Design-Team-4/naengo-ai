@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.errors import ApiError
-from app.api.v1.deps import get_current_user_id
+from app.api.v1.deps import get_current_user_id, get_optional_current_user_id
 from app.api.v1.openapi.recipes import (
     DELETE_LIKE_DESCRIPTION,
     DELETE_LIKE_RESPONSES,
@@ -72,7 +72,7 @@ def get_recipes(
         description="한 번에 가져올 레시피 개수",
     ),
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id),
+    current_user_id: int | None = Depends(get_optional_current_user_id),
 ):
     service = RecipeService(db)
     try:
@@ -122,7 +122,7 @@ def get_scrapped_recipes(
 def get_recipe(
     recipe_id: int,
     db: Session = Depends(get_db),
-    current_user_id: int = Depends(get_current_user_id),
+    current_user_id: int | None = Depends(get_optional_current_user_id),
 ):
     try:
         return RecipeService(db).get_recipe(recipe_id, current_user_id)

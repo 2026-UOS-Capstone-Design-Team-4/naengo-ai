@@ -149,6 +149,17 @@ def test_to_list_item_not_in_sets():
     assert item.is_scrapped is False
 
 
+def test_get_social_sets_returns_empty_for_guest_without_query():
+    db = MagicMock()
+    service = RecipeService(db)
+
+    liked_ids, scrapped_ids = service._get_social_sets(None, [1])
+
+    assert liked_ids == set()
+    assert scrapped_ids == set()
+    db.execute.assert_not_called()
+
+
 # ─── _get_active_recipe ──────────────────────────────────────────────────────
 
 

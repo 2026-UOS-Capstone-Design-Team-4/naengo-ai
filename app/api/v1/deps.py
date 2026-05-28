@@ -89,6 +89,29 @@ def get_current_token_payload(
         ) from exc
 
 
+def get_optional_current_token_payload(
+    authorization: str | None = Header(
+        default=None,
+        alias="Authorization",
+        include_in_schema=False,
+    ),
+) -> AccessTokenPayload | None:
+    if not authorization:
+        return None
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        raise ApiError(
+            status_code=401,
+            code="UNAUTHENTICATED",
+            message="Bearer access token is required.",
+        )
+    credentials = HTTPAuthorizationCredentials(
+        scheme=scheme,
+        credentials=token.strip(),
+    )
+    return get_current_token_payload(credentials)
+
+
 def get_current_user(
     db: Session = Depends(get_db),
     token_payload: AccessTokenPayload = Depends(get_current_token_payload),
@@ -163,6 +186,25 @@ def _ensure_dev_user(
 
 
 def get_current_user_id(current_user: User = Depends(get_current_user)) -> int:
+    return current_user.user_id
+
+
+def get_optional_current_user(
+    db: Session = Depends(get_db),
+    token_payload: AccessTokenPayload | None = Depends(
+        get_optional_current_token_payload
+    ),
+) -> User | None:
+    if token_payload is None:
+        return None
+    return get_current_user(db, token_payload)
+
+
+def get_optional_current_user_id(
+    current_user: User | None = Depends(get_optional_current_user),
+) -> int | None:
+    if current_user is None:
+        return None
     return current_user.user_id
 
 

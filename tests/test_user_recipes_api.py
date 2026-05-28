@@ -207,6 +207,10 @@ class FakeOwnRecipeReportService(FakeUserRecipeReportService):
         raise UserRecipeReportOwnRecipeError
 
 
+def _fail_if_auth_is_required():
+    raise AssertionError("public user recipe read should not require auth")
+
+
 def _override_get_db():
     yield object()
 
@@ -231,6 +235,9 @@ def test_approved_user_recipe_list_returns_public_approved_recipes(monkeypatch):
         endpoint_module,
         "UserRecipeService",
         FakeUserRecipeService,
+    )
+    app.dependency_overrides[endpoint_module.get_current_user_id] = (
+        _fail_if_auth_is_required
     )
 
     response = client.get("/api/v1/user-recipes?cursor=abc&limit=3")
@@ -264,6 +271,9 @@ def test_approved_user_recipe_list_returns_400_for_invalid_cursor(monkeypatch):
         "UserRecipeService",
         InvalidCursorService,
     )
+    app.dependency_overrides[endpoint_module.get_current_user_id] = (
+        _fail_if_auth_is_required
+    )
 
     response = client.get("/api/v1/user-recipes?cursor=bad")
 
@@ -276,6 +286,9 @@ def test_approved_user_recipe_detail_returns_public_detail(monkeypatch):
         endpoint_module,
         "UserRecipeService",
         FakeUserRecipeService,
+    )
+    app.dependency_overrides[endpoint_module.get_current_user_id] = (
+        _fail_if_auth_is_required
     )
 
     response = client.get("/api/v1/user-recipes/22")

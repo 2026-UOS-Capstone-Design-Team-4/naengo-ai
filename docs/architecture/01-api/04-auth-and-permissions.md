@@ -16,6 +16,9 @@
 | API Group | GUEST | USER | ADMIN | SYSTEM |
 | --- | --- | --- | --- | --- |
 | `GET /recipes` | 허용 가능 | 허용 | 허용 | 제한 |
+| `GET /recipes/{id}` | 허용 가능 | 허용 | 허용 | 제한 |
+| `GET /user-recipes` | 허용 | 허용 | 허용 | 제한 |
+| `GET /user-recipes/{id}` | 허용 | 허용 | 허용 | 제한 |
 | `POST /recipes/{id}/likes` | 불가 | 허용 | 허용 | 불가 |
 | `POST /user-recipes` | 불가 | 허용 | 허용 | 불가 |
 | `/admin/*` | 불가 | 불가 | 허용 | 제한 |
