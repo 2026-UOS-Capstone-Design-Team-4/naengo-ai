@@ -150,7 +150,7 @@ POST_USER_RECIPE_DESCRIPTION = r"""
 ```
 
 대표 이미지는 `user_recipes.main_image_url`에, 단계 이미지는
-`user_recipe_steps.image_url`에 업로드 URL로 저장합니다.
+`user_recipe_steps.image_url`에 스토리지 object key로 저장하고, API 응답에서 공개 URL로 변환합니다.
 """
 
 POST_USER_RECIPE_RESPONSES = {

@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -13,6 +14,7 @@ from app.core.config import (
 )
 
 logger = logging.getLogger(__name__)
+_URL_SCHEME_RE = re.compile(r"^[a-z][a-z0-9+.-]*://", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -89,9 +91,9 @@ class S3ChatImageStorage:
 
     def __init__(
         self,
-        endpoint: str,
-        access_key: str,
-        secret_key: str,
+        endpoint: str | None,
+        access_key: str | None,
+        secret_key: str | None,
         bucket: str,
         public_url: str,
     ) -> None:
@@ -99,18 +101,21 @@ class S3ChatImageStorage:
 
         self._bucket = bucket
         self._public_url = public_url.rstrip("/")
-        self._client = boto3.client(
-            "s3",
-            endpoint_url=endpoint,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-        )
-        self._ensure_bucket()
+        client_kwargs = {}
+        if endpoint:
+            client_kwargs["endpoint_url"] = endpoint
+        if access_key and secret_key:
+            client_kwargs["aws_access_key_id"] = access_key
+            client_kwargs["aws_secret_access_key"] = secret_key
+        self._client = boto3.client("s3", **client_kwargs)
+        self._ensure_bucket(create_if_missing=endpoint is not None)
 
-    def _ensure_bucket(self) -> None:
+    def _ensure_bucket(self, *, create_if_missing: bool) -> None:
         try:
             self._client.head_bucket(Bucket=self._bucket)
         except Exception:
+            if not create_if_missing:
+                raise
             self._client.create_bucket(Bucket=self._bucket)
             self._client.put_bucket_policy(
                 Bucket=self._bucket,
@@ -132,7 +137,24 @@ class S3ChatImageStorage:
             Body=data,
             ContentType=content_type,
         )
-        return f"{self._public_url}/{self._bucket}/{key}"
+        key = key.lstrip("/")
+        return key
+
+
+def public_url_for_storage_key(key: str | None) -> str | None:
+    if key is None:
+        return None
+    value = key.strip()
+    if not value or _URL_SCHEME_RE.match(value) or value.startswith("data:"):
+        return value
+    if not S3_PUBLIC_URL:
+        return value
+
+    normalized_key = value.lstrip("/")
+    public_url = S3_PUBLIC_URL.rstrip("/")
+    if S3_ENDPOINT and S3_BUCKET:
+        return f"{public_url}/{S3_BUCKET}/{normalized_key}"
+    return f"{public_url}/{normalized_key}"
 
 
 def get_storage_service() -> StorageService:
@@ -144,9 +166,6 @@ def get_storage_service() -> StorageService:
 def get_chat_image_storage() -> ChatImageStorage:
     if (
         STORAGE_BACKEND == "s3"
-        and S3_ENDPOINT
-        and S3_ACCESS_KEY_ID
-        and S3_SECRET_ACCESS_KEY
         and S3_BUCKET
         and S3_PUBLIC_URL
     ):

@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 
 from app.schemas.recipe import RecipeResponse
+from app.services.storage_service import public_url_for_storage_key
 
 
 class ChatRoomResponse(BaseModel):
@@ -23,6 +24,10 @@ class ChatMessageResponse(BaseModel):
     image_url: str | None = None
     recipes: list[RecipeResponse] | None = None
     created_at: datetime
+
+    @field_serializer("image_url")
+    def serialize_image_url(self, value: str | None) -> str | None:
+        return public_url_for_storage_key(value)
 
 
 class ChatRequest(BaseModel):

@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
+
+from app.services.storage_service import public_url_for_storage_key
 
 UserRecipeStatus = Literal["PENDING", "APPROVED", "REJECTED"]
 UserRecipeImportStatus = Literal["NOT_IMPORTED", "IMPORTED", "FAILED"]
@@ -74,6 +76,10 @@ class UserRecipeStepSchema(BaseModel):
     tip: str | None = None
     sort_order: int = 0
 
+    @field_serializer("image_url")
+    def serialize_image_url(self, value: str | None) -> str | None:
+        return public_url_for_storage_key(value)
+
 
 class UserRecipeLabelSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -138,6 +144,10 @@ class UserRecipeResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+    @field_serializer("main_image_url")
+    def serialize_main_image_url(self, value: str | None) -> str | None:
+        return public_url_for_storage_key(value)
+
 
 class UserRecipePublicResponse(UserRecipeResponse):
     user: UserRecipeAuthorResponse
@@ -165,6 +175,10 @@ class UserRecipeListItemResponse(BaseModel):
     rejection_reason: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    @field_serializer("main_image_url")
+    def serialize_main_image_url(self, value: str | None) -> str | None:
+        return public_url_for_storage_key(value)
 
 
 class UserRecipePublicListItemResponse(UserRecipeListItemResponse):

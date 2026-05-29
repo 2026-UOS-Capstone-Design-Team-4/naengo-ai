@@ -67,7 +67,7 @@ class FakeImageStorage:
 
     def upload_bytes(self, data: bytes, key: str, content_type: str) -> str:
         self.uploads.append((data, key, content_type))
-        return f"https://storage.local/{key}"
+        return key
 
 
 def make_user_recipe(**overrides) -> UserRecipe:
@@ -150,12 +150,8 @@ def test_create_user_recipe_uploads_main_and_step_images():
         ],
     )
 
-    assert result.main_image_url.startswith(
-        "https://storage.local/user-recipes/7/456/main/",
-    )
-    assert result.steps[0].image_url.startswith(
-        "https://storage.local/user-recipes/7/456/steps/1/",
-    )
+    assert result.main_image_url.startswith("user-recipes/7/456/main/")
+    assert result.steps[0].image_url.startswith("user-recipes/7/456/steps/1/")
     assert len(storage.uploads) == 2
 
 

@@ -197,6 +197,14 @@ class FakeUserRecipeReportService:
         )
 
 
+class FakeKeyBackedUserRecipeService(FakeUserRecipeService):
+    def get_user_recipe(self, user_recipe_id, user_id):
+        recipe = super().get_user_recipe(user_recipe_id, user_id)
+        recipe.main_image_url = "user-recipes/7/11/main/key.jpg"
+        recipe.steps[0].image_url = "user-recipes/7/11/steps/1/key.jpg"
+        return recipe
+
+
 class FakeAlreadyReportedService(FakeUserRecipeReportService):
     def create_report(self, user_recipe_id, reporter_user_id, body):
         raise UserRecipeReportAlreadyExistsError
@@ -344,6 +352,33 @@ def test_my_user_recipe_detail_returns_category_tags_and_step_image(monkeypatch)
     assert body["tips"] == ["묵은지를 쓰면 좋아요"]
     assert body["main_image_url"] == "https://example.com/kimchi.jpg"
     assert body["steps"][0]["image_url"] == "https://example.com/step-1.jpg"
+
+
+def test_my_user_recipe_detail_expands_storage_keys_to_public_urls(monkeypatch):
+    monkeypatch.setattr(
+        endpoint_module,
+        "UserRecipeService",
+        FakeKeyBackedUserRecipeService,
+    )
+    monkeypatch.setattr("app.services.storage_service.S3_ENDPOINT", None)
+    monkeypatch.setattr("app.services.storage_service.S3_BUCKET", "naengo-images")
+    monkeypatch.setattr(
+        "app.services.storage_service.S3_PUBLIC_URL",
+        "https://d123.cloudfront.net",
+    )
+
+    response = client.get("/api/v1/user-recipes/me/11")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert (
+        body["main_image_url"]
+        == "https://d123.cloudfront.net/user-recipes/7/11/main/key.jpg"
+    )
+    assert (
+        body["steps"][0]["image_url"]
+        == "https://d123.cloudfront.net/user-recipes/7/11/steps/1/key.jpg"
+    )
 
 
 def test_report_user_recipe_creates_pending_report(monkeypatch):
