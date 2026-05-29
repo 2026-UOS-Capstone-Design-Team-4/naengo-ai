@@ -38,6 +38,10 @@ FastAPI 기반 AI 요리 어시스턴트 서버입니다.
 - 서버에서는 `~/naengo-deploy`의 `docker-compose.prod.yml`로 GHCR 이미지를 pull하고 컨테이너를 재시작합니다. 운영 서버에서 애플리케이션 이미지를 직접 빌드하거나 전체 git repo를 유지하지 않습니다.
 - `~/naengo-deploy`에는 운영 비밀 파일인 `.env.prod`와 `global-bundle.pem`이 있어야 하며, `docker-compose.prod.yml`은 배포 시 GitHub Actions가 복사합니다.
 - 운영 컨테이너 이름은 `naengo-ai`, 포트는 `8000`입니다.
+- ECS 전환을 위해 `Build and Push ECR Image` 워크플로우가 `main` push 또는 수동 실행 시 ECR `naengo-ai-server` 리포지토리에 이미지를 push합니다.
+- ECR push 워크플로우는 GitHub OIDC로 AWS 역할을 assume하며, GitHub Actions secret `AWS_ECR_PUSH_ROLE_ARN`에 해당 IAM Role ARN을 등록해야 합니다.
+- ECS/Fargate 배포 이미지는 `ACCOUNT_ID.dkr.ecr.ap-northeast-2.amazonaws.com/naengo-ai-server:sha-<git-sha>` 또는 `:latest` 태그를 사용합니다.
+- ECS/Fargate 태스크와 ECR 이미지는 ARM64(`Linux/ARM64`, `linux/arm64`) 기준으로 맞춥니다.
 - 개발 환경은 `docker-compose.dev.yml`과 `.env.dev`를 사용하며, 코드가 볼륨 마운트되어 일반적인 코드 수정 후 재빌드 없이 반영됩니다.
 - 개발 compose는 `APP_ENV=dev`, `AUTH_DISABLED=true`로 실행되어 Bearer 토큰 없이 개발용 사용자(`DEV_AUTH_USER_ID=1`, `DEV_AUTH_ROLE=ADMIN`)로 API를 호출할 수 있습니다.
 - 개발 compose는 MinIO를 함께 실행합니다. 앱 컨테이너는 `STORAGE_BACKEND=s3`, `S3_ENDPOINT=http://minio:9000`, `S3_PUBLIC_URL=http://localhost:9000`을 사용하며, MinIO 콘솔은 `http://localhost:9001`에서 확인할 수 있습니다.
