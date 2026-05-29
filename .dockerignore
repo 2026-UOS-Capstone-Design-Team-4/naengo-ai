@@ -5,6 +5,7 @@
 .gitignore
 *.key
 *.pem
+!global-bundle.pem
 *.cert
 naengo-ai-key-20260422.pem
 
