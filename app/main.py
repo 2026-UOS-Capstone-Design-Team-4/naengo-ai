@@ -22,8 +22,9 @@ async def lifespan(app: FastAPI):
         logger.info("데이터베이스를 초기화하는 중입니다.")
         init_db()
         logger.info("데이터베이스 초기화가 완료되었습니다.")
-    except Exception as e:
-        logger.error("데이터베이스 초기화 중 오류가 발생했습니다: %s", e)
+    except Exception:
+        logger.exception("데이터베이스 초기화 중 오류가 발생했습니다.")
+        raise
 
     yield
 
