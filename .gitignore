@@ -36,6 +36,7 @@ build/
 # IDEs
 .idea/
 .claude/
+.omc/
 *.swp
 *.swo
 
