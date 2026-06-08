@@ -52,13 +52,13 @@ jobs:
             set -e
             mkdir -p ~/naengo-deploy
 
-      - name: Copy compose file to EC2
+      - name: Copy deploy files to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: docker-compose.prod.yml
+          source: "docker-compose.prod.yml,deploy.sh"
           target: /home/ubuntu/naengo-deploy
           strip_components: 0
           overwrite: true
@@ -72,10 +72,9 @@ jobs:
           script_stop: true
           script: |
             set -e
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
             cd ~/naengo-deploy
-            test -f .env.prod || (echo "Missing ~/naengo-deploy/.env.prod" >&2; exit 1)
-            test -f global-bundle.pem || (echo "Missing ~/naengo-deploy/global-bundle.pem" >&2; exit 1)
-            NAENGO_AI_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} docker-compose -f docker-compose.prod.yml pull
-            NAENGO_AI_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} docker-compose -f docker-compose.prod.yml up -d --force-recreate
-            docker system prune -af
+            chmod +x deploy.sh
+            test -f .env.prod         || (echo "Missing .env.prod" >&2; exit 1)
+            test -f global-bundle.pem || (echo "Missing global-bundle.pem" >&2; exit 1)
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
+            ./deploy.sh "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
