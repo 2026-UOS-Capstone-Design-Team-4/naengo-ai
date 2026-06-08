@@ -32,6 +32,8 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 - 커밋 메시지는 한국어로 작성합니다.
 - 커밋 시 파일을 기능 단위로 나눠서 커밋합니다.
+- 커밋은 반드시 사용자에게 허락을 받고 진행합니다.
+- 커밋 전에 `README.md`와 `docs/`가 코드와 불일치하면 함께 개선합니다.
 
 ## 설계 문서
 
@@ -40,4 +42,5 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 - 전체 설계 지도 및 읽기 순서: [`docs/architecture.md`](docs/architecture.md)
 - `docs/architecture.md`에서 전체 구조를 확인하고, 현재 작업과 직접 관련된 세부 문서만 추가로 읽습니다.
 - 특정 문서 경로를 이 파일에 중복으로 나열하지 않습니다. 문서 구조가 바뀌면 `docs/architecture.md`만 갱신합니다.
-- 설계 문서는 구체적인 구현보다는 전체적인 흐름에 초점을 맞춥니다. 구현 세부사항은 코드에서 확인합니다.
+- `README.md`는 프로젝트를 간략히 소개하는 역할을 합니다.
+- `docs/`는 구체적인 구현보다는 전체적인 흐름에 초점을 맞춥니다. 구현 세부사항은 코드에서 확인합니다.
