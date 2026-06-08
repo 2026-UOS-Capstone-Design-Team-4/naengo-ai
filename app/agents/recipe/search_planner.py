@@ -1,12 +1,24 @@
-﻿from pydantic import BaseModel
+﻿import base64
+import re
+
+from pydantic import BaseModel
 from pydantic_ai import Agent
-from pydantic_ai.messages import ImageUrl, ModelMessage
+from pydantic_ai.messages import BinaryContent, ImageUrl, ModelMessage
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from app.agents.core.system_prompts import SEARCH_PLANNER_PROMPT
 from app.agents.intent.intent_models import AnswerStrategy, RecipeFindSubIntent
 from app.core import config
+
+_DATA_URL_RE = re.compile(r"^data:([^;]+);base64,(.+)$", re.DOTALL)
+
+
+def _to_image_content(image: str) -> BinaryContent | ImageUrl:
+    m = _DATA_URL_RE.match(image)
+    if m:
+        return BinaryContent(data=base64.b64decode(m.group(2)), media_type=m.group(1))
+    return ImageUrl(url=image)
 
 
 class SearchPlan(BaseModel):
@@ -63,7 +75,7 @@ class RecipeSearchPlanner:
         if context_parts:
             text = "\n\n".join(context_parts + [f"[요청]\n{message}"])
 
-        prompt = [text, ImageUrl(url=image)] if image else text
+        prompt = [text, _to_image_content(image)] if image else text
         result = await self._agent.run(prompt, message_history=history)
         return result.output
 
