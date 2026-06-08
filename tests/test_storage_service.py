@@ -47,6 +47,7 @@ class FakeS3Client:
         self.created_buckets = []
         self.policies = []
         self.objects = []
+        self.deleted_objects = []
 
     def head_bucket(self, **kwargs):
         bucket = kwargs["Bucket"]
@@ -62,6 +63,9 @@ class FakeS3Client:
 
     def put_object(self, **kwargs):
         self.objects.append(kwargs)
+
+    def delete_object(self, **kwargs):
+        self.deleted_objects.append(kwargs)
 
 
 def test_s3_chat_image_storage_uses_minio_endpoint_and_static_keys(monkeypatch):
@@ -129,6 +133,33 @@ def test_s3_chat_image_storage_uses_default_role_credentials(monkeypatch):
     assert calls == [("s3", {})]
     assert fake_client.created_buckets == []
     assert key == "user-recipes/main.jpg"
+
+
+def test_s3_chat_image_storage_deletes_normalized_key(monkeypatch):
+    fake_client = FakeS3Client()
+
+    monkeypatch.setitem(
+        sys.modules,
+        "boto3",
+        SimpleNamespace(client=lambda *_args, **_kwargs: fake_client),
+    )
+
+    storage = S3ChatImageStorage(
+        endpoint=None,
+        access_key=None,
+        secret_key=None,
+        bucket="naengo-images",
+        public_url="https://d123.cloudfront.net",
+    )
+
+    storage.delete_bytes("/user-recipes/main.jpg")
+
+    assert fake_client.deleted_objects == [
+        {
+            "Bucket": "naengo-images",
+            "Key": "user-recipes/main.jpg",
+        }
+    ]
 
 
 def test_public_url_for_storage_key_preserves_absolute_urls(monkeypatch):

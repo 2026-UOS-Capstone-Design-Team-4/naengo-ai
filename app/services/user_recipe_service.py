@@ -1,6 +1,7 @@
 import base64
 import binascii
 import json
+import logging
 import mimetypes
 import uuid
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ from app.services.storage_service import ChatImageStorage, user_recipe_image_sto
 
 ALLOWED_USER_RECIPE_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_USER_RECIPE_IMAGE_BYTES = 10 * 1024 * 1024
+logger = logging.getLogger(__name__)
 
 
 class UserRecipeInvalidCursorError(ValueError):
@@ -230,6 +232,14 @@ class UserRecipeService:
                 f"Missing step images: {', '.join(sorted(missing_image_keys))}",
             )
 
+        images_to_validate = [
+            image
+            for image in [main_image, *step_image_map.values()]
+            if image is not None
+        ]
+        for image in images_to_validate:
+            _validate_image(image)
+
         recipe = UserRecipe(
             user_id=user_id,
             title=body.title,
@@ -240,10 +250,12 @@ class UserRecipeService:
             difficulty=body.difficulty,
             source_url=body.source_url,
         )
-        self.db.add(recipe)
-        self.db.flush()
+        uploaded_keys: list[str] = []
 
         try:
+            self.db.add(recipe)
+            self.db.flush()
+
             if main_image is not None:
                 recipe.main_image_url = self._upload_image(
                     main_image,
@@ -254,39 +266,47 @@ class UserRecipeService:
                         main_image.filename,
                     ),
                 )
+                uploaded_keys.append(recipe.main_image_url)
 
-            recipe.ingredients = [
-                UserRecipeIngredient(**item.model_dump(exclude_unset=True), sort_order=i)
-                for i, item in enumerate(body.ingredients)
-            ]
-            recipe.steps = [
-                UserRecipeStep(
-                    step_no=step.step_no,
-                    instruction=step.instruction,
-                    image_url=(
-                        self._upload_image(
-                            step_image_map[step.client_image_key],
-                            _image_key(
-                                user_id,
-                                recipe.user_recipe_id,
-                                f"steps/{step.step_no}",
-                                step_image_map[step.client_image_key].filename,
-                            ),
-                        )
-                        if step.client_image_key
-                        else None
-                    ),
-                    tip=step.tip,
-                    sort_order=i,
+            recipe.ingredients = []
+            for i, item in enumerate(body.ingredients):
+                recipe.ingredients.append(
+                    UserRecipeIngredient(
+                        **item.model_dump(exclude_unset=True),
+                        sort_order=i,
+                    )
                 )
-                for i, step in enumerate(body.steps)
-            ]
+
+            recipe.steps = []
+            for i, step in enumerate(body.steps):
+                image_key = None
+                if step.client_image_key:
+                    image_key = self._upload_image(
+                        step_image_map[step.client_image_key],
+                        _image_key(
+                            user_id,
+                            recipe.user_recipe_id,
+                            f"steps/{step.step_no}",
+                            step_image_map[step.client_image_key].filename,
+                        ),
+                    )
+                    uploaded_keys.append(image_key)
+                recipe.steps.append(
+                    UserRecipeStep(
+                        step_no=step.step_no,
+                        instruction=step.instruction,
+                        image_url=image_key,
+                        tip=step.tip,
+                        sort_order=i,
+                    )
+                )
             recipe.labels = _build_labels(
                 body.category, body.tags, body.tips, body.warnings
             )
             self.db.commit()
-        except UserRecipeStorageError:
+        except Exception:
             self.db.rollback()
+            self._cleanup_uploaded_images(uploaded_keys)
             raise
 
         self.db.refresh(recipe)
@@ -301,6 +321,16 @@ class UserRecipeService:
         if url is None:
             raise UserRecipeStorageError("Image storage is not configured.")
         return url
+
+    def _cleanup_uploaded_images(self, keys: list[str]) -> None:
+        for key in reversed(keys):
+            try:
+                self.image_storage.delete_bytes(key)
+            except Exception:
+                logger.exception(
+                    "사용자 레시피 이미지 보상 삭제 실패: key=%s",
+                    key,
+                )
 
     def delete_user_recipe(
         self,

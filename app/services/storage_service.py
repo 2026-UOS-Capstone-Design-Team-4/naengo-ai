@@ -78,11 +78,17 @@ class ChatImageStorage(Protocol):
     def upload_bytes(self, data: bytes, key: str, content_type: str) -> str | None:
         ...
 
+    def delete_bytes(self, key: str) -> None:
+        ...
+
 
 class PassthroughChatImageStorage:
     is_available = False
 
     def upload_bytes(self, data: bytes, key: str, content_type: str) -> str | None:
+        return None
+
+    def delete_bytes(self, key: str) -> None:
         return None
 
 
@@ -139,6 +145,12 @@ class S3ChatImageStorage:
         )
         key = key.lstrip("/")
         return key
+
+    def delete_bytes(self, key: str) -> None:
+        self._client.delete_object(
+            Bucket=self._bucket,
+            Key=key.lstrip("/"),
+        )
 
 
 def public_url_for_storage_key(key: str | None) -> str | None:

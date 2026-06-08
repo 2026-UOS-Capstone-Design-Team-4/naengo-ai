@@ -1,3 +1,4 @@
+import pytest
 from pydantic import ValidationError
 
 from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
@@ -10,6 +11,7 @@ from app.services.user_recipe_service import (
     UserRecipeImageUpload,
     UserRecipeImageValidationError,
     UserRecipeService,
+    UserRecipeStorageError,
 )
 
 
@@ -19,6 +21,7 @@ class FakeDb:
         self.committed = False
         self.flushed = False
         self.refreshed = None
+        self.rolled_back = False
 
     def add(self, item):
         self.added.append(item)
@@ -36,6 +39,9 @@ class FakeDb:
 
     def refresh(self, item):
         self.refreshed = item
+
+    def rollback(self):
+        self.rolled_back = True
 
     def delete(self, item):
         self.deleted = item
@@ -64,10 +70,31 @@ class FakeCreateDb(FakeDb):
 class FakeImageStorage:
     def __init__(self):
         self.uploads = []
+        self.deletes = []
 
     def upload_bytes(self, data: bytes, key: str, content_type: str) -> str:
         self.uploads.append((data, key, content_type))
         return key
+
+    def delete_bytes(self, key: str) -> None:
+        self.deletes.append(key)
+
+
+class FailingUploadStorage(FakeImageStorage):
+    def upload_bytes(self, data: bytes, key: str, content_type: str) -> str:
+        if self.uploads:
+            raise RuntimeError("second upload failed")
+        return super().upload_bytes(data, key, content_type)
+
+
+class FailingCommitDb(FakeCreateDb):
+    def commit(self):
+        raise RuntimeError("commit failed")
+
+
+class FailingFlushDb(FakeCreateDb):
+    def flush(self):
+        raise RuntimeError("flush failed")
 
 
 def make_user_recipe(**overrides) -> UserRecipe:
@@ -153,6 +180,197 @@ def test_create_user_recipe_uploads_main_and_step_images():
     assert result.main_image_url.startswith("user-recipes/7/456/main/")
     assert result.steps[0].image_url.startswith("user-recipes/7/456/steps/1/")
     assert len(storage.uploads) == 2
+
+
+def test_create_user_recipe_validates_all_images_before_upload():
+    db = FakeCreateDb(User(user_id=7, username="u@example.com", nickname="user"))
+    storage = FakeImageStorage()
+    service = UserRecipeService(db, image_storage=storage)
+
+    with pytest.raises(UserRecipeImageValidationError, match="Unsupported"):
+        service.create_user_recipe(
+            UserRecipeCreate(
+                title="엄마 김치찌개",
+                description="묵은지 김치찌개",
+                servings=2,
+                cooking_time_minutes=25,
+                difficulty="easy",
+                ingredients=[{"name": "묵은지"}],
+                steps=[
+                    {
+                        "step_no": 1,
+                        "instruction": "묵은지를 볶습니다.",
+                        "client_image_key": "step-1",
+                    }
+                ],
+            ),
+            user_id=7,
+            main_image=UserRecipeImageUpload(
+                filename="main.jpg",
+                content_type="image/jpeg",
+                data=b"main",
+            ),
+            step_images=[
+                UserRecipeImageUpload(
+                    filename="step-1.gif",
+                    content_type="image/gif",
+                    data=b"step",
+                )
+            ],
+        )
+
+    assert storage.uploads == []
+
+
+def test_create_user_recipe_deletes_uploaded_images_when_later_upload_fails():
+    db = FakeCreateDb(User(user_id=7, username="u@example.com", nickname="user"))
+    storage = FailingUploadStorage()
+    service = UserRecipeService(db, image_storage=storage)
+
+    with pytest.raises(UserRecipeStorageError):
+        service.create_user_recipe(
+            UserRecipeCreate(
+                title="엄마 김치찌개",
+                description="묵은지 김치찌개",
+                servings=2,
+                cooking_time_minutes=25,
+                difficulty="easy",
+                ingredients=[{"name": "묵은지"}],
+                steps=[
+                    {
+                        "step_no": 1,
+                        "instruction": "묵은지를 볶습니다.",
+                        "client_image_key": "step-1",
+                    }
+                ],
+            ),
+            user_id=7,
+            main_image=UserRecipeImageUpload(
+                filename="main.jpg",
+                content_type="image/jpeg",
+                data=b"main",
+            ),
+            step_images=[
+                UserRecipeImageUpload(
+                    filename="step-1.png",
+                    content_type="image/png",
+                    data=b"step",
+                )
+            ],
+        )
+
+    assert storage.deletes == [storage.uploads[0][1]]
+    assert db.rolled_back is True
+
+
+def test_create_user_recipe_deletes_all_uploaded_images_when_commit_fails():
+    db = FailingCommitDb(User(user_id=7, username="u@example.com", nickname="user"))
+    storage = FakeImageStorage()
+    service = UserRecipeService(db, image_storage=storage)
+
+    with pytest.raises(RuntimeError, match="commit failed"):
+        service.create_user_recipe(
+            UserRecipeCreate(
+                title="엄마 김치찌개",
+                description="묵은지 김치찌개",
+                servings=2,
+                cooking_time_minutes=25,
+                difficulty="easy",
+                ingredients=[{"name": "묵은지"}],
+                steps=[
+                    {
+                        "step_no": 1,
+                        "instruction": "묵은지를 볶습니다.",
+                        "client_image_key": "step-1",
+                    }
+                ],
+            ),
+            user_id=7,
+            main_image=UserRecipeImageUpload(
+                filename="main.jpg",
+                content_type="image/jpeg",
+                data=b"main",
+            ),
+            step_images=[
+                UserRecipeImageUpload(
+                    filename="step-1.png",
+                    content_type="image/png",
+                    data=b"step",
+                )
+            ],
+        )
+
+    assert storage.deletes == [upload[1] for upload in reversed(storage.uploads)]
+    assert db.rolled_back is True
+
+
+def test_create_user_recipe_rolls_back_when_flush_fails_before_upload():
+    db = FailingFlushDb(User(user_id=7, username="u@example.com", nickname="user"))
+    storage = FakeImageStorage()
+    service = UserRecipeService(db, image_storage=storage)
+
+    with pytest.raises(RuntimeError, match="flush failed"):
+        service.create_user_recipe(
+            UserRecipeCreate(
+                title="엄마 김치찌개",
+                description="묵은지 김치찌개",
+                servings=2,
+                cooking_time_minutes=25,
+                difficulty="easy",
+                ingredients=[{"name": "묵은지"}],
+                steps=[{"step_no": 1, "instruction": "묵은지를 볶습니다."}],
+            ),
+            user_id=7,
+        )
+
+    assert db.rolled_back is True
+    assert storage.uploads == []
+
+
+def test_create_user_recipe_preserves_original_error_when_cleanup_fails(caplog):
+    class FailingCleanupStorage(FailingUploadStorage):
+        def delete_bytes(self, key: str) -> None:
+            raise RuntimeError("cleanup failed")
+
+    db = FakeCreateDb(User(user_id=7, username="u@example.com", nickname="user"))
+    storage = FailingCleanupStorage()
+    service = UserRecipeService(db, image_storage=storage)
+
+    with pytest.raises(UserRecipeStorageError) as exc_info:
+        service.create_user_recipe(
+            UserRecipeCreate(
+                title="엄마 김치찌개",
+                description="묵은지 김치찌개",
+                servings=2,
+                cooking_time_minutes=25,
+                difficulty="easy",
+                ingredients=[{"name": "묵은지"}],
+                steps=[
+                    {
+                        "step_no": 1,
+                        "instruction": "묵은지를 볶습니다.",
+                        "client_image_key": "step-1",
+                    }
+                ],
+            ),
+            user_id=7,
+            main_image=UserRecipeImageUpload(
+                filename="main.jpg",
+                content_type="image/jpeg",
+                data=b"main",
+            ),
+            step_images=[
+                UserRecipeImageUpload(
+                    filename="step-1.png",
+                    content_type="image/png",
+                    data=b"step",
+                )
+            ],
+        )
+
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert "second upload failed" in str(exc_info.value.__cause__)
+    assert "cleanup failed" in caplog.text
 
 
 def test_create_user_recipe_rejects_unmatched_step_image():
