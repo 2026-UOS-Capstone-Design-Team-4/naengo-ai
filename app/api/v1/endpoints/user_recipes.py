@@ -1,4 +1,5 @@
 import json
+import mimetypes
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from pydantic import ValidationError
@@ -271,8 +272,12 @@ def get_approved_user_recipe(
 
 
 def _to_image_upload(file: UploadFile) -> UserRecipeImageUpload:
+    content_type = file.content_type
+    if not content_type or content_type == "application/octet-stream":
+        guessed, _ = mimetypes.guess_type(file.filename or "")
+        content_type = guessed or "application/octet-stream"
     return UserRecipeImageUpload(
         filename=file.filename or "image",
-        content_type=file.content_type or "application/octet-stream",
+        content_type=content_type,
         data=file.file.read(),
     )
