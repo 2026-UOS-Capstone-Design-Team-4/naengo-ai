@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
-from pydantic_ai.messages import ImageUrl, ModelMessage
+from pydantic_ai.messages import BinaryContent, ImageUrl, ModelMessage
 from sqlalchemy.orm import Session
 
 from app.agents.cooking_qa.planner import cooking_qa_planner
@@ -56,6 +56,13 @@ from app.services.storage_service import chat_image_storage
 logger = logging.getLogger(__name__)
 
 _DATA_URL_RE = re.compile(r"^data:([^;]+);base64,(.+)$", re.DOTALL)
+
+
+def _to_image_content(image: str) -> BinaryContent | ImageUrl:
+    m = _DATA_URL_RE.match(image)
+    if m:
+        return BinaryContent(data=base64.b64decode(m.group(2)), media_type=m.group(1))
+    return ImageUrl(url=image)
 
 
 @dataclass(frozen=True)
@@ -882,7 +889,7 @@ class AgentService:
                 )
 
         user_prompt: Any = (
-            [effective_prompt, ImageUrl(url=image_ref)]
+            [effective_prompt, _to_image_content(image_ref)]
             if image_ref
             else effective_prompt
         )
