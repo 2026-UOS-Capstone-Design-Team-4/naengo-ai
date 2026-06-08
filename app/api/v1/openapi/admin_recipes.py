@@ -116,26 +116,6 @@ ADMIN_RECIPE_DETAIL_EXAMPLE = {
         "confidence_score": 0.86,
         "updated_at": "2026-05-17T14:20:00+09:00",
     },
-    "media": [
-        {
-            "media_id": 4001,
-            "step_id": None,
-            "media_type": "IMAGE",
-            "image_role": "MAIN",
-            "source_url": "https://example.com/source.jpg",
-            "storage_url": "https://cdn.naengo.example/recipes/101/main.jpg",
-            "thumbnail_url": "https://cdn.naengo.example/recipes/101/thumb.jpg",
-            "width": 1200,
-            "height": 800,
-            "file_size_bytes": 245000,
-            "mime_type": "image/jpeg",
-            "storage_provider": "S3",
-            "generation_id": None,
-            "is_primary": True,
-            "sort_order": 1,
-            "created_at": "2026-05-17T14:20:00+09:00",
-        }
-    ],
 }
 
 ADMIN_RECIPE_NOT_FOUND_RESPONSE = error_response(
