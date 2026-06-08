@@ -1,7 +1,7 @@
 # Naengo AI Architecture
 
-이 문서는 Naengo AI의 전체 설계 지도를 제공합니다. 상세 설계는
-`docs/architecture/` 아래의 번호가 붙은 문서 폴더로 분리합니다.
+이 문서는 Naengo AI의 전체 설계 지도입니다. 구현 전에 이 문서를 먼저 읽고,
+현재 작업과 직접 관련된 하위 문서만 추가로 확인합니다.
 
 ## 1. Product Goal
 
@@ -18,35 +18,36 @@ Naengo AI는 사용자의 보유 재료, 냉장고 사진, 취향 정보를 바�
 - 사용자 제출 레시피 관리
 - 외부/공공 레시피 데이터 수집, 정규화, import
 
-## 2. Documents
+## 2. Documents & Reading Order
 
-- [Docs Index](docs/00-index.md)
-- [Architecture Overview](docs/architecture/00-overview.md)
-- [API Overview](docs/architecture/01-api/00-overview.md)
-- [User API](docs/architecture/01-api/01-user-api.md)
-- [Admin API](docs/architecture/01-api/02-admin-api.md)
-- [Internal API](docs/architecture/01-api/03-internal-api.md)
-- [Auth and Permissions](docs/architecture/01-api/04-auth-and-permissions.md)
-- [Error Response](docs/architecture/01-api/05-error-response.md)
-- [Data Ingestion Overview](docs/architecture/02-data-ingestion/00-overview.md)
-- [Data Ingestion Schema](docs/architecture/02-data-ingestion/01-schema.md)
-- [Data Ingestion Pipeline](docs/architecture/02-data-ingestion/02-pipeline.md)
-- [Scraper Operations](docs/architecture/02-data-ingestion/03-scraper-operations.md)
-- [Classification and Confidence](docs/architecture/02-data-ingestion/06-classification-and-confidence.md)
-- [Database Schema](docs/architecture/03-database/00-schema.md)
-- [Database Migration Strategy](docs/architecture/03-database/01-migration-strategy.md)
-- [AI Agent Overview](docs/architecture/04-ai-agent/00-overview.md)
-- [AI Intent Analysis](docs/architecture/04-ai-agent/01-intent-analysis.md)
-- [AI Agent Service](docs/architecture/04-ai-agent/02-agent-service.md)
-- [AI Retrieval Planning](docs/architecture/04-ai-agent/03-retrieval-planning.md)
-- [AI Streaming Events](docs/architecture/04-ai-agent/04-streaming-events.md)
-- [AI Testing Strategy](docs/architecture/04-ai-agent/05-testing-strategy.md)
-- [Live Research Overview](docs/architecture/05-live-research/00-overview.md)
-- [Live Research Source Policy](docs/architecture/05-live-research/01-source-policy.md)
-- [Live Research Flow](docs/architecture/05-live-research/02-research-flow.md)
-- [Live Research Agent Integration](docs/architecture/05-live-research/03-agent-integration.md)
-- [Live Research Safety and Caching](docs/architecture/05-live-research/04-safety-and-caching.md)
-- [Background Jobs Overview](docs/architecture/06-background-jobs/00-overview.md)
+구현 전에 이 순서로 읽되, 현재 작업과 관련된 문서만 선택해서 읽습니다.
+
+1. [Architecture Overview](architecture/00-overview.md)
+2. [API Overview](architecture/01-api/00-overview.md)
+3. [User API](architecture/01-api/01-user-api.md)
+4. [Admin API](architecture/01-api/02-admin-api.md)
+5. [Internal API](architecture/01-api/03-internal-api.md)
+6. [Auth and Permissions](architecture/01-api/04-auth-and-permissions.md)
+7. [Error Response](architecture/01-api/05-error-response.md)
+8. [Data Ingestion Overview](architecture/02-data-ingestion/00-overview.md)
+9. [Data Ingestion Schema](architecture/02-data-ingestion/01-schema.md)
+10. [Data Ingestion Pipeline](architecture/02-data-ingestion/02-pipeline.md)
+11. [Scraper Operations](architecture/02-data-ingestion/03-scraper-operations.md)
+12. [Classification and Confidence](architecture/02-data-ingestion/06-classification-and-confidence.md)
+13. [Database Schema](architecture/03-database/00-schema.md)
+14. [Database Migration Strategy](architecture/03-database/01-migration-strategy.md)
+15. [AI Agent Overview](architecture/04-ai-agent/00-overview.md)
+16. [AI Intent Analysis](architecture/04-ai-agent/01-intent-analysis.md)
+17. [AI Agent Service](architecture/04-ai-agent/02-agent-service.md)
+18. [AI Retrieval Planning](architecture/04-ai-agent/03-retrieval-planning.md)
+19. [AI Streaming Events](architecture/04-ai-agent/04-streaming-events.md)
+20. [AI Testing Strategy](architecture/04-ai-agent/05-testing-strategy.md)
+21. [Live Research Overview](architecture/05-live-research/00-overview.md)
+22. [Live Research Source Policy](architecture/05-live-research/01-source-policy.md)
+23. [Live Research Flow](architecture/05-live-research/02-research-flow.md)
+24. [Live Research Agent Integration](architecture/05-live-research/03-agent-integration.md)
+25. [Live Research Safety and Caching](architecture/05-live-research/04-safety-and-caching.md)
+26. [Background Jobs Overview](architecture/06-background-jobs/00-overview.md)
 
 ## 3. Technology Stack
 
@@ -111,7 +112,8 @@ db/
 scripts/                  # scraping, parsing, staging import, backfill CLI
 tests/
 docs/
-  architecture/           # detailed architecture documents
+  architecture.md         # 전체 설계 지도 (이 파일)
+  architecture/           # 세부 설계 문서
 ```
 
 ## 6. Current Public API
