@@ -42,9 +42,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 구현 전에 반드시 관련 설계 문서를 먼저 읽습니다.
 
-- 전체 설계 지도: [`architecture.md`](architecture.md)
-- 문서 목록 및 읽기 순서: [`docs/00-index.md`](docs/00-index.md)
-- 먼저 `architecture.md`에서 전체 구조와 문서 지도를 확인합니다.
-- 그 다음 `docs/00-index.md`의 읽기 순서를 보고, 현재 작업과 직접 관련된 세부 문서만 추가로 읽습니다.
-- 특정 문서 경로를 이 파일에 중복으로 나열하지 않습니다. 문서 구조가 바뀌면 `architecture.md`와 `docs/00-index.md`만 갱신합니다.
+- 전체 설계 지도 및 읽기 순서: [`docs/architecture.md`](docs/architecture.md)
+- `docs/architecture.md`에서 전체 구조를 확인하고, 현재 작업과 직접 관련된 세부 문서만 추가로 읽습니다.
+- 특정 문서 경로를 이 파일에 중복으로 나열하지 않습니다. 문서 구조가 바뀌면 `docs/architecture.md`만 갱신합니다.
 - 설계 문서는 구체적인 구현보다는 전체적인 흐름에 초점을 맞춥니다. 구현 세부사항은 코드에서 확인합니다.
