@@ -87,6 +87,11 @@ GET_ROOM_MESSAGES_DESCRIPTION = (
 
 `role = model` 메시지에 추천 레시피가 연결되어 있으면 `recipes` 필드에
 전체 레시피 데이터를 포함합니다.
+
+채팅 첨부 이미지는 메시지의 `image_url`로 반환하고, 추천 레시피 대표 이미지는
+`recipes[].main_image_url`로 구분됩니다. `image_url`은 저장된 이미지의 공개
+URL이며, 요청 시 전달한 base64 원문은 반환하지 않습니다. 이미지가 없는 user
+메시지와 일반적인 model 메시지는 `image_url: null`입니다.
 """
     + RECIPE_RESPONSE_TABLE
 )

@@ -72,8 +72,8 @@ CHAT_ROOM_EXAMPLE = {
 CHAT_MESSAGE_USER_EXAMPLE = {
     "message_id": 1,
     "role": "user",
-    "content": "김치랑 두부 있는데 뭐 만들 수 있어?",
-    "image_url": None,
+    "content": "냉장고 사진이에요. 어떤 요리를 만들 수 있을까요?",
+    "image_url": "https://example.com/chat/1/fridge.jpg",
     "recipes": None,
     "created_at": "2026-04-29T12:00:00+09:00",
 }
