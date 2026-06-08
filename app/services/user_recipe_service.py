@@ -321,6 +321,12 @@ class UserRecipeService:
     ) -> UserRecipe | None:
         return (
             self.db.query(UserRecipe)
+            .options(
+                selectinload(UserRecipe.ingredients),
+                selectinload(UserRecipe.steps),
+                selectinload(UserRecipe.labels),
+                selectinload(UserRecipe.nutrition),
+            )
             .filter(
                 UserRecipe.user_recipe_id == user_recipe_id,
             )
@@ -331,6 +337,7 @@ class UserRecipeService:
         self,
         user_recipe_id: int,
         body: UserRecipeAdminUpdate,
+        reviewer_user_id: int | None = None,
     ) -> UserRecipe | None:
         recipe = self.get_active_user_recipe(user_recipe_id)
         if not recipe:
@@ -382,6 +389,7 @@ class UserRecipeService:
         if body.status is not None and body.status != recipe.status:
             recipe.status = body.status
             recipe.reviewed_at = datetime.now(UTC)
+            recipe.reviewed_by = reviewer_user_id
             if (
                 body.status != "REJECTED"
                 and "rejection_reason" not in body.model_fields_set

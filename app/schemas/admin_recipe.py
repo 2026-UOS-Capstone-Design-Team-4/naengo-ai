@@ -31,6 +31,7 @@ class AdminRecipeStep(BaseModel):
     step_no: int
     instruction: str
     image_url: str | None = None
+    ai_image_url: str | None = None
     tip: str | None = None
     sort_order: int = 0
 

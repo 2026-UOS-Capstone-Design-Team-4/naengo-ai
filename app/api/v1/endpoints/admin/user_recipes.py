@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.errors import ApiError
+from app.api.v1.deps import get_current_user
+from app.models.user import User
 from app.api.v1.openapi.admin_user_recipes import (
     DELETE_ADMIN_USER_RECIPE_DESCRIPTION,
     DELETE_ADMIN_USER_RECIPE_RESPONSES,
@@ -152,8 +154,11 @@ def update_user_recipe_status(
     user_recipe_id: int,
     body: UserRecipeAdminUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    recipe = UserRecipeService(db).update_user_recipe_status(user_recipe_id, body)
+    recipe = UserRecipeService(db).update_user_recipe_status(
+        user_recipe_id, body, current_user.user_id
+    )
     if not recipe:
         raise ApiError(
             404,
