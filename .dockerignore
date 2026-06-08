@@ -61,7 +61,6 @@ tests/
 mermaid/
 docs/
 db/
-scripts/
 *.md
 .python-version
 
