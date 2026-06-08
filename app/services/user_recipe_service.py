@@ -243,47 +243,52 @@ class UserRecipeService:
         self.db.add(recipe)
         self.db.flush()
 
-        if main_image is not None:
-            recipe.main_image_url = self._upload_image(
-                main_image,
-                _image_key(
-                    user_id,
-                    recipe.user_recipe_id,
-                    "main",
-                    main_image.filename,
-                ),
-            )
+        try:
+            if main_image is not None:
+                recipe.main_image_url = self._upload_image(
+                    main_image,
+                    _image_key(
+                        user_id,
+                        recipe.user_recipe_id,
+                        "main",
+                        main_image.filename,
+                    ),
+                )
 
-        recipe.ingredients = [
-            UserRecipeIngredient(**item.model_dump(exclude_unset=True), sort_order=i)
-            for i, item in enumerate(body.ingredients)
-        ]
-        recipe.steps = [
-            UserRecipeStep(
-                step_no=step.step_no,
-                instruction=step.instruction,
-                image_url=(
-                    self._upload_image(
-                        step_image_map[step.client_image_key],
-                        _image_key(
-                            user_id,
-                            recipe.user_recipe_id,
-                            f"steps/{step.step_no}",
-                            step_image_map[step.client_image_key].filename,
-                        ),
-                    )
-                    if step.client_image_key
-                    else None
-                ),
-                tip=step.tip,
-                sort_order=i,
+            recipe.ingredients = [
+                UserRecipeIngredient(**item.model_dump(exclude_unset=True), sort_order=i)
+                for i, item in enumerate(body.ingredients)
+            ]
+            recipe.steps = [
+                UserRecipeStep(
+                    step_no=step.step_no,
+                    instruction=step.instruction,
+                    image_url=(
+                        self._upload_image(
+                            step_image_map[step.client_image_key],
+                            _image_key(
+                                user_id,
+                                recipe.user_recipe_id,
+                                f"steps/{step.step_no}",
+                                step_image_map[step.client_image_key].filename,
+                            ),
+                        )
+                        if step.client_image_key
+                        else None
+                    ),
+                    tip=step.tip,
+                    sort_order=i,
+                )
+                for i, step in enumerate(body.steps)
+            ]
+            recipe.labels = _build_labels(
+                body.category, body.tags, body.tips, body.warnings
             )
-            for i, step in enumerate(body.steps)
-        ]
-        recipe.labels = _build_labels(
-            body.category, body.tags, body.tips, body.warnings
-        )
-        self.db.commit()
+            self.db.commit()
+        except UserRecipeStorageError:
+            self.db.rollback()
+            raise
+
         self.db.refresh(recipe)
         return recipe
 
@@ -421,12 +426,12 @@ def _build_public_user_recipe_cursor(recipe: UserRecipe) -> str:
 
 
 def _validate_image(image: UserRecipeImageUpload) -> None:
-    if image.content_type not in ALLOWED_USER_RECIPE_IMAGE_TYPES:
-        raise UserRecipeImageValidationError("Unsupported image content type.")
-    if len(image.data) > MAX_USER_RECIPE_IMAGE_BYTES:
-        raise UserRecipeImageValidationError("Image file is too large.")
     if not image.data:
         raise UserRecipeImageValidationError("Image file is empty.")
+    if len(image.data) > MAX_USER_RECIPE_IMAGE_BYTES:
+        raise UserRecipeImageValidationError("Image file is too large.")
+    if image.content_type not in ALLOWED_USER_RECIPE_IMAGE_TYPES:
+        raise UserRecipeImageValidationError("Unsupported image content type.")
 
 
 def _build_step_image_map(
