@@ -35,10 +35,27 @@ FastAPI 기반 AI 요리 어시스턴트 서버입니다.
 ## 배포 현황
 
 - `main` 브랜치에 push되면 GitHub Actions가 Docker 이미지를 빌드해 GHCR(`ghcr.io`)에 push한 뒤 EC2에 SSH로 접속해 배포합니다.
-- 서버에서는 `~/naengo-deploy`의 `docker-compose.prod.yml`로 GHCR 이미지를 pull하고 컨테이너를 재시작합니다. 운영 서버에서 애플리케이션 이미지를 직접 빌드하거나 전체 git repo를 유지하지 않습니다.
-- `~/naengo-deploy`에는 운영 비밀 파일인 `.env.prod`와 `global-bundle.pem`이 있어야 하며, `docker-compose.prod.yml`은 배포 시 GitHub Actions가 복사합니다.
-- 운영 컨테이너 이름은 `naengo-ai`, 포트는 `8000`입니다.
-- 개발 환경은 `docker-compose.dev.yml`과 `.env.dev`를 사용하며, 코드가 볼륨 마운트되어 일반적인 코드 수정 후 재빌드 없이 반영됩니다.
+- 서버에서는 `~/naengo-deploy`의 `docker-compose.prod.yml`과 `deploy.sh`로 Blue-Green 무중단 배포를 수행합니다. 운영 서버에서 애플리케이션 이미지를 직접 빌드하거나 전체 git repo를 유지하지 않습니다.
+- `~/naengo-deploy`에는 운영 비밀 파일인 `.env.prod`와 `global-bundle.pem`이 있어야 하며, `docker-compose.prod.yml`과 `deploy.sh`는 배포 시 GitHub Actions가 복사합니다.
+
+### Blue-Green 무중단 배포
+
+컨테이너를 교체할 때 발생하는 다운타임을 제거하기 위해 Blue-Green 방식을 사용합니다.
+
+| 슬롯 | 컨테이너 | 호스트 포트 |
+|------|----------|-------------|
+| Blue | `naengo-ai-blue` | 8001 |
+| Green | `naengo-ai-green` | 8002 |
+
+배포 흐름 (`deploy.sh`):
+
+1. `/tmp/naengo-slot` 파일로 현재 활성 슬롯 확인 (없으면 `blue` 기본값)
+2. 비활성 슬롯에 새 이미지로 컨테이너 기동
+3. `GET /` 헬스체크 통과 대기 (2초 간격 × 최대 30회)
+4. Nginx `/etc/nginx/conf.d/naengo-upstream.conf` 덮어쓰기 + `nginx -s reload`로 트래픽 전환
+5. 슬롯 기록 갱신, 구 컨테이너 중지·제거
+
+헬스체크 실패 시 새 컨테이너를 제거하고 배포를 중단합니다(기존 슬롯 유지).
 - 개발 compose는 `APP_ENV=dev`, `AUTH_DISABLED=true`로 실행되어 Bearer 토큰 없이 개발용 사용자(`DEV_AUTH_USER_ID=1`, `DEV_AUTH_ROLE=ADMIN`)로 API를 호출할 수 있습니다.
 - 개발 compose는 MinIO를 함께 실행합니다. 앱 컨테이너는 `STORAGE_BACKEND=s3`, `S3_ENDPOINT=http://minio:9000`, `S3_PUBLIC_URL=http://localhost:9000`을 사용하며, MinIO 콘솔은 `http://localhost:9001`에서 확인할 수 있습니다.
 - API 문서는 서버 실행 후 `/docs`에서 확인합니다.
