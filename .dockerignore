@@ -20,6 +20,7 @@ venv/
 .venv/
 .pytest_cache/
 .ruff_cache/
+.ruff-cache-local/
 .mypy_cache/
 .tox/
 .coverage
@@ -32,6 +33,7 @@ build/
 dist/
 *.egg-info/
 .export
+.uv-cache/
 
 # 📊 Data / Databases
 *.sql
@@ -47,9 +49,21 @@ postgres_data/
 *.swp
 *.swo
 Dockerfile
-docker-compose.yml
+docker-compose*.yml
+deploy.sh
 alembic/
 tests/
+
+# 📁 Project tooling & Docs
+.github/
+.claude/
+.omc/
+mermaid/
+docs/
+db/
+scripts/
+*.md
+.python-version
 
 # 💻 OS specific files
 .DS_Store
