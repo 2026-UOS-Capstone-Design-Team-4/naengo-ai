@@ -1,0 +1,65 @@
+name: Agent Evaluation
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Evaluation mode
+        required: true
+        default: live
+        type: choice
+        options:
+          - live
+          - retrieval
+      case_id:
+        description: Optional single case ID
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      API_KEY: ${{ secrets.API_KEY }}
+      BASE_URL: ${{ secrets.BASE_URL }}
+      MODEL_NAME: ${{ secrets.MODEL_NAME }}
+      EMBEDDING_API_KEY: ${{ secrets.EMBEDDING_API_KEY }}
+      EVAL_JUDGE_MODEL: ${{ secrets.EVAL_JUDGE_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --dev
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          test -n "$API_KEY" || (echo "Missing API_KEY" >&2; exit 1)
+          test -n "$MODEL_NAME" || (echo "Missing MODEL_NAME" >&2; exit 1)
+          test -n "$EMBEDDING_API_KEY" || (echo "Missing EMBEDDING_API_KEY" >&2; exit 1)
+          if [ "${{ inputs.mode }}" = "retrieval" ]; then
+            test -n "$DATABASE_URL" || (echo "Missing DATABASE_URL" >&2; exit 1)
+          fi
+      - name: Run evaluation
+        shell: bash
+        run: |
+          args=(--mode "${{ inputs.mode }}" --output artifacts/evals)
+          if [ -n "${{ inputs.case_id }}" ]; then
+            args+=(--case "${{ inputs.case_id }}")
+          fi
+          if [ "${{ inputs.mode }}" = "retrieval" ]; then
+            args+=(--with-db)
+          fi
+          if [ -n "$EVAL_JUDGE_MODEL" ]; then
+            args+=(--judge-model "$EVAL_JUDGE_MODEL")
+          fi
+          uv run python scripts/eval/run_agent_evals.py "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-eval-${{ inputs.mode }}
+          path: artifacts/evals/
