@@ -12,6 +12,11 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+      API_KEY: test-api-key
+      EMBEDDING_API_KEY: test-embedding-api-key
+      MODEL_NAME: test-model
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
