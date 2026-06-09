@@ -49,8 +49,6 @@ class ConversationState:
         if self.rejected_recipe_ids:
             ids = ", ".join(str(recipe_id) for recipe_id in self.rejected_recipe_ids)
             lines.append(f"- rejected_recipe_ids: {ids}")
-        if self.profile_snapshot:
-            lines.append(f"- profile_snapshot: {self.profile_snapshot}")
         if not lines:
             return None
         return "[Conversation state]\n" + "\n".join(lines)

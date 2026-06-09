@@ -27,7 +27,8 @@ retrieval planning의 출력은 검색을 실행하기 위한 구조화된 계�
 2. `retrieval_required=true`이면 retrieval 계층이 embedding, title, ingredient 기반 후보를 모은다.
 3. 알레르기, 제외 재료, 시간 제한 같은 hard constraint를 우선 반영한다.
 4. 보유 재료, 요리명, 취향, 난이도, 최근 추천 중복 여부를 기준으로 rerank한다.
-5. 최종 후보를 answer agent가 이해할 수 있는 evidence context로 요약한다.
+5. 최종 후보의 evidence와 recipe detail을 중복 없는 단일 context로 구성한다.
+6. answer agent는 제공된 context만 사용하며 추가 검색 tool을 호출하지 않는다.
 
 전체 검색 계획으로 후보가 부족할 때는 soft 조건만 완화할 수 있다. 이 경우에도
 알레르기, 제외 재료, 필수 재료, 조리 시간 같은 hard constraint는 유지한다.

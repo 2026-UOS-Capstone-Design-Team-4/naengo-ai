@@ -1,4 +1,4 @@
-﻿import base64
+import base64
 import re
 
 from pydantic import BaseModel
@@ -64,16 +64,12 @@ class RecipeSearchPlanner:
         self,
         message: str,
         history: list[ModelMessage],
-        user_profile_context: str | None = None,
         memory_context: str | None = None,
         image: str | None = None,
     ) -> SearchPlan:
         text = message
-        context_parts = [
-            part for part in [user_profile_context, memory_context] if part
-        ]
-        if context_parts:
-            text = "\n\n".join(context_parts + [f"[요청]\n{message}"])
+        if memory_context:
+            text = "\n\n".join([memory_context, f"[요청]\n{message}"])
 
         prompt = [text, _to_image_content(image)] if image else text
         result = await self._agent.run(prompt, message_history=history)

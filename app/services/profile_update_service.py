@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -97,29 +98,73 @@ class ProfileUpdateAnalyzer:
     def __init__(self, agent: Agent | None = None) -> None:
         self._agent = agent or _build_profile_update_agent()
 
-    def analyze(
+    async def analyze(
         self,
         message: str,
         profile: UserProfile | None = None,
     ) -> ProfileUpdateDecision:
         prompt = _profile_update_prompt(message, profile)
-        result = self._agent.run_sync(prompt)
+        result = await self._agent.run(prompt)
         return _decision_from_ai_output(result.output)
+
+
+class ProfileUpdateCandidateGate:
+    _PROFILE_MARKERS = (
+        "알레르기",
+        "알러지",
+        "식이",
+        "채식",
+        "비건",
+        "당뇨",
+        "탄수화물",
+        "싫어",
+        "좋아",
+        "선호",
+        "취향",
+        "요리 실력",
+        "조리 시간",
+        "인분",
+    )
+    _SELF_MARKERS = ("나는", "저는", "내가", "제가", "평소", "앞으로")
+    _TEMPORARY_MARKERS = ("오늘", "이번", "지금", "당장")
+    _OTHER_MARKERS = ("친구", "가족", "부모", "아이", "손님", "동료")
+
+    def should_analyze(self, message: str) -> bool:
+        text = re.sub(r"\s+", " ", str(message).strip())
+        if not text or not any(marker in text for marker in self._PROFILE_MARKERS):
+            return False
+        if text.endswith("?"):
+            return False
+        if any(marker in text for marker in self._OTHER_MARKERS):
+            return False
+        if any(marker in text for marker in self._TEMPORARY_MARKERS):
+            return False
+        return (
+            any(marker in text for marker in self._SELF_MARKERS)
+            or bool(re.search(r"(^|\s)(나|저)(\s|$)", text))
+            or bool(re.search(r"(알레르기|알러지).*(있어|있습니다|있음)", text))
+            or bool(
+                re.search(
+                    r"(당뇨|건강).*(때문에|라서).*(줄여야|피해야|먹어야)",
+                    text,
+                )
+            )
+        )
 
 
 class ProfileUpdateExtractor:
     def __init__(self, analyzer: ProfileUpdateAnalyzer | None = None) -> None:
         self._analyzer = analyzer or ProfileUpdateAnalyzer()
 
-    def extract(self, message: str) -> list[ProfileUpdateCandidate]:
-        return self._analyzer.analyze(message).candidates
+    async def extract(self, message: str) -> list[ProfileUpdateCandidate]:
+        return (await self._analyzer.analyze(message)).candidates
 
-    def analyze(
+    async def analyze(
         self,
         message: str,
         profile: UserProfile | None = None,
     ) -> ProfileUpdateDecision:
-        return self._analyzer.analyze(message, profile)
+        return await self._analyzer.analyze(message, profile)
 
 
 class ProfileUpdatePolicy:
@@ -320,4 +365,5 @@ Examples:
 
 profile_update_analyzer = ProfileUpdateAnalyzer()
 profile_update_extractor = ProfileUpdateExtractor(profile_update_analyzer)
+profile_update_candidate_gate = ProfileUpdateCandidateGate()
 profile_update_policy = ProfileUpdatePolicy()

@@ -30,14 +30,16 @@ AgentService
   -> fixed response / clarification / profile management early routes
   -> DomainPlanner
       RECIPE_FIND
-        -> ProfileUpdateAnalyzer/ProfileUpdatePolicy (로그인 side effect)
+        -> ProfileUpdateCandidateGate
+        -> ProfileUpdateAnalyzer/ProfileUpdatePolicy (후보 문장만 로그인 side effect)
         -> RecipeFindPlanner
         -> retrieval plan
         -> sub_intent=BY_INGREDIENTS | TARGET_DISH | DIET_CONSTRAINT | ...
         -> answer_strategy=RECIPE_RECOMMENDATION
 
       COOKING_QA
-        -> ProfileUpdateAnalyzer/ProfileUpdatePolicy (로그인 side effect)
+        -> ProfileUpdateCandidateGate
+        -> ProfileUpdateAnalyzer/ProfileUpdatePolicy (후보 문장만 로그인 side effect)
         -> Apply conversation memory / profile context
         -> CookingQAPlanner
         -> AgentContextResolver (최근 추천 레시피 참조 해석)
@@ -54,9 +56,9 @@ AgentService
 
   -> LiveResearchService (domain plan 또는 정책상 최신 정보가 필요한 경우)
   -> DomainAnswerRouter
-  -> RetrievalOrchestrator (retrieval이 필요한 경우)
+  -> RetrievalOrchestrator (retrieval이 필요한 경우, 요청당 최대 1회)
         -> RecipeRetrievalService
-        -> EvidencePack
+        -> EvidencePack + recipe detail을 단일 answer context로 구성
   -> AgentQualityWorkflow (pydantic-graph, in-memory state)
       -> GenerateDraft
       -> VerifyAnswer
@@ -115,6 +117,8 @@ verification result를 묶는 실행 상태 객체다. 각 단계는 이 context
 검색 결과는 answer agent에 그대로 전달하기보다, 추천 이유와 주의 조건을 포함한
 근거 context로 정리한다. 이 근거는 답변 생성과 검증 단계에서 함께 사용하며,
 답변 텍스트와 `recipes` 이벤트가 서로 다른 내용을 말하지 않도록 돕는다.
+answer prompt에는 evidence와 recipe detail을 하나의 retrieval context로 합쳐
+같은 레시피와 사용자 조건이 중복 전달되지 않게 한다.
 
 ## Context Resolver
 
@@ -145,4 +149,13 @@ revision agent가 기존 답변과 허용된 근거만 사용해 한 번 수정�
 Agent tool은 DB session이나 embedding client를 직접 다루지 않는다.
 레시피 검색은 `RecipeRetrievalService.search_recipes()`를 통해서만 수행한다.
 `RecipeFindPlanner`가 `retrieval_required=false`로 판단한 턴에서는
-answer agent의 tool 호출도 검색을 실행하지 않는다.
+검색을 실행하지 않는다. 검색이 필요한 턴은 `RetrievalOrchestrator`가 답변 생성
+전에 한 번 실행하며, answer agent에는 검색 tool을 제공하지 않는다.
+
+## Profile Update Gate
+
+일반 레시피/요리 질문마다 profile 분석 LLM을 호출하지 않는다. 규칙 기반
+`ProfileUpdateCandidateGate`가 장기 프로필 변경 가능성이 있는 1인칭 선언만
+선별하고, 후보 문장만 async `ProfileUpdateAnalyzer`로 전달한다. 임시 조건,
+타인 정보, 질문형 문장은 side effect 분석을 건너뛴다. 명시적인
+`PROFILE_MANAGEMENT` 요청은 gate와 무관하게 항상 분석한다.
