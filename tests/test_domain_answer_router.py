@@ -1,4 +1,5 @@
 from app.agents.core.run_context import AgentRunContext
+from app.agents.core.system_prompts import RECIPE_AGENT_PROMPT
 from app.agents.intent.answer_router import domain_answer_router
 from app.agents.intent.intent_models import (
     AnswerStrategy,
@@ -73,3 +74,9 @@ def test_cooking_safety_routes_to_safety_agent():
 
     assert decision.agent is safety_cooking_agent
     assert decision.selected_agent == "safety_cooking_agent"
+
+
+def test_recipe_answer_agent_has_no_retrieval_tool():
+    assert "search_recipes" not in recipe_agent._function_toolset.tools
+    assert "search_recipes" not in RECIPE_AGENT_PROMPT
+    assert "[Retrieval context]" in RECIPE_AGENT_PROMPT

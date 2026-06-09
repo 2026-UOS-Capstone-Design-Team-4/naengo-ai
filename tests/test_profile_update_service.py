@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 
 from app.services.profile_update_service import (
@@ -5,6 +6,7 @@ from app.services.profile_update_service import (
     ProfileUpdateAIOutput,
     ProfileUpdateAIOutputCandidate,
     ProfileUpdateAnalyzer,
+    ProfileUpdateCandidateGate,
     ProfileUpdateOperation,
 )
 
@@ -14,7 +16,7 @@ class FakeAgent:
         self.output = output
         self.prompt = None
 
-    def run_sync(self, prompt: str):
+    async def run(self, prompt: str):
         self.prompt = prompt
         return SimpleNamespace(output=self.output)
 
@@ -37,7 +39,7 @@ def test_ai_profile_update_auto_saves_structured_candidate():
         )
     )
 
-    decision = ProfileUpdateAnalyzer(agent).analyze("나 새우 알러지 있어")
+    decision = asyncio.run(ProfileUpdateAnalyzer(agent).analyze("나 새우 알러지 있어"))
 
     assert decision.action == ProfileUpdateAction.AUTO_SAVE
     assert decision.candidates[0].field == "allergies"
@@ -48,7 +50,9 @@ def test_ai_profile_update_auto_saves_structured_candidate():
 def test_ai_profile_update_ignores_negation():
     agent = FakeAgent(ProfileUpdateAIOutput(action=ProfileUpdateAction.IGNORE))
 
-    decision = ProfileUpdateAnalyzer(agent).analyze("나는 계란 알레르기는 없어")
+    decision = asyncio.run(
+        ProfileUpdateAnalyzer(agent).analyze("나는 계란 알레르기는 없어")
+    )
 
     assert decision.action == ProfileUpdateAction.IGNORE
     assert decision.candidates == []
@@ -73,8 +77,8 @@ def test_ai_profile_update_requires_confirmation_for_health_context():
         )
     )
 
-    decision = ProfileUpdateAnalyzer(agent).analyze(
-        "당뇨 때문에 탄수화물을 줄여야 해"
+    decision = asyncio.run(
+        ProfileUpdateAnalyzer(agent).analyze("당뇨 때문에 탄수화물을 줄여야 해")
     )
 
     assert decision.action == ProfileUpdateAction.REQUIRE_CONFIRMATION
@@ -96,6 +100,27 @@ def test_ai_profile_update_receives_current_profile_context():
     )
     agent = FakeAgent(ProfileUpdateAIOutput(action=ProfileUpdateAction.IGNORE))
 
-    ProfileUpdateAnalyzer(agent).analyze("나는 고수 좋아해", profile=profile)
+    asyncio.run(
+        ProfileUpdateAnalyzer(agent).analyze("나는 고수 좋아해", profile=profile)
+    )
 
     assert "'disliked_ingredients': ['고수']" in agent.prompt
+
+
+def test_profile_update_candidate_gate_detects_stable_self_profile_statements():
+    gate = ProfileUpdateCandidateGate()
+
+    assert gate.should_analyze("나는 새우 알레르기가 있어")
+    assert gate.should_analyze("새우 알레르기 있어")
+    assert gate.should_analyze("당뇨 때문에 탄수화물을 줄여야 해")
+    assert gate.should_analyze("평소에 고수를 싫어해")
+    assert gate.should_analyze("앞으로 20분 이내 요리를 선호해")
+
+
+def test_profile_update_candidate_gate_skips_temporary_other_and_regular_requests():
+    gate = ProfileUpdateCandidateGate()
+
+    assert not gate.should_analyze("오늘은 고수 빼줘")
+    assert not gate.should_analyze("새우 알레르기 있는 친구가 와")
+    assert not gate.should_analyze("새우 알레르기 있어?")
+    assert not gate.should_analyze("김치찌개 추천해줘")

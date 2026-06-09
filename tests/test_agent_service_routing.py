@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -16,7 +17,7 @@ from app.agents.recipe.recipe_agent import (
     ingredient_substitution_agent,
     smalltalk_agent,
 )
-from app.agents.recipe.search_planner import SearchPlan
+from app.agents.recipe.search_planner import RecipeSearchPlanner, SearchPlan
 from app.services.agent_service import AgentService, AgentServiceDeps
 from app.services.live_research_service import LiveResearchResult, ResearchEvidence
 from app.services.profile_update_service import (
@@ -82,8 +83,10 @@ class FakeLiveResearchService:
 class FakeProfileUpdateAnalyzer:
     def __init__(self, decision: ProfileUpdateDecision | None = None):
         self.decision = decision
+        self.calls = []
 
-    def analyze(self, message, profile=None):
+    async def analyze(self, message, profile=None):
+        self.calls.append(message)
         return self.decision or ProfileUpdateDecision(ProfileUpdateAction.IGNORE, [])
 
 
@@ -158,7 +161,6 @@ class FakeSearchPlanner:
         self,
         message,
         history,
-        user_profile_context=None,
         memory_context=None,
         image=None,
     ):
@@ -174,7 +176,6 @@ class FakeNoRetrievalSearchPlanner:
         self,
         message,
         history,
-        user_profile_context=None,
         memory_context=None,
         image=None,
     ):
@@ -189,7 +190,6 @@ class FakeClarifyingSearchPlanner:
         self,
         message,
         history,
-        user_profile_context=None,
         memory_context=None,
         image=None,
     ):
@@ -224,11 +224,6 @@ class FakeClarifyingCookingQAPlanner:
             clarification_question="어떤 레시피를 말씀하시는지 알려주세요?",
             answer_strategy=AnswerStrategy.GENERAL_COOKING_QA,
         )
-
-
-class FakeUserContextBuilder:
-    def build_profile_context(self, db, user_id):
-        return None
 
 
 class FakeRecipe:
@@ -272,6 +267,13 @@ def _parse_events(chunks: list[str]) -> list[tuple[str, dict]]:
 
 def _legacy_events(events: list[tuple[str, dict]]) -> list[tuple[str, dict]]:
     return [event for event in events if event[0] != "workflow"]
+
+
+def test_recipe_search_planner_uses_memory_as_its_single_profile_context():
+    parameters = inspect.signature(RecipeSearchPlanner.plan).parameters
+
+    assert "memory_context" in parameters
+    assert "user_profile_context" not in parameters
 
 
 async def _collect_stream(service: AgentService, prompt: str, chat_service, db=None):
@@ -502,10 +504,6 @@ def test_recipe_query_prefetches_rag_even_when_agent_does_not_call_tool(monkeypa
         FakeSearchPlanner(),
     )
     monkeypatch.setattr(
-        "app.services.agent_service.user_context_builder",
-        FakeUserContextBuilder(),
-    )
-    monkeypatch.setattr(
         "app.services.agent_service.recipe_retrieval_service",
         retrieval,
     )
@@ -546,7 +544,8 @@ def test_recipe_query_prefetches_rag_even_when_agent_does_not_call_tool(monkeypa
     assert retrieval.queries[0][:2] == ("김치 두부 찌개", 3)
     assert retrieval.queries[0][2].available_ingredients == ["김치", "두부"]
     assert retrieval.queries[0][2].main_ingredients == ["김치", "두부"]
-    assert "RAG recipe candidates" in captured["user_prompt"]
+    assert captured["user_prompt"].count("김치두부찌개") == 1
+    assert "profile_snapshot" not in captured["user_prompt"]
     assert captured["deps"].last_found_recipes[0]["id"] == 7
     evidence = next(data for name, data in events if name == "evidence")
     assert evidence["recipes"][0]["recipe_id"] == 7
@@ -578,11 +577,9 @@ def test_recipe_query_can_save_profile_side_effect_and_still_answer(monkeypatch)
             self,
             message,
             history,
-            user_profile_context=None,
             memory_context=None,
             image=None,
         ):
-            captured["user_profile_context"] = user_profile_context
             captured["memory_context"] = memory_context
             return SearchPlan(
                 query_text="김치 두부 찌개",
@@ -648,7 +645,6 @@ def test_recipe_query_can_save_profile_side_effect_and_still_answer(monkeypatch)
     assert profile_update["candidates"][0]["field"] == "allergies"
     assert profile_update["candidates"][0]["value"] == "새우"
     assert db.profile.allergies == ["새우"]
-    assert "새우" in captured["user_profile_context"]
     assert "새우" in captured["memory_context"]
     assert retrieval.queries[0][2].allergies == ["새우"]
     assert retrieval.queries[0][2].avoid_ingredients == ["새우"]
@@ -684,10 +680,6 @@ def test_recipe_query_skips_rag_prefetch_when_plan_does_not_require_it(monkeypat
     monkeypatch.setattr(
         "app.services.agent_service.recipe_search_planner",
         FakeNoRetrievalSearchPlanner(),
-    )
-    monkeypatch.setattr(
-        "app.services.agent_service.user_context_builder",
-        FakeUserContextBuilder(),
     )
     monkeypatch.setattr(
         "app.services.agent_service.recipe_retrieval_service",
@@ -739,10 +731,6 @@ def test_recipe_query_with_planner_clarification_ends_before_rag(monkeypatch):
     monkeypatch.setattr(
         "app.services.agent_service.recipe_search_planner",
         FakeClarifyingSearchPlanner(),
-    )
-    monkeypatch.setattr(
-        "app.services.agent_service.user_context_builder",
-        FakeUserContextBuilder(),
     )
     monkeypatch.setattr(
         "app.services.agent_service.recipe_retrieval_service",
@@ -830,7 +818,7 @@ def test_cooking_qa_with_retrieval_uses_sub_intent_agent(monkeypatch):
     assert retrieval.queries[0][2].main_ingredients == ["두부"]
     evidence = next(data for name, data in events if name == "evidence")
     assert evidence["recipes"][0]["recipe_id"] == 7
-    assert "RAG recipe candidates" in captured["user_prompt"]
+    assert "[Retrieval context]" in captured["user_prompt"]
     assert captured["agent"] is ingredient_substitution_agent
 
 

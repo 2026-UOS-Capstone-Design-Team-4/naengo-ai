@@ -23,7 +23,6 @@ from app.agents.core.system_prompts import (
     OFF_TOPIC_MESSAGE,
     PROFILE_MANAGEMENT_EMPTY_MESSAGE,
 )
-from app.agents.core.user_context import user_context_builder
 from app.agents.intent.answer_router import domain_answer_router
 from app.agents.intent.intent_models import (
     AnswerStrategy,
@@ -57,6 +56,7 @@ from app.services.profile_update_service import (
     ProfileUpdateDecision,
     UserProfileService,
     profile_update_analyzer,
+    profile_update_candidate_gate,
 )
 from app.services.recipe_retrieval_service import recipe_retrieval_service
 from app.services.retrieval_orchestrator import RetrievalOrchestrator
@@ -211,11 +211,24 @@ def _append_live_research_context(prompt: str, answer_context: str | None) -> st
     return f"{prompt}\n\n[{answer_context}]"
 
 
-def _append_recipe_context(prompt: str, recipes: list[dict]) -> str:
+def _append_retrieval_answer_context(
+    prompt: str,
+    evidence_pack: Any | None,
+    recipes: list[dict],
+) -> str:
     if not recipes:
         return prompt
-    lines = ["RAG recipe candidates:"]
+    evidence_by_id = {
+        evidence.recipe_id: evidence
+        for evidence in getattr(evidence_pack, "recipes", [])
+    }
+    constraints = getattr(evidence_pack, "constraints", {})
+    lines = ["[Retrieval context]"]
+    if constraints:
+        lines.append(f"constraints: {constraints}")
     for index, recipe in enumerate(recipes, start=1):
+        recipe_id = int(recipe.get("id") or 0)
+        evidence = evidence_by_id.get(recipe_id)
         title = recipe.get("title") or "제목 없음"
         description = recipe.get("description") or ""
         ingredients = _ingredients_text(recipe)
@@ -227,6 +240,22 @@ def _append_recipe_context(prompt: str, recipes: list[dict]) -> str:
                 part
                 for part in [
                     f"{index}. {title}",
+                    (
+                        f"   why_matched: {', '.join(evidence.why_matched)}"
+                        if evidence and evidence.why_matched
+                        else ""
+                    ),
+                    (
+                        f"   risk_flags: {', '.join(evidence.risk_flags)}"
+                        if evidence and evidence.risk_flags
+                        else ""
+                    ),
+                    (
+                        "   missing_ingredients: "
+                        f"{', '.join(evidence.missing_ingredients)}"
+                        if evidence and evidence.missing_ingredients
+                        else ""
+                    ),
                     f"   description: {description}" if description else "",
                     f"   ingredients: {ingredients}" if ingredients else "",
                     f"   time: {cooking_time} minutes" if cooking_time else "",
@@ -236,7 +265,7 @@ def _append_recipe_context(prompt: str, recipes: list[dict]) -> str:
                 if part
             )
         )
-    return f"{prompt}\n\n[{chr(10).join(lines)}]"
+    return f"{prompt}\n\n{chr(10).join(lines)}"
 
 
 def _ingredients_text(recipe: dict) -> str:
@@ -257,15 +286,6 @@ def _ingredients_text(recipe: dict) -> str:
         if text:
             values.append(text)
     return ", ".join(values)
-
-
-def _append_evidence_pack_context(prompt: str, evidence_pack: Any | None) -> str:
-    if evidence_pack is None:
-        return prompt
-    context = evidence_pack.to_prompt_context()
-    if not context:
-        return prompt
-    return f"{prompt}\n\n{context}"
 
 
 def _evidence_event_payload(evidence_pack: Any | None) -> dict[str, Any] | None:
@@ -476,7 +496,7 @@ def _profile_update_side_effect_tasks(primary_task: PrimaryTask) -> bool:
     return primary_task in {PrimaryTask.RECIPE_FIND, PrimaryTask.COOKING_QA}
 
 
-def _apply_profile_update_side_effect(
+async def _apply_profile_update_side_effect(
     db: Session | None,
     user_id: int | None,
     prompt: str,
@@ -486,12 +506,13 @@ def _apply_profile_update_side_effect(
         db is None
         or user_id is None
         or not _profile_update_side_effect_tasks(primary_task)
+        or not profile_update_candidate_gate.should_analyze(prompt)
     ):
         return None
 
     try:
         profile = db.query(UserProfile).filter_by(user_id=user_id).first()
-        decision = profile_update_analyzer.analyze(prompt, profile)
+        decision = await profile_update_analyzer.analyze(prompt, profile)
         if decision.action == ProfileUpdateAction.AUTO_SAVE:
             UserProfileService(db).apply_candidates(user_id, decision.candidates)
         if decision.action == ProfileUpdateAction.IGNORE:
@@ -730,7 +751,7 @@ class AgentService:
         yield stream_event_builder.workflow(
             _workflow_payload(run_id, "planning", "started")
         )
-        profile_update_decision = _apply_profile_update_side_effect(
+        profile_update_decision = await _apply_profile_update_side_effect(
             execution.db,
             execution.user_id,
             prompt,
@@ -762,19 +783,10 @@ class AgentService:
 
         if primary_task == PrimaryTask.RECIPE_FIND:
             planner_name = "RecipeFindPlanner"
-            user_profile_context = (
-                user_context_builder.build_profile_context(
-                    execution.db,
-                    execution.user_id,
-                )
-                if execution.db is not None and execution.user_id is not None
-                else None
-            )
             try:
                 plan = await self.deps.recipe_search_planner.plan(
                     prompt,
                     execution.history,
-                    user_profile_context=user_profile_context,
                     memory_context=memory.to_prompt_context(),
                     image=image_ref,
                 )
@@ -991,12 +1003,9 @@ class AgentService:
                     )
                 )
                 run_context.retrieved_recipes = deps.last_found_recipes
-                effective_prompt = _append_evidence_pack_context(
+                effective_prompt = _append_retrieval_answer_context(
                     effective_prompt,
                     run_context.evidence_pack,
-                )
-                effective_prompt = _append_recipe_context(
-                    effective_prompt,
                     deps.last_found_recipes,
                 )
                 logger.info(
@@ -1156,7 +1165,7 @@ class AgentService:
         profile = (
             execution.db.query(UserProfile).filter_by(user_id=execution.user_id).first()
         )
-        decision = profile_update_analyzer.analyze(execution.prompt, profile)
+        decision = await profile_update_analyzer.analyze(execution.prompt, profile)
 
         if decision.action == ProfileUpdateAction.AUTO_SAVE:
             UserProfileService(execution.db).apply_candidates(
