@@ -1,4 +1,4 @@
-﻿import json
+import json
 from decimal import Decimal
 
 from app.agents.core.stream_events import StreamEventBuilder
@@ -114,3 +114,24 @@ def test_evidence_event_serializes_recommendation_evidence():
     assert event == "evidence"
     assert data["recipes"][0]["why_matched"] == ["김치", "두부"]
     assert data["constraints"] == {"avoid_ingredients": ["새우"]}
+
+
+def test_workflow_event_reports_stage_status_and_attempt():
+    event, data = parse_sse(
+        StreamEventBuilder().workflow(
+            {
+                "run_id": "run-123",
+                "stage": "verifying",
+                "status": "started",
+                "attempt": 1,
+            }
+        )
+    )
+
+    assert event == "workflow"
+    assert data == {
+        "run_id": "run-123",
+        "stage": "verifying",
+        "status": "started",
+        "attempt": 1,
+    }

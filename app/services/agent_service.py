@@ -32,8 +32,17 @@ from app.agents.intent.intent_models import (
     RecipeFindSubIntent,
 )
 from app.agents.intent.main_intent_classifier import main_intent_classifier
-from app.agents.recipe.recipe_agent import cooking_agent, recipe_agent
+from app.agents.recipe.recipe_agent import (
+    answer_revision_agent,
+    cooking_agent,
+    recipe_agent,
+)
 from app.agents.recipe.search_planner import SearchPlan, recipe_search_planner
+from app.agents.workflow.quality import (
+    AgentQualityWorkflow,
+    QualityWorkflowInput,
+    RevisionRequest,
+)
 from app.api.errors import ApiError
 from app.core import config
 from app.models.social import Like, Scrap
@@ -120,6 +129,57 @@ async def _run_agent_to_queue(
         await queue.put(("done", None))
     except Exception as exc:
         await queue.put(("error", exc))
+
+
+async def _collect_agent_text(
+    agent: Any,
+    user_prompt: Any,
+    history: list[ModelMessage],
+    deps: RecipeDeps,
+) -> str:
+    queue: asyncio.Queue = asyncio.Queue()
+    task = asyncio.create_task(
+        _run_agent_to_queue(queue, agent, user_prompt, history, deps)
+    )
+    chunks: list[str] = []
+    try:
+        while True:
+            event_type, data = await queue.get()
+            if event_type == "text":
+                chunks.append(str(data))
+            elif event_type == "done":
+                return "".join(chunks)
+            elif event_type == "error":
+                raise data
+    finally:
+        if not task.done():
+            task.cancel()
+
+
+def _revision_prompt(request: RevisionRequest) -> str:
+    return json.dumps(
+        {
+            "answer": request.answer,
+            "verification_issues": request.issues,
+            "allowed_recipes": request.recipes,
+        },
+        ensure_ascii=False,
+        default=str,
+    )
+
+
+def _workflow_payload(
+    run_id: str,
+    stage: str,
+    status: str,
+    attempt: int = 0,
+) -> dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "stage": stage,
+        "status": status,
+        "attempt": attempt,
+    }
 
 
 def _append_live_research_context(prompt: str, answer_context: str | None) -> str:
@@ -539,12 +599,16 @@ class AgentService:
         self,
         execution: _StreamExecutionConfig,
     ) -> AsyncGenerator[str]:
+        run_id = str(uuid4())
         prompt = execution.prompt
         image_ref = execution.image
         stored_image_url: str | None = None
         if execution.persist and image_ref and execution.room_id is not None:
             image_ref, stored_image_url = _upload_image(image_ref, execution.room_id)
 
+        yield stream_event_builder.workflow(
+            _workflow_payload(run_id, "classifying", "started")
+        )
         try:
             main_intent = await main_intent_classifier.classify(
                 prompt,
@@ -554,6 +618,9 @@ class AgentService:
         except Exception as exc:
             logger.error("Intent 분류 실패: %s", exc)
             main_intent = _fallback_main_intent()
+        yield stream_event_builder.workflow(
+            _workflow_payload(run_id, "classifying", "completed")
+        )
 
         primary_task = main_intent.primary_task
         confidence = main_intent.confidence
@@ -571,6 +638,9 @@ class AgentService:
 
         fixed_message = _fixed_message_for_task(primary_task)
         if fixed_message is not None or _should_clarify(main_intent):
+            yield stream_event_builder.workflow(
+                _workflow_payload(run_id, "planning", "started")
+            )
             yield self._metadata_event(primary_task, None)
             answer_strategy = (
                 AnswerStrategy.CLARIFICATION
@@ -585,11 +655,17 @@ class AgentService:
                     confidence,
                 )
             )
+            yield stream_event_builder.workflow(
+                _workflow_payload(run_id, "planning", "completed")
+            )
             message = (
                 main_intent.clarification_question
                 if answer_strategy == AnswerStrategy.CLARIFICATION
                 else fixed_message
             ) or CLARIFY_MESSAGE
+            yield stream_event_builder.workflow(
+                _workflow_payload(run_id, "completed", "completed")
+            )
             yield stream_event_builder.message(message)
             msg_id = self._save_if_persisted(
                 execution,
@@ -601,6 +677,9 @@ class AgentService:
             return
 
         if primary_task == PrimaryTask.PROFILE_MANAGEMENT:
+            yield stream_event_builder.workflow(
+                _workflow_payload(run_id, "planning", "started")
+            )
             yield self._metadata_event(primary_task, None)
             yield stream_event_builder.planning(
                 _planning_payload(
@@ -610,13 +689,20 @@ class AgentService:
                     confidence,
                 )
             )
+            yield stream_event_builder.workflow(
+                _workflow_payload(run_id, "planning", "completed")
+            )
             async for chunk in self._handle_profile_management(
                 execution,
                 stored_image_url,
+                run_id,
             ):
                 yield chunk
             return
 
+        yield stream_event_builder.workflow(
+            _workflow_payload(run_id, "planning", "started")
+        )
         profile_update_decision = _apply_profile_update_side_effect(
             execution.db,
             execution.user_id,
@@ -706,9 +792,15 @@ class AgentService:
                         sub_intent=getattr(run_context.domain_plan, "sub_intent", None),
                     )
                 )
+                yield stream_event_builder.workflow(
+                    _workflow_payload(run_id, "planning", "completed")
+                )
                 message = (
                     getattr(deps.search_plan, "clarification_question", None)
                     or CLARIFY_MESSAGE
+                )
+                yield stream_event_builder.workflow(
+                    _workflow_payload(run_id, "completed", "completed")
                 )
                 yield stream_event_builder.message(message)
                 msg_id = self._save_if_persisted(
@@ -753,9 +845,15 @@ class AgentService:
                         sub_intent=getattr(run_context.domain_plan, "sub_intent", None),
                     )
                 )
+                yield stream_event_builder.workflow(
+                    _workflow_payload(run_id, "planning", "completed")
+                )
                 message = (
                     getattr(deps.cooking_qa_plan, "clarification_question", None)
                     or CLARIFY_MESSAGE
+                )
+                yield stream_event_builder.workflow(
+                    _workflow_payload(run_id, "completed", "completed")
                 )
                 yield stream_event_builder.message(message)
                 msg_id = self._save_if_persisted(
@@ -834,11 +932,13 @@ class AgentService:
                 selected_agent=answer_decision.selected_agent,
             )
         )
+        yield stream_event_builder.workflow(
+            _workflow_payload(run_id, "planning", "completed")
+        )
 
         ai_preface = ""
         if profile_update_decision is not None and profile_update_decision.message:
             ai_preface = f"{profile_update_decision.message}\n"
-            yield stream_event_builder.message(ai_preface)
 
         if resolved_context_payload:
             effective_prompt = _append_cooking_qa_context(
@@ -848,6 +948,9 @@ class AgentService:
             yield stream_event_builder.context(resolved_context_payload)
 
         if should_retrieve:
+            yield stream_event_builder.workflow(
+                _workflow_payload(run_id, "retrieving", "started")
+            )
             yield stream_event_builder.retrieval({"status": "started"})
             try:
                 deps.last_found_recipes, run_context.evidence_pack = (
@@ -882,10 +985,16 @@ class AgentService:
                 evidence_payload = _evidence_event_payload(run_context.evidence_pack)
                 if evidence_payload is not None:
                     yield stream_event_builder.evidence(evidence_payload)
+                yield stream_event_builder.workflow(
+                    _workflow_payload(run_id, "retrieving", "completed")
+                )
             except Exception as exc:
                 logger.warning("RAG 검색 실패: %s", exc)
                 yield stream_event_builder.retrieval(
                     {"status": "failed", "message": str(exc)}
+                )
+                yield stream_event_builder.workflow(
+                    _workflow_payload(run_id, "retrieving", "failed")
                 )
 
         user_prompt: Any = (
@@ -894,54 +1003,99 @@ class AgentService:
             else effective_prompt
         )
         fallback_agent = (
-            recipe_agent
-            if primary_task == PrimaryTask.RECIPE_FIND
-            else cooking_agent
+            recipe_agent if primary_task == PrimaryTask.RECIPE_FIND else cooking_agent
         )
         agent = answer_decision.agent or fallback_agent
 
-        queue: asyncio.Queue = asyncio.Queue()
-        agent_task = asyncio.create_task(
-            _run_agent_to_queue(queue, agent, user_prompt, execution.history, deps)
-        )
+        unique_recipes = list({r["id"]: r for r in deps.last_found_recipes}.values())
+        quality_queue: asyncio.Queue = asyncio.Queue()
 
-        ai_full = ai_preface
-        error_occurred = False
+        async def on_stage(stage: str, status: str, attempt: int) -> None:
+            await quality_queue.put(
+                (
+                    "workflow",
+                    _workflow_payload(run_id, stage, status, attempt),
+                )
+            )
+
+        async def generate_answer() -> str:
+            generated = await _collect_agent_text(
+                agent,
+                user_prompt,
+                execution.history,
+                deps,
+            )
+            return f"{ai_preface}{generated}"
+
+        async def revise_answer(request: RevisionRequest) -> str:
+            return await _collect_agent_text(
+                answer_revision_agent,
+                _revision_prompt(request),
+                [],
+                deps,
+            )
+
+        async def run_quality_workflow() -> None:
+            try:
+                result = await AgentQualityWorkflow().run(
+                    QualityWorkflowInput(
+                        generate=generate_answer,
+                        revise=revise_answer,
+                        verifier=answer_verifier,
+                        recipes=unique_recipes,
+                        memory=memory,
+                        plan=retrieval_plan or run_context.domain_plan,
+                        answer_strategy=answer_strategy,
+                        resolved_recipe_ids=deps.resolved_recipe_ids,
+                        on_stage=on_stage,
+                    )
+                )
+                await quality_queue.put(("result", result))
+            except Exception as exc:
+                await quality_queue.put(("error", exc))
+
+        quality_task = asyncio.create_task(run_quality_workflow())
+        quality_result = None
         try:
             while True:
-                event_type, data = await queue.get()
-                if event_type == "text":
-                    ai_full += data
-                    yield stream_event_builder.message(data)
-                elif event_type == "done":
+                event_type, data = await quality_queue.get()
+                if event_type == "workflow":
+                    yield stream_event_builder.workflow(data)
+                elif event_type == "result":
+                    quality_result = data
                     break
                 elif event_type == "error":
-                    logger.error("Agent 스트리밍 오류: %s", data)
+                    logger.error("Agent 품질 워크플로우 오류: %s", data)
+                    yield stream_event_builder.workflow(
+                        _workflow_payload(run_id, "failed", "failed")
+                    )
                     yield stream_event_builder.error("AGENT_ERROR", str(data))
-                    error_occurred = True
-                    break
+                    yield stream_event_builder.done(None, [])
+                    return
         finally:
-            if not agent_task.done():
-                agent_task.cancel()
+            if not quality_task.done():
+                quality_task.cancel()
 
-        unique_recipes = list({r["id"]: r for r in deps.last_found_recipes}.values())
-        recipe_ids = [r["id"] for r in unique_recipes] or deps.resolved_recipe_ids
+        ai_full = quality_result.answer
+        unique_recipes = quality_result.recipes
+        verification = quality_result.verification
+        if verification is not None:
+            run_context.verification = (
+                verification.to_payload()
+                if hasattr(verification, "to_payload")
+                else {
+                    "passed": verification.passed,
+                    "issues": list(verification.issues),
+                }
+            )
+            if not verification.passed:
+                logger.warning("답변 검증 경고: %s", verification.issues)
 
-        if error_occurred:
-            yield stream_event_builder.done(None, recipe_ids)
-            return
+        recipe_ids = [r["id"] for r in unique_recipes]
+        if not recipe_ids and not quality_result.used_fallback:
+            recipe_ids = deps.resolved_recipe_ids
 
-        verification = answer_verifier.verify(
-            ai_full,
-            unique_recipes,
-            memory,
-            plan=retrieval_plan or run_context.domain_plan,
-            answer_strategy=answer_strategy,
-            resolved_recipe_ids=deps.resolved_recipe_ids,
-        )
-        run_context.verification = verification.to_payload()
-        if not verification.passed:
-            logger.warning("답변 검증 경고: %s", verification.issues)
+        yield stream_event_builder.message(ai_full)
         if unique_recipes:
             yield stream_event_builder.recipes(unique_recipes)
 
@@ -957,19 +1111,23 @@ class AgentService:
         self,
         execution: _StreamExecutionConfig,
         stored_image_url: str | None,
+        run_id: str,
     ) -> AsyncGenerator[str]:
         if execution.db is None or execution.user_id is None:
             message = (
                 "게스트 채팅에서는 프로필을 저장할 수 없어요. "
                 "로그인 후 다시 말씀해 주세요."
             )
+            yield stream_event_builder.workflow(
+                _workflow_payload(run_id, "completed", "completed")
+            )
             yield stream_event_builder.message(message)
             yield stream_event_builder.done(None, [])
             return
 
-        profile = execution.db.query(UserProfile).filter_by(
-            user_id=execution.user_id
-        ).first()
+        profile = (
+            execution.db.query(UserProfile).filter_by(user_id=execution.user_id).first()
+        )
         decision = profile_update_analyzer.analyze(execution.prompt, profile)
 
         if decision.action == ProfileUpdateAction.AUTO_SAVE:
@@ -982,6 +1140,9 @@ class AgentService:
             yield stream_event_builder.profile_update(decision.to_event_payload())
 
         message = decision.message or PROFILE_MANAGEMENT_EMPTY_MESSAGE
+        yield stream_event_builder.workflow(
+            _workflow_payload(run_id, "completed", "completed")
+        )
         yield stream_event_builder.message(message)
         msg_id = self._save_if_persisted(
             execution,

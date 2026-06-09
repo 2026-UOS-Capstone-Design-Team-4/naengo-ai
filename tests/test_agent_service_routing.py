@@ -12,7 +12,10 @@ from app.agents.intent.intent_models import (
     PrimaryTask,
     RecipeFindSubIntent,
 )
-from app.agents.recipe.recipe_agent import ingredient_substitution_agent
+from app.agents.recipe.recipe_agent import (
+    ingredient_substitution_agent,
+    smalltalk_agent,
+)
 from app.agents.recipe.search_planner import SearchPlan
 from app.services.agent_service import AgentService
 from app.services.live_research_service import LiveResearchResult, ResearchEvidence
@@ -267,6 +270,10 @@ def _parse_events(chunks: list[str]) -> list[tuple[str, dict]]:
     return events
 
 
+def _legacy_events(events: list[tuple[str, dict]]) -> list[tuple[str, dict]]:
+    return [event for event in events if event[0] != "workflow"]
+
+
 async def _collect_stream(service: AgentService, prompt: str, chat_service, db=None):
     return [
         chunk
@@ -306,7 +313,7 @@ def test_main_intent_clarification_skips_live_research(monkeypatch):
         )
     )
 
-    events = _parse_events(chunks)
+    events = _legacy_events(_parse_events(chunks))
     assert events[0][0] == "metadata"
     assert events[0][1]["primary_task"] == "RECIPE_FIND"
     assert events[0][1]["used_live_research"] is False
@@ -344,7 +351,7 @@ def test_regular_recipe_query_does_not_use_live_research(monkeypatch):
         )
     )
 
-    events = _parse_events(chunks)
+    events = _legacy_events(_parse_events(chunks))
     assert events[0][0] == "metadata"
     assert events[0][1]["used_live_research"] is False
     assert events[0][1]["source_count"] == 0
@@ -399,7 +406,7 @@ def test_cooking_qa_plan_can_request_live_research(monkeypatch):
         )
     )
 
-    events = _parse_events(chunks)
+    events = _legacy_events(_parse_events(chunks))
     assert events[0][0] == "metadata"
     assert events[0][1]["used_live_research"] is True
     assert events[0][1]["source_count"] == 1
@@ -428,7 +435,7 @@ def test_off_topic_query_keeps_live_research_off(monkeypatch):
         _collect_stream(AgentService(), "요즘 주식 뭐 사야 돼?", FakeChatService())
     )
 
-    events = _parse_events(chunks)
+    events = _legacy_events(_parse_events(chunks))
     assert events[0][1]["primary_task"] == "OFF_TOPIC"
     assert events[0][1]["used_live_research"] is False
     assert events[1][0] == "planning"
@@ -456,7 +463,7 @@ def test_identity_query_returns_fixed_identity_message(monkeypatch):
         _collect_stream(AgentService(), "너는 누구야?", FakeChatService())
     )
 
-    events = _parse_events(chunks)
+    events = _legacy_events(_parse_events(chunks))
     assert events[0][1]["primary_task"] == "IDENTITY"
     assert events[0][1]["used_live_research"] is False
     assert events[1][0] == "planning"
@@ -535,7 +542,7 @@ def test_recipe_query_prefetches_rag_even_when_agent_does_not_call_tool(monkeypa
         )
     )
 
-    events = _parse_events(chunks)
+    events = _legacy_events(_parse_events(chunks))
     assert retrieval.queries[0][:2] == ("김치 두부 찌개", 3)
     assert retrieval.queries[0][2].available_ingredients == ["김치", "두부"]
     assert retrieval.queries[0][2].main_ingredients == ["김치", "두부"]
@@ -635,7 +642,7 @@ def test_recipe_query_can_save_profile_side_effect_and_still_answer(monkeypatch)
         )
     )
 
-    events = _parse_events(chunks)
+    events = _legacy_events(_parse_events(chunks))
     profile_update = next(data for name, data in events if name == "profile_update")
     assert profile_update["action"] == "AUTO_SAVE"
     assert profile_update["candidates"][0]["field"] == "allergies"
@@ -754,8 +761,15 @@ def test_recipe_query_with_planner_clarification_ends_before_rag(monkeypatch):
         )
     )
 
-    events = _parse_events(chunks)
+    all_events = _parse_events(chunks)
+    events = _legacy_events(all_events)
     assert retrieval.queries == []
+    assert any(
+        name == "workflow"
+        and data["stage"] == "completed"
+        and data["status"] == "completed"
+        for name, data in all_events
+    )
     assert events[1][0] == "planning"
     assert events[1][1]["answer_strategy"] == "CLARIFICATION"
     assert events[1][1]["sub_intent"] == "CLARIFICATION"
@@ -910,7 +924,14 @@ def test_cooking_qa_clarification_stops_before_answer_agent(monkeypatch):
         _collect_stream(AgentService(), "그 레시피에서 뭐 빼도 돼?", chat_service)
     )
 
-    events = _parse_events(chunks)
+    all_events = _parse_events(chunks)
+    events = _legacy_events(all_events)
+    assert any(
+        name == "workflow"
+        and data["stage"] == "completed"
+        and data["status"] == "completed"
+        for name, data in all_events
+    )
     assert events[1][0] == "planning"
     assert events[1][1]["primary_task"] == "COOKING_QA"
     assert events[1][1]["answer_strategy"] == "CLARIFICATION"
@@ -921,3 +942,110 @@ def test_cooking_qa_clarification_stops_before_answer_agent(monkeypatch):
     )
     assert events[-1] == ("done", {"message_id": 123, "recipe_ids": []})
     assert chat_service.saved[0][2] == "어떤 레시피를 말씀하시는지 알려주세요?"
+
+
+def test_agent_service_buffers_generated_chunks_until_verification(monkeypatch):
+    classifier = FakeIntentClassifier(
+        MainIntentResult(
+            primary_task=PrimaryTask.SMALLTALK,
+            confidence=0.95,
+            reason="테스트",
+        )
+    )
+
+    async def fake_run_agent_to_queue(queue, agent, user_prompt, history, deps):
+        await queue.put(("text", "안녕"))
+        await queue.put(("text", "하세요."))
+        await queue.put(("done", None))
+
+    monkeypatch.setattr("app.services.agent_service.main_intent_classifier", classifier)
+    monkeypatch.setattr(
+        "app.services.agent_service._run_agent_to_queue",
+        fake_run_agent_to_queue,
+    )
+
+    chunks = asyncio.run(_collect_stream(AgentService(), "안녕", FakeChatService()))
+
+    events = _parse_events(chunks)
+    workflow = [data for name, data in events if name == "workflow"]
+    messages = [data["content"] for name, data in events if name == "message"]
+
+    assert [event["stage"] for event in workflow] == [
+        "classifying",
+        "classifying",
+        "planning",
+        "planning",
+        "generating",
+        "generating",
+        "verifying",
+        "verifying",
+        "completed",
+    ]
+    assert messages == ["안녕하세요."]
+    assert events[-1] == ("done", {"message_id": 123, "recipe_ids": []})
+
+
+def test_agent_service_revises_failed_answer_once_before_sending(monkeypatch):
+    classifier = FakeIntentClassifier(
+        MainIntentResult(
+            primary_task=PrimaryTask.SMALLTALK,
+            confidence=0.95,
+            reason="테스트",
+        )
+    )
+    revision_agent = object()
+    calls = []
+
+    class FakeVerifier:
+        def __init__(self):
+            self.calls = 0
+
+        def verify(self, answer, recipes, memory, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return SimpleNamespace(
+                    passed=False,
+                    issues=["safety_answer_too_permissive"],
+                )
+            return SimpleNamespace(passed=True, issues=[])
+
+    async def fake_run_agent_to_queue(queue, agent, user_prompt, history, deps):
+        calls.append(agent)
+        text = "수정된 안전 답변입니다." if agent is revision_agent else "괜찮아요."
+        await queue.put(("text", text))
+        await queue.put(("done", None))
+
+    monkeypatch.setattr("app.services.agent_service.main_intent_classifier", classifier)
+    monkeypatch.setattr(
+        "app.services.agent_service.answer_verifier",
+        FakeVerifier(),
+    )
+    monkeypatch.setattr(
+        "app.services.agent_service.answer_revision_agent",
+        revision_agent,
+    )
+    monkeypatch.setattr(
+        "app.services.agent_service._run_agent_to_queue",
+        fake_run_agent_to_queue,
+    )
+
+    chunks = asyncio.run(_collect_stream(AgentService(), "안녕", FakeChatService()))
+
+    events = _parse_events(chunks)
+    workflow = [data for name, data in events if name == "workflow"]
+    messages = [data["content"] for name, data in events if name == "message"]
+
+    assert messages == ["수정된 안전 답변입니다."]
+    assert calls == [smalltalk_agent, revision_agent]
+    assert [
+        (event["stage"], event["status"], event["attempt"])
+        for event in workflow
+        if event["stage"] in {"revising", "verifying"}
+    ] == [
+        ("verifying", "started", 0),
+        ("verifying", "completed", 0),
+        ("revising", "started", 1),
+        ("revising", "completed", 1),
+        ("verifying", "started", 1),
+        ("verifying", "completed", 1),
+    ]

@@ -29,6 +29,9 @@ class StreamEventBuilder:
     def planning(self, payload: dict[str, Any]) -> str:
         return self.event("planning", payload)
 
+    def workflow(self, payload: dict[str, Any]) -> str:
+        return self.event("workflow", payload)
+
     def retrieval(self, payload: dict[str, Any]) -> str:
         return self.event("retrieval", payload)
 
