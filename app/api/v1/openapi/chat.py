@@ -40,11 +40,12 @@ _COMMON_SSE_DESCRIPTION = (
 - **응답 방식**: `text/event-stream` 형식으로 이벤트를 실시간 전송합니다.
 - **metadata 이벤트**: primary task, live research 사용 여부, source count를 전송합니다.
 - **planning 이벤트**: planner, sub intent, answer strategy, 선택된 answer agent를 전송합니다.
+- **workflow 이벤트**: 요청별 `run_id`와 `classifying`, `planning`, `retrieving`, `generating`, `verifying`, `revising`, `completed`/`failed` 단계의 진행 상태를 전송합니다. 최초 시도는 `attempt=0`, 수정 시도는 `attempt=1`입니다.
 - **context 이벤트**: 이전 추천 레시피를 이어 묻는 `COOKING_QA`에서 참조가 해석되면 `{"resolved_recipe_id": 1, "title": "김치두부찌개"}` 형식으로 전송합니다.
   예: "첫 번째로 추천한 김치두부찌개에서 돼지고기를 빼도 돼?"처럼 최근 추천 레시피를 이어 묻는 경우입니다.
 - **retrieval 이벤트**: RAG 검색 상태(`started`, `completed`, `failed`)와 선택된 레시피 수를 전송합니다.
 - **evidence 이벤트**: RAG 검색이 완료되면 추천 근거 요약과 사용자 검색 조건을 `{"recipes": [...], "constraints": {...}}` 형식으로 전송합니다.
-- **message 이벤트**: AI 텍스트 조각을 `{"content": "..."}` 형식으로 여러 번 전송합니다.
+- **message 이벤트**: 서버가 생성 답변을 검증하고 필요 시 한 번 수정한 뒤 최종 텍스트를 `{"content": "..."}` 형식으로 한 번 전송합니다.
 - **profile_update 이벤트**: 프로필 관리 또는 요리 관련 흐름의 프로필 side effect에서 `AUTO_SAVE` 또는 `REQUIRE_CONFIRMATION` 결과만 포함되며, `IGNORE`는 전송하지 않습니다. 저장 안내는 일반 `message` 조각에도 포함될 수 있습니다.
 - **recipes 이벤트**: 레시피 추천 흐름에서 응답 완료 후 검색된 레시피 목록을 `RecipeResponse[]`로 전송합니다.
 - **done 이벤트**: 스트림 종료를 나타내는 terminal 이벤트입니다. `message_id`는 저장된 AI 메시지 ID이며, 저장 전 오류에서는 `null`일 수 있습니다.
@@ -167,6 +168,10 @@ _EVIDENCE_EVENT_DATA = json.dumps(
 )
 
 _COMMON_SSE_STREAM = (
+    "event: workflow\n"
+    'data: {"run_id":"2a8208df-cc7f-4d42-a74e-f7b4cb838cea","stage":"classifying","status":"started","attempt":0}\n\n'
+    "event: workflow\n"
+    'data: {"run_id":"2a8208df-cc7f-4d42-a74e-f7b4cb838cea","stage":"classifying","status":"completed","attempt":0}\n\n'
     "event: metadata\n"
     'data: {"primary_task":"RECIPE_FIND","model":"gpt-5.4-mini","used_live_research":false,"source_count":0}\n\n'
     "event: planning\n"
@@ -177,10 +182,14 @@ _COMMON_SSE_STREAM = (
     'data: {"status":"completed","candidate_count":1,"selected_count":1}\n\n'
     "event: evidence\n"
     f"data: {_EVIDENCE_EVENT_DATA}\n\n"
+    "event: workflow\n"
+    'data: {"run_id":"2a8208df-cc7f-4d42-a74e-f7b4cb838cea","stage":"generating","status":"completed","attempt":0}\n\n'
+    "event: workflow\n"
+    'data: {"run_id":"2a8208df-cc7f-4d42-a74e-f7b4cb838cea","stage":"verifying","status":"completed","attempt":0}\n\n'
+    "event: workflow\n"
+    'data: {"run_id":"2a8208df-cc7f-4d42-a74e-f7b4cb838cea","stage":"completed","status":"completed","attempt":0}\n\n'
     "event: message\n"
-    'data: {"content": "김치와 두부로 만들 수 있는 레시피를 찾아볼게요."}\n\n'
-    "event: message\n"
-    'data: {"content": " 김치두부찌개를 추천드려요!"}\n\n'
+    'data: {"content": "김치와 두부로 만들 수 있는 김치두부찌개를 추천드려요!"}\n\n'
     "event: recipes\n"
     f"data: {_RECIPES_EVENT_DATA}\n\n"
     "event: done\n"

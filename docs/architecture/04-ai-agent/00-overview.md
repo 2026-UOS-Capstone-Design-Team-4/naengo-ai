@@ -16,7 +16,7 @@ ChatService
       -> LiveResearchService      최신/외부 근거가 필요한 경우 보조 context 구성
       -> RetrievalOrchestrator    RAG 검색, profile-aware rerank, 결과 정규화
       -> DomainAnswerRouter       main intent/sub intent 기반 agent 선택
-      -> AnswerVerifier           알레르기/추천 모순 검증
+      -> QualityWorkflow          답변 생성, 검증, 1회 수정, 안전 fallback
       -> StreamEventBuilder       SSE 이벤트 생성
 ```
 
@@ -112,6 +112,9 @@ User Message
   함께 사용한다.
 - 검색 결과는 답변에 쓸 수 있는 근거로 요약해 answer agent에 전달한다.
 - 답변 전 검증 단계에서 추천 payload와 텍스트가 서로 어긋나지 않는지 확인한다.
+- 생성 답변은 바로 전송하지 않고 메모리에 버퍼링한다. 검증 실패 시
+  `pydantic-graph` 품질 워크플로우가 충돌 레시피를 제거하고 최대 한 번 수정한다.
+- 재검증에도 실패하면 레시피 payload를 비우고 보수적인 안전 응답으로 종료한다.
 - 대표 대화 케이스로 intent, retrieval, safety, consistency를 지속적으로 평가한다.
 
 ## Subdocuments

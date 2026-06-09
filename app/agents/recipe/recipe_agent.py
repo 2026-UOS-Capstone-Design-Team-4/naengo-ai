@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -6,6 +6,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 
 from app.agents.core.dependencies import RecipeDeps
 from app.agents.core.system_prompts import (
+    ANSWER_REVISION_PROMPT,
     COOKING_ANSWER_PROMPT,
     INGREDIENT_SUBSTITUTION_PROMPT,
     RECIPE_AGENT_PROMPT,
@@ -54,6 +55,11 @@ smalltalk_agent = Agent(
     system_prompt=SMALLTALK_AGENT_PROMPT,
 )
 
+answer_revision_agent = Agent(
+    _model,
+    system_prompt=ANSWER_REVISION_PROMPT,
+)
+
 
 @recipe_agent.tool
 def search_recipes(ctx: RunContext[RecipeDeps], query: str) -> str:
@@ -71,9 +77,7 @@ def search_recipes(ctx: RunContext[RecipeDeps], query: str) -> str:
         return "이번 요청은 레시피 DB 검색 없이 답변해도 됩니다."
 
     search_query = (
-        ctx.deps.search_plan.query_text
-        if ctx.deps.search_plan is not None
-        else query
+        ctx.deps.search_plan.query_text if ctx.deps.search_plan is not None else query
     )
     logger.info("레시피 검색: %s", search_query)
 

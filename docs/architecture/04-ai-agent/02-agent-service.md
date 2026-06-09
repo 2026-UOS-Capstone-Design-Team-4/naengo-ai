@@ -57,8 +57,13 @@ AgentService
   -> RetrievalOrchestrator (retrieval이 필요한 경우)
         -> RecipeRetrievalService
         -> EvidencePack
-  -> Answer agent streaming
-  -> AnswerVerifier
+  -> AgentQualityWorkflow (pydantic-graph, in-memory state)
+      -> GenerateDraft
+      -> VerifyAnswer
+          -> Complete
+          -> ReviseAnswer (최대 1회) -> VerifyAnswer
+          -> SafetyFallback
+  -> verified message / recipes
   -> StreamEventBuilder
 ```
 
@@ -68,6 +73,11 @@ AgentService
 live research, retrieval result, evidence, resolved context, answer strategy,
 verification result를 묶는 실행 상태 객체다. 각 단계는 이 context를 갱신하고,
 `AgentService`는 context를 기준으로 SSE와 저장을 조율한다.
+
+답변 품질 루프는 별도 `AgentQualityWorkflow`가 담당한다. 그래프 상태는 요청
+생명주기 동안 메모리에만 유지하며 DB checkpoint나 장애 후 resume는 제공하지
+않는다. 생성 에이전트의 delta는 서버에서 모은 뒤 검증을 통과한 최종 답변만
+단일 `message` 이벤트로 전송한다.
 
 ## Domain Answer Router
 
@@ -127,7 +137,8 @@ verification result를 묶는 실행 상태 객체다. 각 단계는 이 context
 `AnswerVerifier`는 추천 레시피와 답변이 사용자 제약과 충돌하지 않는지 검사한다.
 알레르기, 제외 재료, 안전 민감 질문, payload 불일치가 핵심 검증 대상이다.
 검증 실패는 로그에 남기고, 가능한 경우 문제가 있는 recipe payload를 제외하거나
-보수적인 응답으로 정리한다.
+revision agent가 기존 답변과 허용된 근거만 사용해 한 번 수정한다. 재검증 실패
+시 recipe payload를 비우고 보수적인 고정 응답으로 정리한다.
 
 ## Tool Boundary
 

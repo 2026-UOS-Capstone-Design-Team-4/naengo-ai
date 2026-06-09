@@ -9,6 +9,7 @@ AI 채팅 응답은 SSE로 스트리밍한다.
 | `room` | `{ "room_id": number }` | 새 채팅방 ID 전달 (`POST /rooms` 전용) |
 | `metadata` | `{ "primary_task": string, "model": string, "used_live_research": boolean, "source_count": number }` | 스트림 메타데이터 |
 | `planning` | `{ "primary_task": string, "sub_intent": string?, "answer_strategy": string, "planner": string?, "selected_agent": string?, "confidence": number }` | task/planner/sub-intent/선택 agent |
+| `workflow` | `{ "run_id": string, "stage": string, "status": string, "attempt": number }` | 요청 단계와 검증/수정 진행 상태 |
 | `context` | `{ "resolved_recipe_id": number, "title": string }` | 최근 추천 등 참조 해석 결과 |
 | `retrieval` | `{ "status": "started" \| "completed" \| "failed", "candidate_count": number?, "selected_count": number? }` | RAG 검색 진행/결과 |
 | `evidence` | `{ "recipes": EvidenceRecipe[], "constraints": object }` | 추천 근거 요약과 사용자 검색 조건 |
@@ -21,7 +22,12 @@ AI 채팅 응답은 SSE로 스트리밍한다.
 ## Rules
 
 - `room`은 `POST /rooms`(새 방 생성)에서만 전송한다. 기존 방 메시지(`POST /rooms/{room_id}`)에서는 보내지 않는다.
-- `message`는 순수 텍스트 delta만 보낸다.
+- `workflow.stage`는 `classifying`, `planning`, `retrieving`, `generating`,
+  `verifying`, `revising`, `completed`, `failed` 중 하나다.
+- `workflow.status`는 `started`, `completed`, `skipped`, `failed` 중 하나다.
+  `attempt=0`은 최초 생성/검증, `attempt=1`은 수정 단계다.
+- `run_id`는 요청 단위 UUID이며 메모리에서만 사용하고 DB에 저장하지 않는다.
+- `message`는 검증과 필요 시 1회 수정을 마친 최종 텍스트를 한 번 전송한다.
 - `planning`은 응답 생성 전에 현재 task, sub intent, answer strategy, 선택된 answer agent를 알려준다.
 - `context`는 "첫 번째로 추천한 김치두부찌개"처럼 이전 추천을 가리키는 참조가
   실제 레시피로 해석된 경우에만 보낸다.
