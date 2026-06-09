@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from app.api.errors import ApiError
 from app.api.v1.deps import get_current_user
-from app.models.user import User
 from app.api.v1.openapi.admin_user_recipes import (
     DELETE_ADMIN_USER_RECIPE_DESCRIPTION,
     DELETE_ADMIN_USER_RECIPE_RESPONSES,
@@ -20,6 +19,7 @@ from app.api.v1.openapi.admin_user_recipes import (
     PATCH_ADMIN_USER_RECIPE_SUMMARY,
 )
 from app.db.session import get_db
+from app.models.user import User
 from app.schemas.user_recipe import (
     UserRecipeAdminUpdate,
     UserRecipeListResponse,
