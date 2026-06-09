@@ -86,6 +86,29 @@ class _StreamExecutionConfig:
     persist: bool = False
 
 
+@dataclass(frozen=True)
+class AgentServiceDeps:
+    main_intent_classifier: Any
+    recipe_search_planner: Any
+    cooking_qa_planner: Any
+    answer_verifier: Any
+    quality_workflow: Any
+    retrieval_orchestrator: Any
+
+    @classmethod
+    def from_defaults(cls, **overrides: Any) -> "AgentServiceDeps":
+        values = {
+            "main_intent_classifier": main_intent_classifier,
+            "recipe_search_planner": recipe_search_planner,
+            "cooking_qa_planner": cooking_qa_planner,
+            "answer_verifier": answer_verifier,
+            "quality_workflow": AgentQualityWorkflow(),
+            "retrieval_orchestrator": RetrievalOrchestrator(recipe_retrieval_service),
+        }
+        values.update(overrides)
+        return cls(**values)
+
+
 def _upload_image(image: str, room_id: int) -> tuple[str, str | None]:
     """Return (image_ref_for_llm, stored_url_or_none).
 
@@ -436,8 +459,9 @@ def _search_recipe_payloads(
     plan: Any | None,
     deps: RecipeDeps,
     memory: AgentMemory,
+    retrieval_orchestrator: Any,
 ) -> tuple[list[dict], Any]:
-    result = RetrievalOrchestrator(recipe_retrieval_service).search(
+    result = retrieval_orchestrator.search(
         search_query,
         limit=limit,
         plan=plan,
@@ -551,6 +575,9 @@ def _cooking_qa_retrieval_plan(plan: Any | None, prompt: str) -> SearchPlan | No
 
 
 class AgentService:
+    def __init__(self, deps: AgentServiceDeps | None = None) -> None:
+        self.deps = deps or AgentServiceDeps.from_defaults()
+
     async def guest_stream(
         self,
         prompt: str,
@@ -610,7 +637,7 @@ class AgentService:
             _workflow_payload(run_id, "classifying", "started")
         )
         try:
-            main_intent = await main_intent_classifier.classify(
+            main_intent = await self.deps.main_intent_classifier.classify(
                 prompt,
                 execution.history,
                 image=image_ref,
@@ -744,7 +771,7 @@ class AgentService:
                 else None
             )
             try:
-                plan = await recipe_search_planner.plan(
+                plan = await self.deps.recipe_search_planner.plan(
                     prompt,
                     execution.history,
                     user_profile_context=user_profile_context,
@@ -815,7 +842,7 @@ class AgentService:
         elif primary_task == PrimaryTask.COOKING_QA:
             planner_name = "CookingQAPlanner"
             try:
-                deps.cooking_qa_plan = await cooking_qa_planner.plan(
+                deps.cooking_qa_plan = await self.deps.cooking_qa_planner.plan(
                     prompt,
                     execution.history,
                     memory_context=memory.to_prompt_context(),
@@ -960,6 +987,7 @@ class AgentService:
                         plan=retrieval_plan,
                         deps=deps,
                         memory=memory,
+                        retrieval_orchestrator=self.deps.retrieval_orchestrator,
                     )
                 )
                 run_context.retrieved_recipes = deps.last_found_recipes
@@ -1037,11 +1065,11 @@ class AgentService:
 
         async def run_quality_workflow() -> None:
             try:
-                result = await AgentQualityWorkflow().run(
+                result = await self.deps.quality_workflow.run(
                     QualityWorkflowInput(
                         generate=generate_answer,
                         revise=revise_answer,
-                        verifier=answer_verifier,
+                        verifier=self.deps.answer_verifier,
                         recipes=unique_recipes,
                         memory=memory,
                         plan=retrieval_plan or run_context.domain_plan,

@@ -28,7 +28,9 @@ dependencies = [
 dev = [
     "ruff>=0.15.9",
     "pytest>=9.0.2",
+    "pytest-asyncio>=1.0.0",
     "httpx>=0.28.1",
+    "pydantic-evals>=1.77.0",
 ]
 
 [tool.ruff]
