@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     api_key: str = Field(alias="API_KEY")
     base_url: str | None = Field(default=None, alias="BASE_URL")
     model_name: str = Field(alias="MODEL_NAME")
+    eval_judge_model: str | None = Field(
+        default=None,
+        alias="EVAL_JUDGE_MODEL",
+    )
     jwt_secret_key: str | None = Field(default=None, alias="JWT_SECRET_KEY")
     jwt_algorithm: str = Field(default="HS512", alias="JWT_ALGORITHM")
     auth_disabled: bool = Field(default=False, alias="AUTH_DISABLED")
@@ -89,6 +93,7 @@ EMBEDDING_MODEL = settings.embedding_model
 API_KEY = settings.api_key
 BASE_URL = normalize_optional_url(settings.base_url)
 MODEL_NAME = settings.model_name
+EVAL_JUDGE_MODEL = settings.eval_judge_model
 
 JWT_SECRET_KEY = settings.jwt_secret_key
 JWT_ALGORITHM = settings.jwt_algorithm

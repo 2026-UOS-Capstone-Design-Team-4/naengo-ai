@@ -42,12 +42,13 @@ Naengo AI는 사용자의 보유 재료, 냉장고 사진, 취향 정보를 바�
 18. [AI Retrieval Planning](architecture/04-ai-agent/03-retrieval-planning.md)
 19. [AI Streaming Events](architecture/04-ai-agent/04-streaming-events.md)
 20. [AI Testing Strategy](architecture/04-ai-agent/05-testing-strategy.md)
-21. [Live Research Overview](architecture/05-live-research/00-overview.md)
-22. [Live Research Source Policy](architecture/05-live-research/01-source-policy.md)
-23. [Live Research Flow](architecture/05-live-research/02-research-flow.md)
-24. [Live Research Agent Integration](architecture/05-live-research/03-agent-integration.md)
-25. [Live Research Safety and Caching](architecture/05-live-research/04-safety-and-caching.md)
-26. [Background Jobs Overview](architecture/06-background-jobs/00-overview.md)
+21. [AI Evaluation](architecture/04-ai-agent/06-evaluation.md)
+22. [Live Research Overview](architecture/05-live-research/00-overview.md)
+23. [Live Research Source Policy](architecture/05-live-research/01-source-policy.md)
+24. [Live Research Flow](architecture/05-live-research/02-research-flow.md)
+25. [Live Research Agent Integration](architecture/05-live-research/03-agent-integration.md)
+26. [Live Research Safety and Caching](architecture/05-live-research/04-safety-and-caching.md)
+27. [Background Jobs Overview](architecture/06-background-jobs/00-overview.md)
 
 ## 3. Technology Stack
 

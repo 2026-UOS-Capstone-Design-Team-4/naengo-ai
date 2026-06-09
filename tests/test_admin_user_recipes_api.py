@@ -75,9 +75,16 @@ def _override_require_admin():
     return object()
 
 
+def _override_get_current_user():
+    return type("FakeAdmin", (), {"user_id": 1, "role": "ADMIN"})()
+
+
 def setup_function():
     app.dependency_overrides[endpoint_module.get_db] = _override_get_db
     app.dependency_overrides[api_module.require_admin] = _override_require_admin
+    app.dependency_overrides[endpoint_module.get_current_user] = (
+        _override_get_current_user
+    )
 
 
 def teardown_function():

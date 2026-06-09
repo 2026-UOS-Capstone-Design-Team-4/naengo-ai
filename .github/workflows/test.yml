@@ -1,0 +1,47 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test
+      API_KEY: test-api-key
+      EMBEDDING_API_KEY: test-embedding-api-key
+      MODEL_NAME: test-model
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --dev
+      - name: Ruff
+        run: |
+          uv run ruff check .
+          uv run ruff format --check \
+            app/evals \
+            app/core/config.py \
+            app/services/agent_service.py \
+            scripts/eval \
+            tests/test_agent_eval_framework.py \
+            tests/test_agent_service_routing.py \
+            tests/test_admin_user_recipes_api.py
+      - name: Tests
+        run: uv run pytest -q
+      - name: Deterministic agent evaluation
+        run: uv run python scripts/eval/run_agent_evals.py --mode deterministic
+      - name: Upload evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deterministic-agent-eval
+          path: artifacts/evals/

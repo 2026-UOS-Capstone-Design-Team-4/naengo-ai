@@ -14,6 +14,7 @@ __pycache__/
 .tox/
 .coverage
 htmlcov/
+artifacts/evals*/
 
 # Virtual Environments
 .venv/

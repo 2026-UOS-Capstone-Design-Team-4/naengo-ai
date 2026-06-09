@@ -16,6 +16,8 @@ FastAPI 기반 AI 요리 어시스턴트 서버입니다.
 - **관리자 API**: 관리자 레시피 목록, 제출 레시피 검수, 채팅방 삭제 기능을 제공합니다.
 - **데이터 수집/정제**: 만개의레시피를 수집, 파싱, 검수, import하는 CLI 흐름을 제공합니다.
 - **Live Research**: 설정이 켜진 경우 외부 검색 결과를 추천 보조 정보로 활용합니다.
+- **Agent Evaluation**: 50개 golden case로 intent, routing, retrieval, safety,
+  LLM judge 품질을 평가합니다.
 
 ## 기술 스택
 
@@ -31,6 +33,23 @@ FastAPI 기반 AI 요리 어시스턴트 서버입니다.
 - **Infra**: Docker, Docker Compose, AWS EC2, AWS RDS
 - **Object Storage**: S3 호환 스토리지(로컬 개발은 MinIO)
 - **CI/CD**: GitHub Actions
+
+## AI Agent 평가
+
+```powershell
+# PR용 결정론적 평가
+uv run python scripts/eval/run_agent_evals.py --mode deterministic
+
+# 실제 모델 + 고정 retrieval fixture
+uv run python scripts/eval/run_agent_evals.py --mode live
+
+# 실제 PostgreSQL/pgvector retrieval
+uv run python scripts/eval/run_agent_evals.py --mode retrieval --with-db
+```
+
+단일 케이스는 `--case sf01`, 리포트 경로는 `--output artifacts/evals`로
+지정합니다. baseline은 `--baseline <path>`로 비교하며
+`--update-baseline`을 명시해야만 갱신됩니다.
 
 ## 배포 현황
 

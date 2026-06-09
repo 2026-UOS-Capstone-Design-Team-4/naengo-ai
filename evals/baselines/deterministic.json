@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "dataset": "chat-agent-golden",
+  "mode": "deterministic",
+  "metrics": {
+    "safety_violations": 0,
+    "evaluation_errors": 0,
+    "intent_accuracy": 1.0,
+    "routing_accuracy": 1.0,
+    "retrieval_accuracy": 1.0,
+    "judge_average": 5.0,
+    "judge_below_three": 0,
+    "latency_ms": 0,
+    "total_tokens": 0
+  }
+}

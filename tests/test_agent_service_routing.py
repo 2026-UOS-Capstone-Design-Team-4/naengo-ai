@@ -17,7 +17,7 @@ from app.agents.recipe.recipe_agent import (
     smalltalk_agent,
 )
 from app.agents.recipe.search_planner import SearchPlan
-from app.services.agent_service import AgentService
+from app.services.agent_service import AgentService, AgentServiceDeps
 from app.services.live_research_service import LiveResearchResult, ResearchEvidence
 from app.services.profile_update_service import (
     ProfileUpdateAction,
@@ -1049,3 +1049,35 @@ def test_agent_service_revises_failed_answer_once_before_sending(monkeypatch):
         ("verifying", "started", 1),
         ("verifying", "completed", 1),
     ]
+
+
+def test_agent_service_accepts_explicit_dependency_bundle(monkeypatch):
+    classifier = FakeIntentClassifier(
+        MainIntentResult(
+            primary_task=PrimaryTask.SMALLTALK,
+            confidence=0.95,
+            reason="주입 테스트",
+        )
+    )
+
+    async def fake_run_agent_to_queue(queue, agent, user_prompt, history, deps):
+        await queue.put(("text", "주입된 분류기를 사용했어요."))
+        await queue.put(("done", None))
+
+    monkeypatch.setattr(
+        "app.services.agent_service._run_agent_to_queue",
+        fake_run_agent_to_queue,
+    )
+    service = AgentService(
+        deps=AgentServiceDeps.from_defaults(
+            main_intent_classifier=classifier,
+        )
+    )
+
+    chunks = asyncio.run(_collect_stream(service, "안녕", FakeChatService()))
+
+    assert classifier.calls == ["안녕"]
+    assert any(
+        name == "message" and data["content"] == "주입된 분류기를 사용했어요."
+        for name, data in _parse_events(chunks)
+    )

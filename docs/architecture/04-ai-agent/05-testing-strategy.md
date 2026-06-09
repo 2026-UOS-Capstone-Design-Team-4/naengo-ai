@@ -47,6 +47,8 @@ AI Agent 테스트에서 LLM과 embedding API 의존성을 경계로 분리한�
 ## Golden Evaluation
 
 챗봇 성능 개선은 단위 테스트와 별도로 golden case 기반 평가를 둔다.
+구체적인 데이터셋, 실행 모드, baseline 정책은
+[06. Evaluation](06-evaluation.md)을 따른다.
 
 - intent: `primary_task`, `sub_intent`, `answer_strategy`가 기대값과 맞는지 검증
 - routing: 선택된 answer agent가 기대값과 맞는지 검증
