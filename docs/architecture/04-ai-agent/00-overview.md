@@ -124,4 +124,5 @@ User Message
 - [03. Retrieval Planning](03-retrieval-planning.md)
 - [04. Streaming Events](04-streaming-events.md)
 - [05. Testing Strategy](05-testing-strategy.md)
+- [06. Evaluation](06-evaluation.md)
 - [Live Research](../05-live-research/00-overview.md)
