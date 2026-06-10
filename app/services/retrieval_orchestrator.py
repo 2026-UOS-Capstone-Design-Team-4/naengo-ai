@@ -41,6 +41,7 @@ class RetrievalOrchestrator:
             for recipe in recipes
         ]
         payloads = _filter_payloads_for_memory(payloads, memory)
+        payloads = _filter_payloads_for_hard_diets(payloads, plan)
         evidence_pack = EvidencePack(
             recipes=[
                 _evidence_recipe(payload, plan=plan, memory=memory)
@@ -91,6 +92,36 @@ def _why_matched(payload: dict, plan: Any | None) -> list[str]:
                 matched.append(f"{int(cooking_time_max)}분 이내")
         except (TypeError, ValueError):
             pass
+    for keyword in _plan_list(plan, "diet_keywords"):
+        if keyword in _payload_list(payload, "_diet_keywords"):
+            matched.append(f"식단:{keyword}")
+    for keyword in _plan_list(plan, "taste_keywords"):
+        if keyword in _payload_list(payload, "_taste_keywords"):
+            matched.append(f"맛:{keyword}")
+    for category in _plan_list(plan, "preferred_categories"):
+        categories = [
+            *_payload_list(payload, "_category_labels"),
+            *_payload_list(payload, "category"),
+        ]
+        if category in categories:
+            matched.append(f"카테고리:{category}")
+    skill = _plan_value(plan, "cooking_skill")
+    if skill and skill == payload.get("difficulty"):
+        matched.append(f"난이도:{skill}")
+    preferred_time = _plan_value(plan, "preferred_cooking_time_minutes")
+    if preferred_time and payload.get("cooking_time_minutes"):
+        try:
+            if int(payload["cooking_time_minutes"]) <= int(preferred_time):
+                matched.append(f"선호시간:{int(preferred_time)}분")
+        except (TypeError, ValueError):
+            pass
+    servings = _plan_value(plan, "servings")
+    if servings and payload.get("servings"):
+        try:
+            if float(payload["servings"]) == float(servings):
+                matched.append(f"인분:{float(servings):g}")
+        except (TypeError, ValueError):
+            pass
     return matched
 
 
@@ -126,6 +157,12 @@ def _constraints(plan: Any | None, memory: AgentMemory | None) -> dict[str, Any]
     if long is not None:
         avoid.extend(long.allergies)
         constraints["disliked_ingredients"] = long.disliked_ingredients
+        constraints["diet_preferences"] = long.dietary_restrictions
+        constraints["taste_preferences"] = long.taste_keywords
+        constraints["preferred_categories"] = long.preferred_categories
+    hard_diets = _plan_list(plan, "hard_diet_keywords")
+    if hard_diets:
+        constraints["required_diet_keywords"] = hard_diets
     if avoid:
         constraints["avoid_ingredients"] = _unique(avoid)
     cooking_time_max = _plan_value(plan, "cooking_time_max")
@@ -149,6 +186,23 @@ def _filter_payloads_for_memory(
     ]
 
 
+def _filter_payloads_for_hard_diets(
+    payloads: list[dict],
+    plan: Any | None,
+) -> list[dict]:
+    required = _plan_list(plan, "hard_diet_keywords")
+    if not required:
+        return payloads
+    return [
+        payload
+        for payload in payloads
+        if all(
+            keyword in _payload_list(payload, "_diet_keywords")
+            for keyword in required
+        )
+    ]
+
+
 def _payload_text(payload: dict) -> str:
     parts = [
         str(payload.get("title") or ""),
@@ -159,6 +213,13 @@ def _payload_text(payload: dict) -> str:
     if isinstance(ingredients, list):
         parts.extend(str(item) for item in ingredients)
     return " ".join(parts)
+
+
+def _payload_list(payload: dict, field: str) -> list[str]:
+    value = payload.get(field)
+    if not isinstance(value, list):
+        return []
+    return [text for item in value if (text := str(item).strip())]
 
 
 def _contains(text: str, value: str) -> bool:

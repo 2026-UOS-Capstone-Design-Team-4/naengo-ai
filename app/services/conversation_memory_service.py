@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.agents.core.memory import AgentMemory, LongTermMemory, ShortTermMemory
 from app.models.user import UserProfile
 from app.services.chat_service import ChatService
+from app.services.personalization_taxonomy import canonicalize_profile_values
 
 
 class ConversationMemoryBuilder:
@@ -57,12 +58,27 @@ class ConversationMemoryBuilder:
             return None
 
         return LongTermMemory(
-            allergies=_list_value(profile.allergies),
-            dietary_restrictions=_list_value(profile.dietary_restrictions),
-            preferred_ingredients=_list_value(profile.preferred_ingredients),
-            disliked_ingredients=_list_value(profile.disliked_ingredients),
-            preferred_categories=_list_value(profile.preferred_categories),
-            taste_keywords=_list_value(profile.taste_keywords),
+            allergies=canonicalize_profile_values("allergies", profile.allergies),
+            dietary_restrictions=canonicalize_profile_values(
+                "dietary_restrictions",
+                profile.dietary_restrictions,
+            ),
+            preferred_ingredients=canonicalize_profile_values(
+                "preferred_ingredients",
+                profile.preferred_ingredients,
+            ),
+            disliked_ingredients=canonicalize_profile_values(
+                "disliked_ingredients",
+                profile.disliked_ingredients,
+            ),
+            preferred_categories=canonicalize_profile_values(
+                "preferred_categories",
+                profile.preferred_categories,
+            ),
+            taste_keywords=canonicalize_profile_values(
+                "taste_keywords",
+                profile.taste_keywords,
+            ),
             cooking_skill=profile.cooking_skill,
             preferred_cooking_time_minutes=profile.preferred_cooking_time_minutes,
             serving_size=float(profile.serving_size) if profile.serving_size else None,

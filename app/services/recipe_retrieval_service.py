@@ -9,6 +9,7 @@ from app.db.session import SessionLocal
 from app.models.chat import ChatMessage, ChatRoom  # noqa: F401
 from app.models.recipe import (
     Recipe,
+    RecipeClassification,
     RecipeEmbedding,
     RecipeIngredient,
 )
@@ -16,6 +17,11 @@ from app.models.recipe_source import RecipeSource  # noqa: F401
 from app.models.social import Like, Scrap  # noqa: F401
 from app.models.user import User, UserProfile  # noqa: F401
 from app.services.embedding_service import EmbeddingService, embedding_service
+from app.services.personalization_taxonomy import (
+    canonical_aliases,
+    canonicalize_diet_keywords,
+    canonicalize_taste_keywords,
+)
 
 DEFAULT_DIFFICULTY_BONUS = {
     "easy": 1.5,
@@ -33,7 +39,7 @@ AVAILABLE_INGREDIENT_VARIANT_BONUS = 0.25
 ALL_MAIN_INGREDIENTS_BONUS = 2.0
 MAIN_INGREDIENT_MATCH_RATIO_BONUS = 1.0
 PREFERRED_INGREDIENT_BONUS = 0.6
-DISLIKED_INGREDIENT_PENALTY = 3.0
+DISLIKED_INGREDIENT_PENALTY = 8.0
 SKILL_DIFFICULTY_BONUS = 0.8
 TIME_PREFERENCE_PENALTY = 0.8
 _INGREDIENT_SYNONYMS = {
@@ -199,6 +205,21 @@ class RecipeRetrievalService:
             "scrap_count": recipe.stats.scrap_count if recipe.stats else 0,
             "is_liked": recipe.recipe_id in (liked_ids or set()),
             "is_scrapped": recipe.recipe_id in (scrapped_ids or set()),
+            "_diet_keywords": (
+                list(recipe.classifications.diet_keywords or [])
+                if recipe.classifications
+                else []
+            ),
+            "_taste_keywords": (
+                list(recipe.classifications.taste_keywords or [])
+                if recipe.classifications
+                else []
+            ),
+            "_category_labels": (
+                list(recipe.classifications.category_labels or [])
+                if recipe.classifications
+                else []
+            ),
         }
 
 
@@ -218,6 +239,7 @@ def _hard_constraint_fallback_plan(plan: Any | None) -> dict[str, Any] | None:
         "required_ingredients": _plan_list(plan, "required_ingredients"),
         "avoid_ingredients": _plan_list(plan, "avoid_ingredients"),
         "allergies": _plan_list(plan, "allergies"),
+        "hard_diet_keywords": _plan_list(plan, "hard_diet_keywords"),
         "cooking_time_max": _positive_int(_plan_value(plan, "cooking_time_max")),
         "difficulty": None,
         "cooking_skill": None,
@@ -226,6 +248,7 @@ def _hard_constraint_fallback_plan(plan: Any | None) -> dict[str, Any] | None:
         "disliked_ingredients": _plan_list(plan, "disliked_ingredients"),
         "taste_keywords": [],
         "diet_keywords": [],
+        "preferred_categories": [],
         "dish_type": None,
         "cuisine_type": None,
         "cooking_method": None,
@@ -252,6 +275,16 @@ def _hard_filters(plan: Any | None) -> list:
             _ingredient_exists(ingredient) for ingredient in avoid_ingredients
         ]
         filters.append(not_(or_(*avoid_filters)))
+
+    for keyword in canonicalize_diet_keywords(
+        _plan_list(plan, "hard_diet_keywords")
+    ):
+        filters.append(
+            exists().where(
+                RecipeClassification.recipe_id == Recipe.recipe_id,
+                RecipeClassification.diet_keywords.contains([keyword]),
+            )
+        )
 
     return filters
 
@@ -397,12 +430,12 @@ def _plan_bonus(recipe: Recipe, plan: Any) -> float:
     classification = recipe.classifications
     if classification is not None:
         score += _overlap_score(
-            _plan_list(plan, "taste_keywords"),
+            canonicalize_taste_keywords(_plan_list(plan, "taste_keywords")),
             classification.taste_keywords or [],
             weight=0.5,
         )
         score += _overlap_score(
-            _plan_list(plan, "diet_keywords"),
+            canonicalize_diet_keywords(_plan_list(plan, "diet_keywords")),
             classification.diet_keywords or [],
             weight=0.75,
         )
@@ -415,6 +448,11 @@ def _plan_bonus(recipe: Recipe, plan: Any) -> float:
         cooking_method = _clean_text(_plan_value(plan, "cooking_method"))
         if cooking_method and cooking_method in (classification.cooking_methods or []):
             score += 0.75
+        score += _overlap_score(
+            _plan_list(plan, "preferred_categories"),
+            classification.category_labels or [],
+            weight=0.75,
+        )
 
     servings = _positive_int(_plan_value(plan, "servings"))
     if servings is not None and recipe.servings is not None:
@@ -613,6 +651,7 @@ def _ingredient_variants(value: str) -> set[str]:
         return set()
     variants = {text}
     variants.update(_INGREDIENT_SYNONYMS.get(text, set()))
+    variants.update(canonical_aliases("allergies", text))
     return variants
 
 

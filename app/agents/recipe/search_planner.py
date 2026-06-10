@@ -38,9 +38,11 @@ class SearchPlan(BaseModel):
     cooking_method: str | None = None
     taste_keywords: list[str] = []
     diet_keywords: list[str] = []
+    hard_diet_keywords: list[str] = []
     allergies: list[str] = []
     preferred_ingredients: list[str] = []
     disliked_ingredients: list[str] = []
+    preferred_categories: list[str] = []
     servings: int | None = None
     retrieval_required: bool = True
     clarification_required: bool = False

@@ -5,6 +5,10 @@ from fastapi.testclient import TestClient
 
 from app.api.v1.endpoints import users as endpoint_module
 from app.main import app
+from app.services.user_profile_input_service import (
+    UserProfileInputFact,
+    UserProfileInputResult,
+)
 
 client = TestClient(app)
 
@@ -45,6 +49,34 @@ class FakeWithdrawUserService:
     def withdraw_user(self, user_id):
         type(self).called_user_id = user_id
         return type(self).result
+
+
+class FakeProfileUserService:
+    captured_facts = None
+
+    def __init__(self, _db):
+        pass
+
+    def get_profile(self, user_id):
+        return SimpleNamespace(user_id=user_id)
+
+    def append_profile_user_input(self, user_id, body, facts=None):
+        type(self).captured_facts = facts
+        return {"user_input": [body.text]}
+
+
+class FakeProfileNormalizer:
+    def normalize(self, text):
+        return UserProfileInputResult(
+            is_user_info=True,
+            normalized_sentence="저탄수 식단을 선호해요.",
+            facts=[
+                UserProfileInputFact(
+                    field="dietary_restrictions",
+                    value="저탄수화물",
+                )
+            ],
+        )
 
 
 def _override_get_db():
@@ -114,3 +146,25 @@ def test_delete_me_returns_not_found_when_user_missing(monkeypatch):
         }
     }
     assert FakeWithdrawUserService.called_user_id == 7
+
+
+def test_append_profile_passes_structured_facts_to_service(monkeypatch):
+    FakeProfileUserService.captured_facts = None
+    monkeypatch.setattr(endpoint_module, "UserService", FakeProfileUserService)
+    monkeypatch.setattr(
+        endpoint_module,
+        "user_profile_input_normalizer",
+        FakeProfileNormalizer(),
+    )
+
+    response = client.post(
+        "/api/v1/users/me/profile",
+        json={"text": "저탄수 식단을 선호해"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"user_input": ["저탄수 식단을 선호해요."]}
+    assert FakeProfileUserService.captured_facts[0].field == (
+        "dietary_restrictions"
+    )
+    assert FakeProfileUserService.captured_facts[0].value == "저탄수화물"

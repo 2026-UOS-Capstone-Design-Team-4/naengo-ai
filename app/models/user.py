@@ -6,6 +6,7 @@ from sqlalchemy import (
     Integer,
     Numeric,
     String,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -95,6 +96,41 @@ class UserProfile(Base):
 
     # 관계 설정
     user = relationship("User", back_populates="profile")
+    facts = relationship(
+        "UserProfileFact",
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
+
+
+class UserProfileFact(Base):
+    __tablename__ = "user_profile_facts"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "field",
+            "canonical_value",
+            "source_type",
+            "source_key",
+        ),
+    )
+
+    fact_id = Column(Integer, primary_key=True)
+    user_id = Column(
+        Integer,
+        ForeignKey("user_profiles.user_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    field = Column(String(50), nullable=False)
+    canonical_value = Column(String(255), nullable=False)
+    display_value = Column(String(255), nullable=False)
+    source_type = Column(String(30), nullable=False)
+    source_text = Column(String(1000), nullable=False)
+    source_key = Column(String(100), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    profile = relationship("UserProfile", back_populates="facts")
 
 
 # Register related models for standalone User imports.

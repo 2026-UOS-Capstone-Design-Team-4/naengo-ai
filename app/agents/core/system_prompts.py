@@ -90,7 +90,8 @@ SEARCH_PLANNER_PROMPT = """
 - dish_type: 음식 유형, 언급 없으면 null
 - cooking_method: 조리 방법, 언급 없으면 null
 - taste_keywords: 맛 키워드
-- diet_keywords: 식이 제한 키워드
+- diet_keywords: 저장 프로필을 포함한 선호 식이 키워드
+- hard_diet_keywords: 현재 요청에서 사용자가 직접 명시한 필수 식이 조건
 - allergies: 사용자에게 적용해야 하는 알레르기 재료. avoid_ingredients에도 반영
 - servings: 인분 수, 언급 없으면 null
 - retrieval_required: 레시피 DB 검색이 필요하면 true

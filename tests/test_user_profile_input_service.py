@@ -4,6 +4,7 @@ import pytest
 
 from app.services.user_profile_input_service import (
     PROFILE_INPUT_TOO_MANY_SENTENCES_REASON,
+    UserProfileInputFact,
     UserProfileInputNormalizeError,
     UserProfileInputNormalizer,
     UserProfileInputOutput,
@@ -28,6 +29,7 @@ def test_normalizer_accepts_user_info_and_returns_one_sentence():
         UserProfileInputOutput(
             is_user_info=True,
             normalized_sentence="  새우 알레르기가 있어요.  ",
+            facts=[UserProfileInputFact(field="allergies", value="새우")],
             reason="allergy",
         )
     )
@@ -37,6 +39,7 @@ def test_normalizer_accepts_user_info_and_returns_one_sentence():
 
     assert result.is_user_info is True
     assert result.normalized_sentence == "새우 알레르기가 있어요."
+    assert result.facts[0].field == "allergies"
     assert agent.prompt == "나 새우 알러지 있어"
 
 

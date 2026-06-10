@@ -364,6 +364,7 @@ def test_hard_constraint_fallback_plan_preserves_only_hard_filters():
         disliked_ingredients=["고수"],
         taste_keywords=["칼칼함"],
         diet_keywords=["저탄수화물"],
+        hard_diet_keywords=["low_carb"],
     )
 
     fallback = _hard_constraint_fallback_plan(plan)
@@ -375,4 +376,5 @@ def test_hard_constraint_fallback_plan_preserves_only_hard_filters():
     assert fallback["avoid_ingredients"] == ["고수"]
     assert fallback["allergies"] == ["새우"]
     assert fallback["cooking_time_max"] == 20
+    assert fallback["hard_diet_keywords"] == ["low_carb"]
     assert fallback["taste_keywords"] == []

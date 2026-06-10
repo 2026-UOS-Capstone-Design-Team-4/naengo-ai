@@ -31,6 +31,7 @@ from app.schemas.user import (
     UserResponse,
     UserUpdateRequest,
 )
+from app.services.profile_fact_service import ProfileFactInput
 from app.services.user_profile_input_service import (
     UserProfileInputNormalizeError,
     user_profile_input_normalizer,
@@ -138,7 +139,11 @@ def append_my_profile_user_input(
             "UPSTREAM_ERROR",
             "프로필 입력 문장을 정리하지 못했습니다.",
         ) from exc
-    if not normalized.is_user_info or normalized.normalized_sentence is None:
+    if (
+        not normalized.is_user_info
+        or normalized.normalized_sentence is None
+        or not normalized.facts
+    ):
         raise ApiError(
             422,
             "PROFILE_INPUT_NOT_USER_INFO",
@@ -149,6 +154,10 @@ def append_my_profile_user_input(
     profile = user_service.append_profile_user_input(
         current_user_id,
         UserInputAppendRequest(text=normalized.normalized_sentence),
+        facts=[
+            ProfileFactInput(field=fact.field, value=fact.value)
+            for fact in normalized.facts
+        ],
     )
     return profile
 

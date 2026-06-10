@@ -27,6 +27,10 @@ AI Agent 테스트에서 LLM과 embedding API 의존성을 경계로 분리한�
 - `COOKING_QA`가 `needs_retrieval=true`인 경우 retrieval을 호출하는지 검증
 - `COOKING_QA + SAFETY/RECIPE_CONTEXT/INGREDIENT_SUBSTITUTION`이 전용 answer agent로 라우팅되는지 검증
 - 알레르기 포함 레시피가 verifier에서 감지되는지 검증
+- 현재 요청의 식이 제한은 hard filter로, 저장된 식이 제한은 soft rerank로
+  처리되는지 검증
+- 프로필 표현이 canonical value로 정규화되고 문장 삭제 시 projection이
+  재계산되는지 검증
 - 검증 성공 시 revision agent를 호출하지 않는지 검증
 - 검증 실패 시 충돌 레시피를 제거하고 revision agent를 한 번만 호출하는지 검증
 - 재검증 실패 시 빈 recipe payload와 안전 fallback을 반환하는지 검증

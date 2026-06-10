@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.core import config
 from app.models.user import UserProfile
+from app.services.personalization_taxonomy import canonicalize_profile_value
+from app.services.profile_fact_service import ProfileFactInput, ProfileFactService
 
 
 class ProfileUpdateAction(StrEnum):
@@ -201,15 +203,36 @@ class UserProfileService:
         self, user_id: int, candidates: list[ProfileUpdateCandidate]
     ) -> UserProfile:
         profile = self.get_or_create_profile(user_id)
+        facts = []
         for candidate in candidates:
-            if candidate.operation == ProfileUpdateOperation.ADD:
-                values = _list_value(getattr(profile, candidate.field, None))
-                if candidate.value not in values:
-                    values.append(candidate.value)
-                setattr(profile, candidate.field, values)
-            elif candidate.operation == ProfileUpdateOperation.SET:
-                setattr(profile, candidate.field, candidate.value)
+            value = canonicalize_profile_value(candidate.field, candidate.value)
+            facts.append(
+                ProfileFactInput(
+                    field=candidate.field,
+                    value=value,
+                    display_value=str(candidate.value),
+                )
+            )
 
+        if facts and isinstance(self.db, Session):
+            source_text = " | ".join(
+                dict.fromkeys(candidate.evidence for candidate in candidates)
+            )
+            ProfileFactService(self.db).add_facts(
+                profile,
+                facts,
+                source_type="CHAT",
+                source_text=source_text,
+            )
+        else:
+            for candidate, fact in zip(candidates, facts, strict=True):
+                if candidate.operation == ProfileUpdateOperation.ADD:
+                    values = _list_value(getattr(profile, candidate.field, None))
+                    if fact.value not in values:
+                        values.append(fact.value)
+                    setattr(profile, candidate.field, values)
+                elif candidate.operation == ProfileUpdateOperation.SET:
+                    setattr(profile, candidate.field, fact.value)
         self.db.commit()
         self.db.refresh(profile)
         return profile

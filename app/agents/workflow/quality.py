@@ -207,11 +207,27 @@ def _filter_conflicting_recipes(
         )
     ]
     if not blocked_values:
-        return list(recipes)
+        filtered = list(recipes)
+    else:
+        filtered = [
+            recipe
+            for recipe in recipes
+            if not any(_recipe_contains(recipe, value) for value in blocked_values)
+        ]
+    required_diets = [
+        issue.removeprefix("recipe_violates_hard_diet:").strip()
+        for issue in issues
+        if issue.startswith("recipe_violates_hard_diet:")
+    ]
+    if not required_diets:
+        return filtered
     return [
         recipe
-        for recipe in recipes
-        if not any(_recipe_contains(recipe, value) for value in blocked_values)
+        for recipe in filtered
+        if all(
+            diet in recipe.get("_diet_keywords", [])
+            for diet in required_diets
+        )
     ]
 
 

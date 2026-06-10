@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic_ai import Agent
@@ -16,9 +17,25 @@ MAX_PROFILE_INPUT_SENTENCES = 2
 PROFILE_INPUT_TOO_MANY_SENTENCES_REASON = "too many sentences"
 
 
+class UserProfileInputFact(BaseModel):
+    field: Literal[
+        "allergies",
+        "dietary_restrictions",
+        "preferred_ingredients",
+        "disliked_ingredients",
+        "preferred_categories",
+        "taste_keywords",
+        "cooking_skill",
+        "preferred_cooking_time_minutes",
+        "serving_size",
+    ]
+    value: str | int | float
+
+
 class UserProfileInputOutput(BaseModel):
     is_user_info: bool
     normalized_sentence: str | None = None
+    facts: list[UserProfileInputFact] = []
     reason: str | None = None
 
 
@@ -26,6 +43,7 @@ class UserProfileInputOutput(BaseModel):
 class UserProfileInputResult:
     is_user_info: bool
     normalized_sentence: str | None
+    facts: list[UserProfileInputFact] = field(default_factory=list)
     reason: str | None = None
 
 
@@ -43,12 +61,14 @@ class UserProfileInputNormalizer:
             return UserProfileInputResult(
                 is_user_info=False,
                 normalized_sentence=None,
+                facts=[],
                 reason="empty input",
             )
         if _count_sentences(prompt) > MAX_PROFILE_INPUT_SENTENCES:
             return UserProfileInputResult(
                 is_user_info=False,
                 normalized_sentence=None,
+                facts=[],
                 reason=PROFILE_INPUT_TOO_MANY_SENTENCES_REASON,
             )
 
@@ -65,11 +85,13 @@ class UserProfileInputNormalizer:
             return UserProfileInputResult(
                 is_user_info=False,
                 normalized_sentence=None,
+                facts=[],
                 reason=output.reason,
             )
         return UserProfileInputResult(
             is_user_info=True,
             normalized_sentence=sentence,
+            facts=list(output.facts),
             reason=output.reason,
         )
 
@@ -133,9 +155,23 @@ Do not save:
 
 When saving, rewrite to exactly one concise Korean sentence.
 Keep the user's meaning. Do not add facts that are not present.
+Also return one or more facts using only these fields:
+- allergies
+- dietary_restrictions
+- preferred_ingredients
+- disliked_ingredients
+- preferred_categories
+- taste_keywords
+- cooking_skill
+- preferred_cooking_time_minutes
+- serving_size
+Use Korean values for list fields. Use easy/normal/hard for cooking_skill and numbers
+for cooking time or serving size.
 Examples:
-- "나 새우 알러지 있어" -> "새우 알레르기가 있어요."
-- "매운 거 좋아함" -> "매운 음식을 좋아해요."
+- "나 새우 알러지 있어" -> sentence "새우 알레르기가 있어요.",
+  fact allergies=새우.
+- "매운 거 좋아함" -> sentence "매운 음식을 좋아해요.",
+  fact taste_keywords=매운맛.
 - "오늘은 닭고기 빼줘" -> not user info, temporary request.
 - "엄마가 땅콩 못 먹어" -> not user info, another person.
 """.strip()

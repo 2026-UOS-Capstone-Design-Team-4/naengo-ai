@@ -48,6 +48,26 @@ def test_answer_verifier_flags_no_recipe_text_with_payload():
     assert "answer_payload_mismatch:no_recipes_text_with_payload" in result.issues
 
 
+def test_answer_verifier_does_not_block_disliked_ingredient():
+    memory = AgentMemory(
+        long_term=LongTermMemory(disliked_ingredients=["고수"])
+    )
+    recipes = [{"id": 1, "title": "고수 샐러드", "ingredients": [{"name": "고수"}]}]
+
+    result = AnswerVerifier().verify("고수 샐러드예요.", recipes, memory)
+
+    assert result.passed is True
+
+
+def test_answer_verifier_flags_hard_diet_mismatch():
+    plan = SimpleNamespace(hard_diet_keywords=["vegan"])
+    recipes = [{"id": 1, "title": "돼지고기 볶음", "_diet_keywords": []}]
+
+    result = AnswerVerifier().verify("추천드려요.", recipes, None, plan=plan)
+
+    assert result.issues == ["recipe_violates_hard_diet:vegan"]
+
+
 def test_answer_verifier_flags_overly_permissive_safety_answer():
     plan = SimpleNamespace(safety_sensitive=True)
 

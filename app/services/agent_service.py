@@ -51,6 +51,12 @@ from app.services.agent_context_resolver import agent_context_resolver
 from app.services.chat_service import ChatService
 from app.services.conversation_state_service import conversation_state_resolver
 from app.services.live_research_service import live_research_service
+from app.services.personalization_taxonomy import (
+    canonicalize_diet_keywords,
+    canonicalize_profile_values,
+    canonicalize_taste_keywords,
+    extract_canonical_diet_keywords,
+)
 from app.services.profile_update_service import (
     ProfileUpdateAction,
     ProfileUpdateDecision,
@@ -318,6 +324,10 @@ def _append_conversation_state_context(
     return f"{prompt}\n\n{context}"
 
 
+def _public_recipe_payload(recipe: dict) -> dict:
+    return {key: value for key, value in recipe.items() if not key.startswith("_")}
+
+
 def _planning_payload(
     primary_task: str,
     strategy: AnswerStrategy,
@@ -415,7 +425,24 @@ def _apply_memory_to_search_plan(
     plan: Any,
     memory: AgentMemory,
     conversation_state: ConversationState | None = None,
+    prompt: str | None = None,
 ) -> None:
+    plan.allergies = canonicalize_profile_values("allergies", plan.allergies)
+    plan.preferred_ingredients = canonicalize_profile_values(
+        "preferred_ingredients",
+        plan.preferred_ingredients,
+    )
+    plan.disliked_ingredients = canonicalize_profile_values(
+        "disliked_ingredients",
+        plan.disliked_ingredients,
+    )
+    plan.taste_keywords = canonicalize_taste_keywords(plan.taste_keywords)
+    plan.diet_keywords = canonicalize_diet_keywords(plan.diet_keywords)
+    plan.preferred_categories = canonicalize_profile_values(
+        "preferred_categories",
+        plan.preferred_categories,
+    )
+    plan.hard_diet_keywords = extract_canonical_diet_keywords(prompt or "")
     long_term = memory.long_term
     if long_term is not None:
         _extend_unique(plan.allergies, long_term.allergies)
@@ -423,6 +450,8 @@ def _apply_memory_to_search_plan(
         _extend_unique(plan.disliked_ingredients, long_term.disliked_ingredients)
         _extend_unique(plan.preferred_ingredients, long_term.preferred_ingredients)
         _extend_unique(plan.diet_keywords, long_term.dietary_restrictions)
+        _extend_unique(plan.taste_keywords, long_term.taste_keywords)
+        _extend_unique(plan.preferred_categories, long_term.preferred_categories)
         if plan.cooking_skill is None:
             plan.cooking_skill = long_term.cooking_skill
         if plan.preferred_cooking_time_minutes is None:
@@ -790,7 +819,12 @@ class AgentService:
                     memory_context=memory.to_prompt_context(),
                     image=image_ref,
                 )
-                _apply_memory_to_search_plan(plan, memory, conversation_state)
+                _apply_memory_to_search_plan(
+                    plan,
+                    memory,
+                    conversation_state,
+                    prompt,
+                )
                 deps.search_plan = plan
                 run_context.domain_plan = plan
                 answer_strategy = plan.answer_strategy
@@ -929,6 +963,7 @@ class AgentService:
                             retrieval_plan,
                             memory,
                             conversation_state,
+                            prompt,
                         )
                         deps.search_plan = retrieval_plan
                         search_query = retrieval_plan.query_text
@@ -1132,9 +1167,10 @@ class AgentService:
         if not recipe_ids and not quality_result.used_fallback:
             recipe_ids = deps.resolved_recipe_ids
 
+        public_recipes = [_public_recipe_payload(recipe) for recipe in unique_recipes]
         yield stream_event_builder.message(ai_full)
-        if unique_recipes:
-            yield stream_event_builder.recipes(unique_recipes)
+        if public_recipes:
+            yield stream_event_builder.recipes(public_recipes)
 
         msg_id = self._save_if_persisted(
             execution,

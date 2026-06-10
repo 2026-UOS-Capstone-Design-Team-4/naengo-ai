@@ -10,6 +10,11 @@ from app.schemas.user import (
     UserProfileResponse,
     UserUpdateRequest,
 )
+from app.services.profile_fact_service import (
+    ProfileFactInput,
+    ProfileFactService,
+    profile_fact_source_key,
+)
 
 
 class UserUpdateStatus(StrEnum):
@@ -84,6 +89,7 @@ class UserService:
         self,
         user_id: int,
         body: UserInputAppendRequest,
+        facts: list[ProfileFactInput] | None = None,
     ) -> UserProfileResponse | None:
         profile = self.get_profile(user_id)
         if not profile:
@@ -96,6 +102,15 @@ class UserService:
             )
 
         profile.user_input = [*_clean_user_inputs(profile.user_input), text]
+        if facts and isinstance(self.db, Session):
+            occurrence = profile.user_input.count(text)
+            ProfileFactService(self.db).add_facts(
+                profile,
+                facts,
+                source_type="USER_INPUT",
+                source_text=text,
+                source_key=_user_input_source_key(text, occurrence),
+            )
         self.db.commit()
         self.db.refresh(profile)
         return UserProfileResponse(user_input=_clean_user_inputs(profile.user_input))
@@ -116,6 +131,19 @@ class UserService:
                 current_inputs.remove(delete_target)
             except ValueError:
                 pass
+            else:
+                if not isinstance(self.db, Session):
+                    profile.user_input = current_inputs
+                    self.db.commit()
+                    self.db.refresh(profile)
+                    return UserProfileResponse(
+                        user_input=_clean_user_inputs(profile.user_input)
+                    )
+                ProfileFactService(self.db).delete_source(
+                    profile,
+                    source_type="USER_INPUT",
+                    source_text=delete_target,
+                )
         profile.user_input = current_inputs
         self.db.commit()
         self.db.refresh(profile)
@@ -135,3 +163,8 @@ def _clean_user_inputs(values: list[str] | None) -> list[str]:
         for value in values
         if isinstance(value, str) and (text := _clean_user_input(value)) is not None
     ]
+
+
+def _user_input_source_key(text: str, occurrence: int | None) -> str:
+    base = profile_fact_source_key("USER_INPUT", text)
+    return f"{base}:{occurrence or 1}"

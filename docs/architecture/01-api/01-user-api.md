@@ -69,6 +69,18 @@ POST 저장 조건:
 - "오늘은 닭고기 빼줘"처럼 임시 요청이면 저장하지 않는다.
 - 타인 정보, 질문, 농담, 단순 레시피 요청이면 저장하지 않는다.
 - 저장될 문장은 agent가 한 문장으로 정리한다.
+- 저장 문장은 동시에 구조화된 profile fact로 변환한다. 사용자에게는 한국어
+  문장을 그대로 반환하고, 검색에는 `low_carb`, `spicy` 같은 내부 표준값을 쓴다.
+- 문장 삭제 시 그 문장에서 생성된 fact도 함께 삭제하고 구조화 프로필을 재계산한다.
+
+기존 프로필 데이터는 아래 명령으로 먼저 점검한 뒤 적용한다.
+
+```text
+uv run python scripts/backfill/backfill_user_profile_facts.py
+uv run python scripts/backfill/backfill_user_profile_facts.py --apply
+```
+
+기본 실행은 dry-run이며 변환하지 못한 문장을 로그로 보고한다.
 
 삭제:
 

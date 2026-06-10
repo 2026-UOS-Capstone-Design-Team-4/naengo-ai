@@ -7,6 +7,7 @@
 - `users`
 - `user_identities`
 - `user_profiles`
+- `user_profile_facts`
 - `recipes`
 - `recipe_nutrition`
 - `recipe_ingredients`
@@ -79,6 +80,16 @@ JSONB는 원본 백업이나 구조가 자주 바뀌는 보조 metadata에 제�
 ## User Identity
 
 `user_identities`는 OAuth provider(KAKAO, GOOGLE, NAVER, APPLE)별 로그인 식별자를 저장한다. 한 사용자가 여러 provider로 연결될 수 있다. `users` 1:N 관계이며, `provider + provider_user_id`가 unique constraint다.
+
+## User Profile Facts
+
+`user_profile_facts`는 사용자 입력 문장과 채팅에서 추출한 개인화 정보의 출처를
+보관한다. `user_profiles`의 배열·스칼라 컬럼은 검색용 projection이며 fact를
+추가하거나 삭제할 때 재계산한다.
+
+- `canonical_value`: 검색과 필터링에 사용하는 내부 표준값
+- `display_value`: 사용자가 입력한 의미를 보존하는 표시값
+- `source_type`, `source_text`, `source_key`: 입력 문장 또는 채팅 근거 추적
 
 ## Image URL Policy
 

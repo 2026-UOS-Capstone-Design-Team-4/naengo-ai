@@ -112,6 +112,11 @@ verification result를 묶는 실행 상태 객체다. 각 단계는 이 context
 현재 구현은 별도 memory 테이블을 두지 않고, 채팅 메시지와 사용자 프로필에서
 동적으로 구성한다.
 
+프로필 값은 공통 taxonomy의 canonical value로 정규화한다. 알레르기는 항상
+hard constraint이고, 저장된 식이 제한은 soft preference다. 현재 요청에서
+사용자가 직접 명시한 식이 제한만 해당 턴의 hard constraint로 승격한다.
+비선호 재료는 후보를 제거하지 않고 강한 감점으로 처리한다.
+
 ## Evidence
 
 검색 결과는 answer agent에 그대로 전달하기보다, 추천 이유와 주의 조건을 포함한

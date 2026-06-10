@@ -39,7 +39,6 @@ class AnswerVerifier:
             [
                 *_plan_list(plan, "avoid_ingredients"),
                 *_short_term_avoid_ingredients(memory),
-                *(long_term.disliked_ingredients if long_term is not None else []),
             ]
         )
         avoid_ingredients = [
@@ -63,6 +62,15 @@ class AnswerVerifier:
                 _recipe_contains_value(recipe, value) for recipe in recipes
             ):
                 issues.append(f"answer_recipe_conflict_avoid_ingredient:{value}")
+
+        for diet_keyword in _plan_list(plan, "hard_diet_keywords"):
+            for recipe in recipes:
+                recipe_diets = recipe.get("_diet_keywords")
+                if (
+                    not isinstance(recipe_diets, list)
+                    or diet_keyword not in recipe_diets
+                ):
+                    issues.append(f"recipe_violates_hard_diet:{diet_keyword}")
 
         if recipes and _answer_says_no_recipes(answer):
             issues.append("answer_payload_mismatch:no_recipes_text_with_payload")

@@ -17,7 +17,7 @@ Retrieval Planning은 `RECIPE_FIND` 요청을 검색에 적합한 구조로 바�
 ## Output
 
 retrieval planning의 출력은 검색을 실행하기 위한 구조화된 계획이다. 계획에는
-검색 문장, 세부 의도, 보유 재료, 제외 재료, 알레르기, 시간/난이도 조건,
+검색 문장, 세부 의도, 보유 재료, 제외 재료, 알레르기, 식이 조건, 시간/난이도 조건,
 요리명 힌트, 답변 전략이 포함된다. 이 값들은 검색, rerank, 답변 생성, 검증
 단계가 같은 조건을 바라보도록 하는 공통 계약이다.
 
@@ -25,13 +25,19 @@ retrieval planning의 출력은 검색을 실행하기 위한 구조화된 계�
 
 1. planner가 검색 의도와 조건을 정리한다.
 2. `retrieval_required=true`이면 retrieval 계층이 embedding, title, ingredient 기반 후보를 모은다.
-3. 알레르기, 제외 재료, 시간 제한 같은 hard constraint를 우선 반영한다.
+3. 알레르기, 제외 재료, 현재 요청에서 명시한 식이 제한, 시간 제한 같은
+   hard constraint를 우선 반영한다.
 4. 보유 재료, 요리명, 취향, 난이도, 최근 추천 중복 여부를 기준으로 rerank한다.
 5. 최종 후보의 evidence와 recipe detail을 중복 없는 단일 context로 구성한다.
 6. answer agent는 제공된 context만 사용하며 추가 검색 tool을 호출하지 않는다.
 
 전체 검색 계획으로 후보가 부족할 때는 soft 조건만 완화할 수 있다. 이 경우에도
-알레르기, 제외 재료, 필수 재료, 조리 시간 같은 hard constraint는 유지한다.
+알레르기, 제외 재료, 명시적 식이 제한, 필수 재료, 조리 시간 같은 hard
+constraint는 유지한다.
+
+저장된 식이 제한, 맛, 선호 재료·카테고리, 실력, 선호 시간, 인분은 soft
+preference로 rerank한다. 비선호 재료는 강한 감점을 적용하지만 후보 부족 시
+반환할 수 있다.
 
 planner가 `clarification_required=true` 또는 `sub_intent=CLARIFICATION`을 반환하면
 검색 전에 확인 질문으로 응답하고 RAG prefetch를 수행하지 않는다.

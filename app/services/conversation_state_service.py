@@ -79,6 +79,10 @@ def _profile_snapshot(memory: AgentMemory) -> dict[str, Any]:
         snapshot["preferred_ingredients"] = long.preferred_ingredients
     if long.disliked_ingredients:
         snapshot["disliked_ingredients"] = long.disliked_ingredients
+    if long.preferred_categories:
+        snapshot["preferred_categories"] = long.preferred_categories
+    if long.taste_keywords:
+        snapshot["taste_keywords"] = long.taste_keywords
     if long.cooking_skill:
         snapshot["cooking_skill"] = long.cooking_skill
     if long.preferred_cooking_time_minutes:

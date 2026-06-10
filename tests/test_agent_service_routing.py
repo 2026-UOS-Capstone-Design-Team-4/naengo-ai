@@ -276,6 +276,31 @@ def test_recipe_search_planner_uses_memory_as_its_single_profile_context():
     assert "user_profile_context" not in parameters
 
 
+def test_memory_application_separates_saved_and_explicit_diets():
+    from app.agents.core.memory import AgentMemory, LongTermMemory
+    from app.services.agent_service import _apply_memory_to_search_plan
+
+    plan = SearchPlan(query_text="추천")
+    memory = AgentMemory(
+        long_term=LongTermMemory(
+            dietary_restrictions=["low_carb"],
+            taste_keywords=["spicy"],
+            preferred_categories=["한식"],
+        )
+    )
+
+    _apply_memory_to_search_plan(
+        plan,
+        memory,
+        prompt="오늘은 비건 요리 추천해줘",
+    )
+
+    assert plan.diet_keywords == ["low_carb"]
+    assert plan.hard_diet_keywords == ["vegan"]
+    assert plan.taste_keywords == ["spicy"]
+    assert plan.preferred_categories == ["한식"]
+
+
 async def _collect_stream(service: AgentService, prompt: str, chat_service, db=None):
     return [
         chunk
